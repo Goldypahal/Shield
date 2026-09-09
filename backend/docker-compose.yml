@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # The Core Database: PostgreSQL with both TimescaleDB and PostGIS extensions pre-compiled
+  shield-db:
+    # This image is built by Timescale and includes PostGIS out of the box
+    image: timescale/timescaledb-ha:pg15-latest
+    container_name: shield-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_password
+      POSTGRES_DB: shield_db
+      # Optimization parameters for timescaledb (adjust based on RAM in production)
+      TS_TUNE_MEMORY: "1GB"
+      TS_TUNE_NUM_CPUS: "2"
+    ports:
+      - "5432:5432"
+    volumes:
+      # Map the schema files folder so Postgres runs them automatically on first boot
+      - ./db:/docker-entrypoint-initdb.d
+      # Persistent storage for the database data
+      - shield-pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d shield_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for pub/sub WebSocket multi-casting and token caching
+  shield-redis:
+    image: redis:7-alpine
+    container_name: shield-redis
+    ports:
+      - "6380:6379"
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - shield-redis-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  shield-pgdata:
+  
+  shield-redis-data:

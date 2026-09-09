@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build & Dist
+dist/
+build/
+.next/
+*.egg-info/
+.pytest_cache/
+.astro/
+.expo/
+
+# Environment & Secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+!*.env.example
+secrets.json
+
+# Large AI Models & Checkpoints (>25MB)
+*.gguf
+*.bin
+*.pt
+*.pth
+*.onnx
+*.safetensors
+*.h5
+*.ckpt
+
+# Databases & Cache
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
