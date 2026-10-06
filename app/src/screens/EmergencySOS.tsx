@@ -140,9 +140,9 @@ export default function EmergencySOS() {
 
   const handlePanicButtonPress = async () => {
     setIsTriggering(true);
-    setCountdown(5); // 5 second stealth cancel window
+    setCountdown(10); // ALERT-2: 10 second pre-alert countdown with vibration
 
-    let currentCount = 5;
+    let currentCount = 10;
     const interval = setInterval(() => {
       currentCount -= 1;
       setCountdown(currentCount);
@@ -158,6 +158,7 @@ export default function EmergencySOS() {
 
   const cancelAlert = async () => {
     const savedPin = await AsyncStorage.getItem('@shield_pin');
+    const duressPin = await AsyncStorage.getItem('@shield_duress_pin');
 
     const executeCancel = () => {
       if (timeoutId) {
@@ -165,16 +166,16 @@ export default function EmergencySOS() {
         setTimeoutId(null);
         setCountdown(null);
         setIsTriggering(false);
-        RNAlert.alert("Alert Cancelled", "Stealth alert was cancelled before sending.");
+        RNAlert.alert("Alert Cancelled", "Pre-alert was cancelled safely.");
         return;
       }
       setAlertActive(false);
       setActiveAlertId(null);
       LocationTracker.stopBroadcastingSOS();
-      RNAlert.alert("Alert Disabled", "SOS has been safely deactivated.");
+      RNAlert.alert("Alert Disabled", "SOS has been deactivated.");
     };
 
-    if (savedPin) {
+    if (savedPin || duressPin) {
       if (Platform.OS === 'ios') {
         RNAlert.prompt(
           "Enter PIN",
@@ -183,9 +184,16 @@ export default function EmergencySOS() {
             { text: "Back", style: "cancel" },
             {
               text: "Cancel Alert",
-              onPress: (input) => {
-                if (input === savedPin) executeCancel();
-                else RNAlert.alert("Incorrect PIN", "Alert remains active.");
+              onPress: async (input) => {
+                if (input === duressPin) {
+                  // ALERT-3, DUR-3: Silent high-priority alert dispatched
+                  dispatchAlert();
+                  executeCancel();
+                } else if (input === savedPin) {
+                  executeCancel();
+                } else {
+                  RNAlert.alert("Incorrect PIN", "Alert remains active.");
+                }
               }
             }
           ],
@@ -202,6 +210,26 @@ export default function EmergencySOS() {
 
   const confirmAndroidPinCancel = async () => {
     const savedPin = await AsyncStorage.getItem('@shield_pin');
+    const duressPin = await AsyncStorage.getItem('@shield_duress_pin');
+
+    // DUR-1 to DUR-3: Check normal PIN vs duress PIN locally
+    if (duressPin && pinInput === duressPin) {
+      // Duress PIN entered: appear to cancel normally while silently dispatching high-priority alert
+      setPinModalVisible(false);
+      setPinInput('');
+      dispatchAlert(); // Silently dispatches alert in background
+      if (timeoutId) {
+        clearInterval(timeoutId);
+        setTimeoutId(null);
+        setCountdown(null);
+        setIsTriggering(false);
+      }
+      setAlertActive(false);
+      setActiveAlertId(null);
+      RNAlert.alert("Alert Cancelled", "Pre-alert was cancelled safely.");
+      return;
+    }
+
     if (pinInput === savedPin) {
       setPinModalVisible(false);
       setPinInput('');
@@ -210,7 +238,7 @@ export default function EmergencySOS() {
         setTimeoutId(null);
         setCountdown(null);
         setIsTriggering(false);
-        RNAlert.alert("Alert Cancelled", "Stealth alert was cancelled before sending.");
+        RNAlert.alert("Alert Cancelled", "Pre-alert was cancelled safely.");
         return;
       }
       setAlertActive(false);

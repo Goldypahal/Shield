@@ -1,0 +1,1676 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}</style><style>:root{color-scheme:light dark;--md-bg:#fff;--md-text:rgba(0,0,0,.8);--md-muted:rgba(0,0,0,.6);--md-fill:rgba(0,0,0,.04);--md-fill-strong:rgba(0,0,0,.06);--md-rule:rgba(0,0,0,.1);--md-rule-strong:rgba(0,0,0,.16);--md-link:hsl(210 100% 45%)}@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){--md-bg:#0d0d0d;--md-text:rgba(255,255,255,.85);--md-muted:rgba(255,255,255,.6);--md-fill:rgba(255,255,255,.06);--md-fill-strong:rgba(255,255,255,.09);--md-rule:rgba(255,255,255,.14);--md-rule-strong:rgba(255,255,255,.22);--md-link:hsl(210 100% 72%)}}:root[data-theme="dark"]{color-scheme:dark;--md-bg:#0d0d0d;--md-text:rgba(255,255,255,.85);--md-muted:rgba(255,255,255,.6);--md-fill:rgba(255,255,255,.06);--md-fill-strong:rgba(255,255,255,.09);--md-rule:rgba(255,255,255,.14);--md-rule-strong:rgba(255,255,255,.22);--md-link:hsl(210 100% 72%)}:root[data-theme="light"]{color-scheme:light}@media print{:root,:root[data-theme="dark"]{color-scheme:light;--md-bg:#fff;--md-text:rgba(0,0,0,.8);--md-muted:rgba(0,0,0,.6);--md-fill:rgba(0,0,0,.04);--md-fill-strong:rgba(0,0,0,.06);--md-rule:rgba(0,0,0,.1);--md-rule-strong:rgba(0,0,0,.16);--md-link:hsl(210 100% 45%)}}body{background:var(--md-bg);color:var(--md-text);max-width:720px;margin:0 auto;padding:32px;display:flex;flex-direction:column;gap:10px;font:14px/1.55 -apple-system,BlinkMacSystemFont,'SF Pro','Segoe UI',sans-serif;overflow-wrap:break-word}body>:first-child{margin-top:0}h1,h2,h3,h4,h5,h6{margin:6px 0 0;line-height:1.25;font-weight:600;text-wrap:balance}h1{font-size:1.35em}h2{font-size:1.15em;color:var(--md-muted)}h3,h4,h5,h6{font-size:1em}p,ul,ol,blockquote,table,pre,hr{margin:0}strong{font-weight:600}a{color:var(--md-link);text-decoration:none}a:hover{text-decoration:underline}ul,ol{display:flex;flex-direction:column;gap:6px;padding-left:22px}ul{list-style:disc}ol{list-style:decimal}:is(li,td,th)>*+:is(p,ul,ol,blockquote){margin-top:6px}blockquote{display:flex;flex-direction:column;gap:10px;border-left:2px solid var(--md-rule);padding-left:10px;color:var(--md-muted)}:not(pre)>code{background:var(--md-fill);padding:1px 3px;border-radius:4px;font:.92em 'SF Mono',ui-monospace,Menlo,Consolas,monospace}a>code{background:none;color:inherit}pre{background:var(--md-fill);padding:10px 12px;border-radius:6px;overflow-x:auto;font:12px/1.5 'SF Mono',ui-monospace,Menlo,Consolas,monospace;margin-block:4px}pre code{background:none;padding:0;font:inherit}table{width:100%;border-collapse:separate;border-spacing:2px;font:inherit}th,td{padding:6px 8px;border-radius:3px;text-align:left;vertical-align:top}th{background:var(--md-fill-strong);font-weight:600}td{background:var(--md-fill)}:is(th,td) :not(pre)>code{background:transparent}hr{border:0;border-top:1px solid var(--md-rule-strong);margin-block:10px}img{max-width:100%;height:auto;border-radius:4px}</style>
+</head><body>
+<h1>Software Requirements Specification: SHIELD Walk</h1>
+<p><strong>Urban Safety Infrastructure: safer routes, faster help, smarter cities</strong></p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left"></th>
+<th style="text-align:left"></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><strong>Document version</strong></td>
+<td style="text-align:left">1.0 (draft for implementation)</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Date</strong></td>
+<td style="text-align:left">6 October 2026</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Standard followed</strong></td>
+<td style="text-align:left">Structure based on IEEE 29148 / IEEE 830</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Track</strong></td>
+<td style="text-align:left">Smart &amp; Sustainable Cities (Geospatial tech, AI, CivicTech)</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Priority key</strong></td>
+<td style="text-align:left"><strong>M</strong> = Must, <strong>S</strong> = Should, <strong>C</strong> = Could. <strong>Rel</strong>: MVP = hackathon build, Pilot = campus pilot, Later = roadmap</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>1. Introduction</h2>
+<h3>1.1 Purpose</h3>
+<p>This document specifies the requirements for <strong>SHIELD Walk</strong>, a mobile and web platform that helps people choose safer walking routes, stay protected during a walk, and gives city and campus authorities street-level safety data. It is the reference for design, implementation, testing and acceptance.</p>
+<h3>1.2 Scope</h3>
+<p>SHIELD Walk consists of five deliverables:</p>
+<ol>
+<li><strong>Mobile app</strong> (Android first; React Native / Expo development build) for walkers and guardians.</li>
+<li><strong>Backend services</strong> (FastAPI, PostgreSQL + PostGIS, Redis) for routing scores, alerts, live location and sync.</li>
+<li><strong>On-device AI</strong> (audio distress detection and motion/fall detection) that runs without internet.</li>
+<li><strong>Offline alert path</strong> (local queue and native SMS) that works with no data connection.</li>
+<li><strong>Authority dashboard</strong> (web) for responders and city/campus analysts.</li>
+</ol>
+<p><strong>Out of scope for v1:</strong> iOS silent-SMS fallback (not permitted by iOS), wearable apps, federated learning, volunteer-responder network, payments, and any guarantee that help will arrive. SHIELD Walk is an assistive safety tool and does not replace emergency services.</p>
+<h3>1.3 Definitions</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Term</th>
+<th style="text-align:left">Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><strong>Walker</strong></td>
+<td style="text-align:left">Primary user taking a walk or commute</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Guardian</strong></td>
+<td style="text-align:left">Trusted contact who follows walks and receives alerts</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Responder</strong></td>
+<td style="text-align:left">Police, campus security or helpline operator using the dashboard</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Analyst</strong></td>
+<td style="text-align:left">City/campus user viewing aggregated safety data</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Walk (Trip)</strong></td>
+<td style="text-align:left">A tracked journey from origin to destination</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Segment</strong></td>
+<td style="text-align:left">A short piece of street (about 50 to 100 m) that receives a safety score</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Safety Score</strong></td>
+<td style="text-align:left">0 to 100 value for a segment or route (higher means safer)</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Alert</strong></td>
+<td style="text-align:left">An emergency event raised manually or automatically</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Duress PIN</strong></td>
+<td style="text-align:left">A second PIN that appears to unlock or cancel normally but silently raises an alert</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>OSM</strong></td>
+<td style="text-align:left">OpenStreetMap</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>DLT</strong></td>
+<td style="text-align:left">India's TRAI Distributed Ledger Technology registration for commercial SMS</td>
+</tr>
+</tbody>
+</table>
+<h3>1.4 References</h3>
+<p>OpenStreetMap and Overpass API docs; OpenRouteService or OSRM docs; PostGIS manual; Expo and React Native docs; TensorFlow Lite / YAMNet; NCRB <em>Crime in India 2024</em>; India's Digital Personal Data Protection Act, 2023 and applicable Rules; Google Play policy on SMS and Call Log permissions; Android foreground-service type requirements (Android 14+).</p>
+<hr>
+<h2>2. Overall Description</h2>
+<h3>2.1 Product perspective</h3>
+<p>SHIELD Walk is a new, self-contained system. It integrates with external services: a routing API, OSM data, an SMS gateway, push notification services, and (where available) emergency numbers.</p>
+<pre class="mermaid">graph TD
+    subgraph Phone[&#34;Mobile app (Android)&#34;]
+        UI[Screens]
+        Det[On-device detection: audio + motion]
+        Q[Local queue SQLite + native SMS]
+        Trk[Location tracker]
+    end
+    subgraph Back[&#34;Backend (FastAPI)&#34;]
+        API[REST + WebSocket gateway]
+        Route[Route scoring service]
+        Alert[Alert + escalation service]
+        Ev[Evidence service]
+    end
+    subgraph Data[&#34;Data layer&#34;]
+        PG[(PostgreSQL + PostGIS)]
+        RD[(Redis)]
+        OBJ[(Object storage S3/MinIO)]
+    end
+    Ext[Routing API, OSM/Overpass, SMS gateway, FCM]
+    Web[Authority dashboard]
+    UI --&gt; API
+    Det --&gt; Q
+    Q --&gt;|offline| SMS[Cellular SMS]
+    Q --&gt;|online| API
+    Trk --&gt; API
+    API --&gt; Route --&gt; PG
+    API --&gt; Alert --&gt; RD
+    API --&gt; Ev --&gt; OBJ
+    Alert --&gt; Ext
+    Route --&gt; Ext
+    Web --&gt; API
+</pre>
+<h3>2.2 Product functions (summary)</h3>
+<p>Safety-scored route comparison; live trip sharing with deviation alerts; automatic distress detection; one-tap and hardware-button SOS; silent duress PIN; offline SMS alerts with later sync; guardian escalation chain; encrypted evidence capture; post-walk ratings and hazard reports; authority dashboard with heatmaps; auto-generated incident report.</p>
+<h3>2.3 User classes</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Class</th>
+<th style="text-align:left">Description</th>
+<th style="text-align:left">Technical skill</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">Walker</td>
+<td style="text-align:left">Students, working women, night-shift workers</td>
+<td style="text-align:left">Low</td>
+</tr>
+<tr>
+<td style="text-align:left">Guardian</td>
+<td style="text-align:left">Parent, friend, hostel warden</td>
+<td style="text-align:left">Low</td>
+</tr>
+<tr>
+<td style="text-align:left">Responder</td>
+<td style="text-align:left">Campus security / police control room</td>
+<td style="text-align:left">Medium</td>
+</tr>
+<tr>
+<td style="text-align:left">Analyst</td>
+<td style="text-align:left">City or campus safety planner</td>
+<td style="text-align:left">Medium</td>
+</tr>
+<tr>
+<td style="text-align:left">Admin</td>
+<td style="text-align:left">Platform operator</td>
+<td style="text-align:left">High</td>
+</tr>
+</tbody>
+</table>
+<h3>2.4 Operating environment</h3>
+<ul>
+<li><strong>Mobile:</strong> Android 10+ (target API 34), ARM64, minimum 3 GB RAM, GPS and microphone required. Delivered as an Expo development build / EAS build (not Expo Go).</li>
+<li><strong>Backend:</strong> Linux, Docker Compose, Python 3.11+, PostgreSQL 15 with PostGIS, Redis 7.</li>
+<li><strong>Dashboard:</strong> Latest Chrome, Edge and Firefox, 1280 px wide and above.</li>
+</ul>
+<h3>2.5 Design and implementation constraints</h3>
+<ul>
+<li>C-1. Silent SMS sending is possible only on Android; the fallback is not available on iOS.</li>
+<li>C-2. Google Play restricts the SMS permission. The hackathon and pilot builds are sideloaded or distributed through internal testing; a Play release needs a compliant alternative (SMS intent with user tap, or default-handler exemption).</li>
+<li>C-3. Commercial SMS in India requires DLT registration with the gateway.</li>
+<li>C-4. Background microphone and location need foreground services with correct types on Android 14+, plus a persistent notification.</li>
+<li>C-5. Raw audio must not leave the device unless an alert is active.</li>
+<li>C-6. Safety scores must use physical street features, never demographics or neighbourhood identity.</li>
+</ul>
+<h3>2.6 Assumptions and dependencies</h3>
+<ul>
+<li>A-1. Walkers carry a smartphone with a SIM and a basic cellular plan (needed for SMS).</li>
+<li>A-2. OSM coverage is adequate in the pilot area (verify before launch).</li>
+<li>A-3. Guardians install the app or accept SMS-only alerts.</li>
+<li>D-1. Availability of the routing API and SMS gateway.</li>
+<li>D-2. A labelled audio dataset (Scream/Non-scream and ESC-50) is available for fine-tuning.</li>
+</ul>
+<hr>
+<h2>3. System Features and Functional Requirements</h2>
+<h3>3.1 Account, onboarding and security settings (AUTH)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">ID</th>
+<th style="text-align:left">Requirement</th>
+<th style="text-align:center">P</th>
+<th style="text-align:center">Rel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">AUTH-1</td>
+<td style="text-align:left">The system shall register a user with phone number, name and OTP verification.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">AUTH-2</td>
+<td style="text-align:left">The system shall issue short-lived access tokens (15 min) and refresh tokens (30 days) and allow revocation.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">AUTH-3</td>
+<td style="text-align:left">The user shall set a normal PIN and a different duress PIN; the app shall reject identical PINs.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">AUTH-4</td>
+<td style="text-align:left">PINs shall be stored only as salted slow hashes (Argon2id or bcrypt) on the server and in Android Keystore-protected storage on the device.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">AUTH-5</td>
+<td style="text-align:left">The app shall limit PIN attempts (5 failures, then escalating lockout) without revealing which PIN type failed.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">AUTH-6</td>
+<td style="text-align:left">The onboarding wizard shall collect: profile, PINs, at least one guardian, permissions (location, microphone, SMS, notifications, battery optimisation exemption).</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">AUTH-7</td>
+<td style="text-align:left">The user shall be able to delete their account and all personal data.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">Pilot</td>
+</tr>
+</tbody>
+</table>
+<h3>3.2 Guardians and contacts (GRD)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">ID</th>
+<th style="text-align:left">Requirement</th>
+<th style="text-align:center">P</th>
+<th style="text-align:center">Rel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">GRD-1</td>
+<td style="text-align:left">The user shall add up to 5 guardians with name, phone and priority order.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">GRD-2</td>
+<td style="text-align:left">A guardian shall accept an invitation by SMS link; unverified guardians still receive SMS alerts but not live tracking.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">GRD-3</td>
+<td style="text-align:left">The app shall display a key fingerprint (QR code) for each guardian so the walker can verify the encryption key out of band.</td>
+<td style="text-align:center">S</td>
+<td style="text-align:center">Pilot</td>
+</tr>
+<tr>
+<td style="text-align:left">GRD-4</td>
+<td style="text-align:left">The guardian shall see a live map, status and trip details for walks shared with them.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">GRD-5</td>
+<td style="text-align:left">The guardian shall be able to acknowledge an alert, call the walker, or escalate to responders with one tap.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">GRD-6</td>
+<td style="text-align:left">The walker shall be able to pause or stop sharing at any time.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+</tbody>
+</table>
+<h3>3.3 Safe route planning (ROUTE)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">ID</th>
+<th style="text-align:left">Requirement</th>
+<th style="text-align:center">P</th>
+<th style="text-align:center">Rel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">ROUTE-1</td>
+<td style="text-align:left">The user shall search a destination (text or map pin) and set origin (current location by default).</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">ROUTE-2</td>
+<td style="text-align:left">The system shall obtain 2 to 3 walking route alternatives from the routing provider.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">ROUTE-3</td>
+<td style="text-align:left">The system shall split each route into segments and compute a Safety Score per segment and per route using the model in Section 6.1.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">ROUTE-4</td>
+<td style="text-align:left">The app shall show routes ranked by Safety Score, labelling the fastest and safest, with distance, time, and score breakdown (lighting, activity, ratings).</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">ROUTE-5</td>
+<td style="text-align:left">Segments scoring below 40 shall be highlighted as &quot;caution&quot; on the map.</td>
+<td style="text-align:center">S</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">ROUTE-6</td>
+<td style="text-align:left">Route computation shall use the time of day (day, evening, night) to select weights.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">ROUTE-7</td>
+<td style="text-align:left">The system shall show nearby Safe Stops (police stations, hospitals, open pharmacies, 24-hour shops, verified partner shops) along the route.</td>
+<td style="text-align:center">S</td>
+<td style="text-align:center">Pilot</td>
+</tr>
+<tr>
+<td style="text-align:left">ROUTE-8</td>
+<td style="text-align:left">The app shall never state that a route is &quot;safe&quot;; it shall say &quot;higher safety score&quot; and show a disclaimer.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">ROUTE-9</td>
+<td style="text-align:left">The system shall cache scores per segment and refresh them at least daily or after new ratings.</td>
+<td style="text-align:center">S</td>
+<td style="text-align:center">Pilot</td>
+</tr>
+</tbody>
+</table>
+<h3>3.4 Walk tracking and live sharing (WALK)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">ID</th>
+<th style="text-align:left">Requirement</th>
+<th style="text-align:center">P</th>
+<th style="text-align:center">Rel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">WALK-1</td>
+<td style="text-align:left">The user shall start a walk on a chosen route; the app shall begin foreground tracking with a persistent notification.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">WALK-2</td>
+<td style="text-align:left">Location shall be sampled adaptively: every 10 s in normal mode, every 2 s after any trigger or deviation, and every 30 s when battery is under 15%.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">WALK-3</td>
+<td style="text-align:left">The system shall stream location to guardians in near real time via WebSocket, with HTTP batching as a fallback.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">WALK-4</td>
+<td style="text-align:left">The system shall flag <strong>route deviation</strong> when the walker is more than 150 m from the chosen route for more than 30 s (thresholds configurable), then prompt the walker and notify guardians if not dismissed within 20 s.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">WALK-5</td>
+<td style="text-align:left">The system shall flag an <strong>unexpected long stop</strong> (no movement beyond 30 m for 5 min mid-route).</td>
+<td style="text-align:center">S</td>
+<td style="text-align:center">Pilot</td>
+</tr>
+<tr>
+<td style="text-align:left">WALK-6</td>
+<td style="text-align:left">The user shall be able to set a <strong>check-in timer</strong> (dead-man's switch); failing to confirm in time triggers the alert flow.</td>
+<td style="text-align:center">S</td>
+<td style="text-align:center">Pilot</td>
+</tr>
+<tr>
+<td style="text-align:left">WALK-7</td>
+<td style="text-align:left">On arrival (within 30 m of the destination), the app shall end the walk, notify guardians, and show the rating prompt.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">WALK-8</td>
+<td style="text-align:left"><strong>Low battery survival mode</strong>: at 15% battery the app shall send a final location to guardians and drop to minimal sampling.</td>
+<td style="text-align:center">S</td>
+<td style="text-align:center">Pilot</td>
+</tr>
+</tbody>
+</table>
+<h3>3.5 Distress detection (DET)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">ID</th>
+<th style="text-align:left">Requirement</th>
+<th style="text-align:center">P</th>
+<th style="text-align:center">Rel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">DET-1</td>
+<td style="text-align:left">During an active walk (or when enabled), the app shall run an on-device audio classifier on 0.975 s windows with no network access required.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">DET-2</td>
+<td style="text-align:left">The audio model shall be a pretrained embedding model (YAMNet or equivalent) with a small classification head fine-tuned for distress sounds, quantised for TFLite.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">DET-3</td>
+<td style="text-align:left">The audio detector shall trigger the pre-alert when scream probability is at least 0.80 in 3 of 5 consecutive windows (default; tunable).</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">DET-4</td>
+<td style="text-align:left">The app shall detect keywords (&quot;bachao&quot;, &quot;help&quot;, &quot;chhodo&quot;) using a keyword-spotting model, as an additional trigger.</td>
+<td style="text-align:center">C</td>
+<td style="text-align:center">Later</td>
+</tr>
+<tr>
+<td style="text-align:left">DET-5</td>
+<td style="text-align:left">The app shall detect falls and struggles from accelerometer and gyroscope: impact above 2.5 g followed by 10 s of stillness, or sustained erratic motion pattern.</td>
+<td style="text-align:center">S</td>
+<td style="text-align:center">Pilot</td>
+</tr>
+<tr>
+<td style="text-align:left">DET-6</td>
+<td style="text-align:left">A composite threat score shall combine audio, motion and context (night, high-risk area) using weights in Section 6.2.</td>
+<td style="text-align:center">S</td>
+<td style="text-align:center">Pilot</td>
+</tr>
+<tr>
+<td style="text-align:left">DET-7</td>
+<td style="text-align:left">The model shall be evaluated on a held-out set; the team shall report precision, recall and the false-positive rate per ESC-50 class (crying, laughing, siren, glass breaking).</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">DET-8</td>
+<td style="text-align:left">Raw audio shall be processed in memory and discarded unless an alert becomes active (then see EVID).</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+</tbody>
+</table>
+<h3>3.6 Alerts, SOS and escalation (ALERT)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">ID</th>
+<th style="text-align:left">Requirement</th>
+<th style="text-align:center">P</th>
+<th style="text-align:center">Rel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">ALERT-1</td>
+<td style="text-align:left">The user shall trigger SOS by on-screen long-press (500 ms), by hardware button pattern (power button 5 times or volume combo, where the OS allows), or by in-app voice keyword when enabled.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">ALERT-2</td>
+<td style="text-align:left">Automatic triggers (DET, WALK-4, WALK-6) shall start a <strong>pre-alert</strong>: a 10 s countdown with vibration, cancellable only with the normal PIN.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">ALERT-3</td>
+<td style="text-align:left">A duress PIN entered at cancel shall appear to cancel normally while sending a silent high-priority alert.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">ALERT-4</td>
+<td style="text-align:left">On alert confirmation, the app shall first write the alert to the local queue (SQLite) with a UUID, then dispatch over all available channels in parallel.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">ALERT-5</td>
+<td style="text-align:left"><strong>Offline path:</strong> the app shall send an SMS with name, last known coordinates and a map link to all guardians using the native SMS API, with no data connection required.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">ALERT-6</td>
+<td style="text-align:left"><strong>Online path:</strong> the app shall post the alert to the backend, which shall send push notifications to guardians and (if configured) SMS via the gateway and forward to responders.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">ALERT-7</td>
+<td style="text-align:left">The queue shall retry sync with exponential backoff (up to 5 attempts, then wait for connectivity change) and the API shall treat repeated submissions of the same UUID as idempotent.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">ALERT-8</td>
+<td style="text-align:left"><strong>Escalation chain:</strong> if guardian 1 does not acknowledge within 60 s, the system shall notify guardian 2, then guardian 3, then responders (if configured).</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">ALERT-9</td>
+<td style="text-align:left">Emergency numbers (112 or local equivalents) shall be configurable per region and disabled by default until the team has verified that the number accepts SMS in that state.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">ALERT-10</td>
+<td style="text-align:left">The alert shall move through the states in Section 6.3 and every transition shall be logged.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">ALERT-11</td>
+<td style="text-align:left">After an alert, the user shall be able to mark it <strong>false alarm</strong> and give a reason; the reason shall be stored to tune thresholds.</td>
+<td style="text-align:center">S</td>
+<td style="text-align:center">Pilot</td>
+</tr>
+<tr>
+<td style="text-align:left">ALERT-12</td>
+<td style="text-align:left"><strong>Disguised mode</strong>: the app icon and name may be set to a neutral utility (for example &quot;Calculator&quot;), opening SHIELD via a secret input.</td>
+<td style="text-align:center">C</td>
+<td style="text-align:center">Later</td>
+</tr>
+</tbody>
+</table>
+<h3>3.7 Evidence capture (EVID)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">ID</th>
+<th style="text-align:left">Requirement</th>
+<th style="text-align:center">P</th>
+<th style="text-align:center">Rel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">EVID-1</td>
+<td style="text-align:left">When an alert becomes active, the app shall record audio in 30 s rolling chunks.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">EVID-2</td>
+<td style="text-align:left">Each chunk shall be encrypted on the device with AES-256-GCM using a fresh random key; the key shall be sealed for each guardian with their public key (RSA-OAEP-2048 or X25519 sealed box).</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">EVID-3</td>
+<td style="text-align:left">The server shall store ciphertext only and shall not hold plaintext keys.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">EVID-4</td>
+<td style="text-align:left">Each chunk shall be hashed (SHA-256) and chained with the previous hash; the head hash shall be submitted to the server for timestamping.</td>
+<td style="text-align:center">S</td>
+<td style="text-align:center">Pilot</td>
+</tr>
+<tr>
+<td style="text-align:left">EVID-5</td>
+<td style="text-align:left">Local chunks shall be deleted after upload is confirmed. Upload shall retry when connectivity returns.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">EVID-6</td>
+<td style="text-align:left">The documentation shall describe the system as &quot;end-to-end encrypted, server cannot read audio&quot;, not &quot;zero-knowledge&quot;, unless key verification (GRD-3) is implemented.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+</tbody>
+</table>
+<h3>3.8 Duress mode (DUR)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">ID</th>
+<th style="text-align:left">Requirement</th>
+<th style="text-align:center">P</th>
+<th style="text-align:center">Rel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">DUR-1</td>
+<td style="text-align:left">The duress PIN shall be verified <strong>locally</strong> first so it works offline; the result shall be reported to the server when possible.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">DUR-2</td>
+<td style="text-align:left">The UI, timing and animation for the duress and normal PINs shall be identical.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">DUR-3</td>
+<td style="text-align:left">Entering the duress PIN shall trigger ALERT-4 to ALERT-8 silently (no sound, vibration or visible indicator).</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">DUR-4</td>
+<td style="text-align:left">Duress alerts shall be marked high priority in guardian and responder views.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+</tbody>
+</table>
+<h3>3.9 Ratings and hazard reports (RATE)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">ID</th>
+<th style="text-align:left">Requirement</th>
+<th style="text-align:center">P</th>
+<th style="text-align:center">Rel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">RATE-1</td>
+<td style="text-align:left">After a walk, the app shall offer a one-tap rating: Lit? Busy? Felt safe? (yes/no each), optional note.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">RATE-2</td>
+<td style="text-align:left">A rating shall be accepted only for a walk whose GPS trace covers at least 70% of the rated segments.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">RATE-3</td>
+<td style="text-align:left">The system shall limit users to one rating per segment per walk and 20 ratings per day, and discount ratings that deviate strongly from consensus.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">Pilot</td>
+</tr>
+<tr>
+<td style="text-align:left">RATE-4</td>
+<td style="text-align:left">Users shall report hazards (broken light, harassment spot, blocked path) with a pin, category and optional photo.</td>
+<td style="text-align:center">S</td>
+<td style="text-align:center">Pilot</td>
+</tr>
+<tr>
+<td style="text-align:left">RATE-5</td>
+<td style="text-align:left">Ratings shall be anonymised before appearing on any map or dashboard.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">RATE-6</td>
+<td style="text-align:left">A moderator shall review reported hazards flagged as abusive.</td>
+<td style="text-align:center">S</td>
+<td style="text-align:center">Pilot</td>
+</tr>
+</tbody>
+</table>
+<h3>3.10 Authority dashboard (DASH)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">ID</th>
+<th style="text-align:left">Requirement</th>
+<th style="text-align:center">P</th>
+<th style="text-align:center">Rel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">DASH-1</td>
+<td style="text-align:left">Responders shall sign in with role-based access and see active alerts on a live map with walker details, last location, trail and acknowledgement status.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">DASH-2</td>
+<td style="text-align:left">Responders shall be able to acknowledge, assign and resolve alerts, and add notes.</td>
+<td style="text-align:center">S</td>
+<td style="text-align:center">Pilot</td>
+</tr>
+<tr>
+<td style="text-align:left">DASH-3</td>
+<td style="text-align:left">Analysts shall see a heatmap of ratings, hazard reports and anonymised incident clusters, filterable by date, time of day and category.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">DASH-4</td>
+<td style="text-align:left">The dashboard shall list <strong>infrastructure gaps</strong> (segments with low lighting score and high night usage) as a ranked work list, exportable as CSV.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">DASH-5</td>
+<td style="text-align:left">Dashboard data shall be aggregated to a minimum cell size (for example 5 incidents or 20 walks) before display, to prevent identification of individuals.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">MVP</td>
+</tr>
+<tr>
+<td style="text-align:left">DASH-6</td>
+<td style="text-align:left">All dashboard access to personal data shall be written to an audit log.</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">Pilot</td>
+</tr>
+</tbody>
+</table>
+<h3>3.11 Reporting (REP)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">ID</th>
+<th style="text-align:left">Requirement</th>
+<th style="text-align:center">P</th>
+<th style="text-align:center">Rel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">REP-1</td>
+<td style="text-align:left">After an alert, the walker shall be able to generate a PDF incident report with timeline, trigger type, location trail, evidence hashes and guardian responses.</td>
+<td style="text-align:center">S</td>
+<td style="text-align:center">Pilot</td>
+</tr>
+<tr>
+<td style="text-align:left">REP-2</td>
+<td style="text-align:left">The report shall carry a disclaimer and be shareable by the user only (no automatic sending to authorities).</td>
+<td style="text-align:center">M</td>
+<td style="text-align:center">Pilot</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>4. External Interface Requirements</h2>
+<h3>4.1 User interface (key screens)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Screen</th>
+<th style="text-align:left">Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">Onboarding wizard</td>
+<td style="text-align:left">Profile, PINs, guardians, permissions</td>
+</tr>
+<tr>
+<td style="text-align:left">Home</td>
+<td style="text-align:left">Destination search, current status, quick SOS</td>
+</tr>
+<tr>
+<td style="text-align:left">Route comparison</td>
+<td style="text-align:left">Map with 2-3 routes, scores, breakdown, Start Walk</td>
+</tr>
+<tr>
+<td style="text-align:left">Active walk</td>
+<td style="text-align:left">Map, status chip, timer, SOS, check-in, end walk</td>
+</tr>
+<tr>
+<td style="text-align:left">Pre-alert</td>
+<td style="text-align:left">Full-screen 10 s countdown with PIN pad</td>
+</tr>
+<tr>
+<td style="text-align:left">Guardian view</td>
+<td style="text-align:left">Live map, alert list, acknowledge/escalate buttons</td>
+</tr>
+<tr>
+<td style="text-align:left">Rating</td>
+<td style="text-align:left">Three one-tap questions and optional hazard report</td>
+</tr>
+<tr>
+<td style="text-align:left">Settings</td>
+<td style="text-align:left">Guardians, PINs, sensitivity, languages, disguised mode, data deletion</td>
+</tr>
+<tr>
+<td style="text-align:left">Dashboard (web)</td>
+<td style="text-align:left">Live alerts, heatmap, infrastructure work list, exports</td>
+</tr>
+</tbody>
+</table>
+<p>UI rules: large tap targets (48 dp minimum); high contrast; English, Hindi and Punjabi labels; haptic feedback for confirmations; no colour-only meaning.</p>
+<h3>4.2 Hardware interfaces</h3>
+<p>GPS, microphone, accelerometer, gyroscope, vibration motor, cellular modem (SMS), hardware buttons (power and volume), battery status.</p>
+<h3>4.3 Software interfaces</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Interface</th>
+<th style="text-align:left">Use</th>
+<th style="text-align:left">Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">Routing API (OpenRouteService or OSRM)</td>
+<td style="text-align:left">Walking route alternatives</td>
+<td style="text-align:left">Free tier limits; cache results</td>
+</tr>
+<tr>
+<td style="text-align:left">Overpass API / OSM extract</td>
+<td style="text-align:left">Street lamps, shops, amenities, police, hospitals</td>
+<td style="text-align:left">Load an extract of the pilot area into PostGIS to avoid live API limits</td>
+</tr>
+<tr>
+<td style="text-align:left">SMS gateway (for example Twilio or an Indian provider)</td>
+<td style="text-align:left">Server-side SMS to guardians</td>
+<td style="text-align:left">Requires DLT registration</td>
+</tr>
+<tr>
+<td style="text-align:left">FCM / Expo Push</td>
+<td style="text-align:left">Push notifications</td>
+<td style="text-align:left">Data messages for high priority</td>
+</tr>
+<tr>
+<td style="text-align:left">Map tiles</td>
+<td style="text-align:left">Map display</td>
+<td style="text-align:left">Use a provider that permits the use case</td>
+</tr>
+</tbody>
+</table>
+<h3>4.4 Communication interfaces</h3>
+<p>HTTPS (TLS 1.2+) for REST; WSS for live location; cellular SMS for the offline path. No sensitive data in URLs or logs.</p>
+<h3>4.5 REST API (v1)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Method</th>
+<th style="text-align:left">Endpoint</th>
+<th style="text-align:center">Auth</th>
+<th style="text-align:left">Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">POST</td>
+<td style="text-align:left"><code>/auth/otp/request</code>, <code>/auth/otp/verify</code></td>
+<td style="text-align:center">No</td>
+<td style="text-align:left">OTP login and registration</td>
+</tr>
+<tr>
+<td style="text-align:left">POST</td>
+<td style="text-align:left"><code>/auth/refresh</code></td>
+<td style="text-align:center">Refresh</td>
+<td style="text-align:left">New access token</td>
+</tr>
+<tr>
+<td style="text-align:left">GET/PUT</td>
+<td style="text-align:left"><code>/me</code></td>
+<td style="text-align:center">Yes</td>
+<td style="text-align:left">Profile</td>
+</tr>
+<tr>
+<td style="text-align:left">POST</td>
+<td style="text-align:left"><code>/me/pins</code></td>
+<td style="text-align:center">Yes</td>
+<td style="text-align:left">Set normal and duress PIN hashes</td>
+</tr>
+<tr>
+<td style="text-align:left">GET/POST/DELETE</td>
+<td style="text-align:left"><code>/guardians</code></td>
+<td style="text-align:center">Yes</td>
+<td style="text-align:left">Manage guardians</td>
+</tr>
+<tr>
+<td style="text-align:left">POST</td>
+<td style="text-align:left"><code>/routes/compare</code></td>
+<td style="text-align:center">Yes</td>
+<td style="text-align:left">Body: origin, destination, time. Returns scored routes</td>
+</tr>
+<tr>
+<td style="text-align:left">POST</td>
+<td style="text-align:left"><code>/walks</code></td>
+<td style="text-align:center">Yes</td>
+<td style="text-align:left">Start a walk</td>
+</tr>
+<tr>
+<td style="text-align:left">POST</td>
+<td style="text-align:left"><code>/walks/{id}/points</code></td>
+<td style="text-align:center">Yes</td>
+<td style="text-align:left">Batch location points</td>
+</tr>
+<tr>
+<td style="text-align:left">POST</td>
+<td style="text-align:left"><code>/walks/{id}/end</code></td>
+<td style="text-align:center">Yes</td>
+<td style="text-align:left">End walk</td>
+</tr>
+<tr>
+<td style="text-align:left">POST</td>
+<td style="text-align:left"><code>/alerts/sync</code></td>
+<td style="text-align:center">Yes</td>
+<td style="text-align:left">Idempotent alert upload (UUID)</td>
+</tr>
+<tr>
+<td style="text-align:left">PUT</td>
+<td style="text-align:left"><code>/alerts/{id}/state</code></td>
+<td style="text-align:center">Yes</td>
+<td style="text-align:left">Transition state</td>
+</tr>
+<tr>
+<td style="text-align:left">POST</td>
+<td style="text-align:left"><code>/alerts/{id}/ack</code></td>
+<td style="text-align:center">Guardian</td>
+<td style="text-align:left">Acknowledge</td>
+</tr>
+<tr>
+<td style="text-align:left">POST</td>
+<td style="text-align:left"><code>/evidence/chunks</code></td>
+<td style="text-align:center">Yes</td>
+<td style="text-align:left">Upload encrypted chunk metadata and file</td>
+</tr>
+<tr>
+<td style="text-align:left">POST</td>
+<td style="text-align:left"><code>/ratings</code></td>
+<td style="text-align:center">Yes</td>
+<td style="text-align:left">Submit walk rating</td>
+</tr>
+<tr>
+<td style="text-align:left">POST</td>
+<td style="text-align:left"><code>/hazards</code></td>
+<td style="text-align:center">Yes</td>
+<td style="text-align:left">Report a hazard</td>
+</tr>
+<tr>
+<td style="text-align:left">GET</td>
+<td style="text-align:left"><code>/dashboard/heatmap</code>, <code>/dashboard/gaps</code></td>
+<td style="text-align:center">Analyst</td>
+<td style="text-align:left">Aggregated data</td>
+</tr>
+<tr>
+<td style="text-align:left">GET</td>
+<td style="text-align:left"><code>/dashboard/alerts/active</code></td>
+<td style="text-align:center">Responder</td>
+<td style="text-align:left">Active alerts</td>
+</tr>
+<tr>
+<td style="text-align:left">WS</td>
+<td style="text-align:left"><code>/ws/walk/{id}?ticket=…</code></td>
+<td style="text-align:center">Ticket</td>
+<td style="text-align:left">Live location (short-lived one-time ticket, not the JWT)</td>
+</tr>
+</tbody>
+</table>
+<p>Error format: <code>{ &quot;error&quot;: { &quot;code&quot;: &quot;...&quot;, &quot;message&quot;: &quot;...&quot; } }</code>. All write endpoints shall be rate limited.</p>
+<hr>
+<h2>5. Data Requirements</h2>
+<h3>5.1 Entities</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Entity</th>
+<th style="text-align:left">Key fields</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><code>users</code></td>
+<td style="text-align:left">id, phone, name, pin_hash, duress_hash, public_key, push_token, language, created_at</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>guardians</code></td>
+<td style="text-align:left">id, user_id, name, phone, priority, verified, public_key, key_fingerprint</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>walks</code></td>
+<td style="text-align:left">id, user_id, route (LineString), start/end time, status, shared_with</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>walk_points</code></td>
+<td style="text-align:left">walk_id, geom (Point 4326), speed, accuracy, ts (indexed on walk_id, ts)</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>alerts</code></td>
+<td style="text-align:left">id (client UUID), user_id, walk_id, trigger_type, state, geom, priority, created_at</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>alert_events</code></td>
+<td style="text-align:left">alert_id, event_type, actor, ts, meta (JSON)</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>evidence_chunks</code></td>
+<td style="text-align:left">id, alert_id, seq, sha256, prev_sha256, storage_key, wrapped_keys (JSON), ts</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>segments</code></td>
+<td style="text-align:left">id, osm_way_id, geom (LineString), length_m, lamp_density, activity_index, static_score</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>ratings</code></td>
+<td style="text-align:left">id, walk_id, segment_id, lit, busy, felt_safe, ts (user id stored separately and hashed)</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>hazards</code></td>
+<td style="text-align:left">id, geom, category, status, photo_key, ts</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>safe_stops</code></td>
+<td style="text-align:left">id, name, type, geom, hours, verified</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>audit_log</code></td>
+<td style="text-align:left">id, actor, action, target, ts</td>
+</tr>
+<tr>
+<td style="text-align:left"><code>false_alarm_feedback</code></td>
+<td style="text-align:left">alert_id, reason, ts</td>
+</tr>
+</tbody>
+</table>
+<h3>5.2 Retention and privacy</h3>
+<ul>
+<li>Walk points: delete 30 days after the walk ends unless attached to an alert.</li>
+<li>Alert data and evidence: retain for 1 year (or until the user deletes), then delete.</li>
+<li>Ratings: retain anonymised indefinitely.</li>
+<li>Dashboard data is aggregated; no raw trails of non-alert walks are visible to authorities.</li>
+<li>Only data needed for the feature is collected (data minimisation); explicit consent is recorded for location, microphone and contact data.</li>
+</ul>
+<hr>
+<h2>6. Algorithms and Behaviour Specifications</h2>
+<h3>6.1 Safety Score model</h3>
+<p><strong>Segment score</strong> (0 to 100), computed for each segment <em>s</em>:</p>
+<p><code>Score(s) = 100 × ( w_L · L + w_A · A + w_R · R + w_P · P )</code></p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Factor</th>
+<th style="text-align:left">Definition</th>
+<th style="text-align:left">Normalisation (0 to 1)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><strong>L</strong> Lighting</td>
+<td style="text-align:left">Street lamps within 25 m per 100 m of segment, or <code>lit=yes</code> tag</td>
+<td style="text-align:left"><code>min(1, density / 3)</code></td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>A</strong> Activity</td>
+<td style="text-align:left">Open shops, bus stops, transit stations, and restaurants within 50 m, using opening hours at the walking time</td>
+<td style="text-align:left"><code>min(1, count / 4)</code></td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>R</strong> Community rating</td>
+<td style="text-align:left">Shrunk mean of &quot;felt safe&quot; ratings: <code>(n·mean + k·prior) / (n + k)</code>, with k = 5, prior = 0.5</td>
+<td style="text-align:left">0 to 1</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>P</strong> Proximity to help</td>
+<td style="text-align:left">Distance to the nearest police, hospital or Safe Stop</td>
+<td style="text-align:left"><code>max(0, 1 − d / 500 m)</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Weights by time of day:</strong></p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Period</th>
+<th style="text-align:center">w_L</th>
+<th style="text-align:center">w_A</th>
+<th style="text-align:center">w_R</th>
+<th style="text-align:center">w_P</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">Day (06:00-18:00)</td>
+<td style="text-align:center">0.15</td>
+<td style="text-align:center">0.30</td>
+<td style="text-align:center">0.35</td>
+<td style="text-align:center">0.20</td>
+</tr>
+<tr>
+<td style="text-align:left">Evening (18:00-21:00)</td>
+<td style="text-align:center">0.30</td>
+<td style="text-align:center">0.25</td>
+<td style="text-align:center">0.25</td>
+<td style="text-align:center">0.20</td>
+</tr>
+<tr>
+<td style="text-align:left">Night (21:00-06:00)</td>
+<td style="text-align:center">0.40</td>
+<td style="text-align:center">0.10</td>
+<td style="text-align:center">0.30</td>
+<td style="text-align:center">0.20</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Route score:</strong> <code>0.7 × length-weighted mean(segment scores) + 0.3 × minimum segment score</code>. This penalises one very dark stretch even if the rest is good.</p>
+<p><strong>Cold start:</strong> with no ratings, R equals the prior (0.5), so scores come from OSM data on day one. Weights are initial defaults and shall be reviewed after pilot data. The model shall be documented in the app (&quot;How is this score calculated?&quot;).</p>
+<p><strong>Fairness rule:</strong> no input may be derived from demographics, religion, caste, or neighbourhood reputation.</p>
+<h3>6.2 Composite threat score (DET-6)</h3>
+<p><code>S = min(100, round( (0.45·Audio + 0.30·Motion + 0.25·Context) × M_night ) + B_manual )</code></p>
+<ul>
+<li>Audio and Motion are 0 to 100 from the models; Context is 100 in a segment scoring below 40, else 0 to 50 scaled by the route score.</li>
+<li>M_night = 1.2 from 21:00 to 06:00. B_manual = 40 for manual SOS.</li>
+<li>Pre-alert threshold: 70 (60 if the segment score is below 40). Parameters are configurable and shall be tuned using false-alarm feedback.</li>
+</ul>
+<h3>6.3 Alert state machine</h3>
+<pre class="mermaid">stateDiagram-v2
+    [*] --&gt; PRE_ALERT: trigger
+    PRE_ALERT --&gt; CANCELLED: normal PIN
+    PRE_ALERT --&gt; ACTIVE: timeout or SOS or duress PIN
+    ACTIVE --&gt; ACKNOWLEDGED: guardian ack
+    ACTIVE --&gt; ESCALATED: no ack in 60 s
+    ESCALATED --&gt; ACKNOWLEDGED: ack
+    ACKNOWLEDGED --&gt; RESOLVED: walker or responder
+    ACTIVE --&gt; FALSE_ALARM: walker marks
+    ACKNOWLEDGED --&gt; FALSE_ALARM: walker marks
+    RESOLVED --&gt; [*]
+    CANCELLED --&gt; [*]
+    FALSE_ALARM --&gt; [*]
+</pre>
+<h3>6.4 Offline behaviour</h3>
+<ol>
+<li>Trigger writes the alert (UUID, location, timestamp) to SQLite as <code>PENDING</code>.</li>
+<li>SMS is sent immediately; the status changes to <code>SMS_SENT</code>.</li>
+<li>On connectivity, the app calls <code>/alerts/sync</code>; on success, the status is <code>SYNCED</code>.</li>
+<li>Duplicate UUIDs are ignored by the server.</li>
+</ol>
+<hr>
+<h2>7. Non-Functional Requirements</h2>
+<p>Targets below are design goals to be verified in testing, not measured results.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">ID</th>
+<th style="text-align:left">Category</th>
+<th style="text-align:left">Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">NFR-1</td>
+<td style="text-align:left">Performance</td>
+<td style="text-align:left">Route comparison (3 routes, up to 3 km) returns within 3 s at p95 with warm cache.</td>
+</tr>
+<tr>
+<td style="text-align:left">NFR-2</td>
+<td style="text-align:left">Performance</td>
+<td style="text-align:left">On-device audio inference completes within 200 ms per window on a mid-range phone.</td>
+</tr>
+<tr>
+<td style="text-align:left">NFR-3</td>
+<td style="text-align:left">Performance</td>
+<td style="text-align:left">Live location appears on the guardian screen within 3 s p95 on a 4G connection. Measure this; do not claim lower figures without data.</td>
+</tr>
+<tr>
+<td style="text-align:left">NFR-4</td>
+<td style="text-align:left">Performance</td>
+<td style="text-align:left">From trigger confirmation to SMS handoff to the modem: under 5 s.</td>
+</tr>
+<tr>
+<td style="text-align:left">NFR-5</td>
+<td style="text-align:left">Reliability</td>
+<td style="text-align:left">No alert shall be lost: an alert accepted locally persists across app kill and reboot until synced.</td>
+</tr>
+<tr>
+<td style="text-align:left">NFR-6</td>
+<td style="text-align:left">Availability</td>
+<td style="text-align:left">Backend target 99.5% during the pilot; offline SMS path independent of the backend.</td>
+</tr>
+<tr>
+<td style="text-align:left">NFR-7</td>
+<td style="text-align:left">Battery</td>
+<td style="text-align:left">Monitoring mode target of 10% per hour or less in a 1-hour walk, measured on a reference device. Use adaptive sampling.</td>
+</tr>
+<tr>
+<td style="text-align:left">NFR-8</td>
+<td style="text-align:left">Accuracy</td>
+<td style="text-align:left">Report precision, recall and false-alarm rate. Initial goals: recall at least 85% and at most 5% false triggers on the ESC-50 distractor set; revise after testing.</td>
+</tr>
+<tr>
+<td style="text-align:left">NFR-9</td>
+<td style="text-align:left">Security</td>
+<td style="text-align:left">TLS 1.2+; secrets only from environment variables and startup fails if <code>JWT_SECRET</code>, DB URL or SMS credentials are missing; no hard-coded secrets.</td>
+</tr>
+<tr>
+<td style="text-align:left">NFR-10</td>
+<td style="text-align:left">Security</td>
+<td style="text-align:left">WebSocket uses one-time tickets; JWT never appears in URLs or logs.</td>
+</tr>
+<tr>
+<td style="text-align:left">NFR-11</td>
+<td style="text-align:left">Security</td>
+<td style="text-align:left">Audio and evidence encrypted with AES-256-GCM; key wrapping with RSA-OAEP or sealed box; dependencies scanned for known vulnerabilities.</td>
+</tr>
+<tr>
+<td style="text-align:left">NFR-12</td>
+<td style="text-align:left">Privacy</td>
+<td style="text-align:left">Compliance with the DPDP Act: consent, purpose limitation, minimisation, right to erasure; privacy notice in plain language.</td>
+</tr>
+<tr>
+<td style="text-align:left">NFR-13</td>
+<td style="text-align:left">Usability</td>
+<td style="text-align:left">The SOS action is reachable within 2 taps from the lock screen or by hardware button; the core flows are usable one-handed.</td>
+</tr>
+<tr>
+<td style="text-align:left">NFR-14</td>
+<td style="text-align:left">Accessibility</td>
+<td style="text-align:left">Screen reader labels, large text support, haptic and visual alerts for hearing- or speech-impaired users.</td>
+</tr>
+<tr>
+<td style="text-align:left">NFR-15</td>
+<td style="text-align:left">Localisation</td>
+<td style="text-align:left">English, Hindi, Punjabi UI strings in resource files.</td>
+</tr>
+<tr>
+<td style="text-align:left">NFR-16</td>
+<td style="text-align:left">Scalability</td>
+<td style="text-align:left">Pilot target: 1,000 registered users and 200 concurrent walks; design allows horizontal scaling of API workers.</td>
+</tr>
+<tr>
+<td style="text-align:left">NFR-17</td>
+<td style="text-align:left">Maintainability</td>
+<td style="text-align:left">Modular services, typed APIs (OpenAPI), 70% unit test coverage on scoring and alert logic, CI on every push.</td>
+</tr>
+<tr>
+<td style="text-align:left">NFR-18</td>
+<td style="text-align:left">Observability</td>
+<td style="text-align:left">Structured JSON logs, request IDs, alert delivery metrics (sent, delivered, acknowledged times).</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>8. Legal, Ethical and Compliance Requirements</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">ID</th>
+<th style="text-align:left">Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">LEG-1</td>
+<td style="text-align:left">Obtain explicit, revocable consent for location, microphone and contact data; show clear purposes.</td>
+</tr>
+<tr>
+<td style="text-align:left">LEG-2</td>
+<td style="text-align:left">Guardians shall consent before receiving live tracking; walkers shall be told what guardians can see.</td>
+</tr>
+<tr>
+<td style="text-align:left">LEG-3</td>
+<td style="text-align:left">The app shall display that it is an assistive tool and that emergency services remain the primary contact.</td>
+</tr>
+<tr>
+<td style="text-align:left">LEG-4</td>
+<td style="text-align:left">Complete SMS gateway DLT registration (sender ID, templates) before production SMS in India.</td>
+</tr>
+<tr>
+<td style="text-align:left">LEG-5</td>
+<td style="text-align:left">Comply with Google Play permission policy; use sideload/internal testing for the pilot.</td>
+</tr>
+<tr>
+<td style="text-align:left">LEG-6</td>
+<td style="text-align:left">Moderate ratings and reports; provide a takedown path for businesses or residents who contest a listing.</td>
+</tr>
+<tr>
+<td style="text-align:left">LEG-7</td>
+<td style="text-align:left">Do not use stalking-prone features: guardians cannot track a walker outside a shared walk or alert.</td>
+</tr>
+<tr>
+<td style="text-align:left">LEG-8</td>
+<td style="text-align:left">Provide a data protection contact and a breach-response procedure.</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>9. Verification and Acceptance</h2>
+<h3>9.1 Test strategy</h3>
+<ul>
+<li><strong>Unit tests:</strong> scoring functions, state machine, queue logic, crypto helpers.</li>
+<li><strong>Integration tests:</strong> API with PostGIS test database; WebSocket live location; alert sync idempotency.</li>
+<li><strong>Model tests:</strong> held-out evaluation; per-class confusion matrix; threshold sweep.</li>
+<li><strong>Field tests:</strong> walk the pilot area at day and night; airplane mode scream test; SMS delivery on two carriers.</li>
+<li><strong>Security tests:</strong> PIN brute-force lockout, token expiry, WebSocket ticket reuse, encrypted evidence cannot be decrypted by the server.</li>
+<li><strong>Usability tests:</strong> 5 to 10 target users complete onboarding, a walk and a false alarm cancel without help.</li>
+<li><strong>Device matrix:</strong> at least 3 Android devices across vendors (battery optimisation behaviour differs).</li>
+</ul>
+<h3>9.2 Acceptance criteria (MVP)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">#</th>
+<th style="text-align:left">Criterion</th>
+<th style="text-align:left">Linked requirements</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:left">Three scored routes are displayed for a pilot-area destination within 3 s, with the fastest and safest labelled.</td>
+<td style="text-align:left">ROUTE-1 to ROUTE-6</td>
+</tr>
+<tr>
+<td style="text-align:center">2</td>
+<td style="text-align:left">A walk can be started, shared and followed live by a guardian device; moving off route 150 m triggers a deviation prompt.</td>
+<td style="text-align:left">WALK-1 to WALK-4</td>
+</tr>
+<tr>
+<td style="text-align:center">3</td>
+<td style="text-align:left">In airplane mode, a scream test triggers a pre-alert and, after the countdown, an SMS with location reaches the guardian.</td>
+<td style="text-align:left">DET-1 to DET-3, ALERT-2, ALERT-4, ALERT-5</td>
+</tr>
+<tr>
+<td style="text-align:center">4</td>
+<td style="text-align:left">After reconnection, the alert appears once in the backend and on the dashboard (no duplicates).</td>
+<td style="text-align:left">ALERT-7</td>
+</tr>
+<tr>
+<td style="text-align:center">5</td>
+<td style="text-align:left">Entering the duress PIN looks like a normal cancel but notifies the guardian silently, even with no data.</td>
+<td style="text-align:left">DUR-1 to DUR-4</td>
+</tr>
+<tr>
+<td style="text-align:center">6</td>
+<td style="text-align:left">If guardian 1 does not acknowledge in 60 s, guardian 2 is notified.</td>
+<td style="text-align:left">ALERT-8</td>
+</tr>
+<tr>
+<td style="text-align:center">7</td>
+<td style="text-align:left">A post-walk rating changes the segment score in the next route comparison.</td>
+<td style="text-align:left">RATE-1, RATE-2, ROUTE-3</td>
+</tr>
+<tr>
+<td style="text-align:center">8</td>
+<td style="text-align:left">The dashboard shows the live alert and a heatmap with an infrastructure work list.</td>
+<td style="text-align:left">DASH-1, DASH-3, DASH-4</td>
+</tr>
+<tr>
+<td style="text-align:center">9</td>
+<td style="text-align:left">Audio evidence is encrypted; a server-side inspection shows no plaintext.</td>
+<td style="text-align:left">EVID-2, EVID-3</td>
+</tr>
+<tr>
+<td style="text-align:center">10</td>
+<td style="text-align:left">A written evaluation shows precision, recall and false-alarm rates for the audio model.</td>
+<td style="text-align:left">DET-7, NFR-8</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>10. Implementation Plan</h2>
+<h3>10.1 Recommended technology</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Layer</th>
+<th style="text-align:left">Choice</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">Mobile</td>
+<td style="text-align:left">React Native + Expo SDK 54 development build, TypeScript; <code>expo-sqlite</code> (replace <code>react-native-sqlite-storage</code>), <code>expo-location</code>, <code>react-native-fast-tflite</code>, a native SMS module (config plugin), <code>expo-notifications</code></td>
+</tr>
+<tr>
+<td style="text-align:left">Backend</td>
+<td style="text-align:left">FastAPI, asyncpg, SQLAlchemy/Alembic migrations, Redis, Celery or arq for background jobs</td>
+</tr>
+<tr>
+<td style="text-align:left">Data</td>
+<td style="text-align:left">PostgreSQL 15 + PostGIS; object storage via MinIO (dev) or S3 (prod)</td>
+</tr>
+<tr>
+<td style="text-align:left">ML</td>
+<td style="text-align:left">TensorFlow, YAMNet embeddings + dense head; TFLite INT8 export</td>
+</tr>
+<tr>
+<td style="text-align:left">Dashboard</td>
+<td style="text-align:left">React + MapLibre GL or Leaflet, heat layer, role-based login</td>
+</tr>
+<tr>
+<td style="text-align:left">DevOps</td>
+<td style="text-align:left">Docker Compose, GitHub Actions CI, <code>.env</code> templates</td>
+</tr>
+</tbody>
+</table>
+<h3>10.2 Release scope</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Release</th>
+<th style="text-align:left">Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><strong>MVP (hackathon)</strong></td>
+<td style="text-align:left">AUTH-1 to 6, GRD-1/2/4/5/6, ROUTE-1 to 6/8, WALK-1 to 4/7, DET-1 to 3/7/8, ALERT-1 to 10, EVID-1 to 3/5/6, DUR-1 to 4, RATE-1/2/5, DASH-1/3/4/5</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Pilot</strong></td>
+<td style="text-align:left">GRD-3, ROUTE-7/9, WALK-5/6/8, DET-5/6, EVID-4, ALERT-11, RATE-3/4/6, DASH-2/6, REP, AUTH-7</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>Later</strong></td>
+<td style="text-align:left">Keyword spotting, disguised mode, wearables, volunteer network, iOS adaptations, e-FIR handoff</td>
+</tr>
+</tbody>
+</table>
+<h3>10.3 Work breakdown (suggested 4-person team)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Role</th>
+<th style="text-align:left">Main tasks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">Mobile lead</td>
+<td style="text-align:left">Onboarding, walk screen, tracker, pre-alert, offline queue, SMS module, hardware trigger</td>
+</tr>
+<tr>
+<td style="text-align:left">ML engineer</td>
+<td style="text-align:left">Dataset prep, fine-tune, evaluation report, TFLite export, on-device integration</td>
+</tr>
+<tr>
+<td style="text-align:left">Backend / data</td>
+<td style="text-align:left">API, auth, alert sync, WebSocket, PostGIS schema, OSM import, route scoring</td>
+</tr>
+<tr>
+<td style="text-align:left">Web / design</td>
+<td style="text-align:left">Dashboard, route comparison UI, rating screen, demo video, pitch</td>
+</tr>
+</tbody>
+</table>
+<h3>10.4 Suggested order of work</h3>
+<ol>
+<li>Set up a development build, repository, CI and Docker Compose (day 1).</li>
+<li>Load the pilot-area OSM extract; implement segment scoring and <code>/routes/compare</code>.</li>
+<li>Build the walk, live sharing and deviation logic.</li>
+<li>Fine-tune and integrate the audio model; build the pre-alert and offline SMS path; test on a real phone.</li>
+<li>Build the duress flow, escalation and evidence encryption.</li>
+<li>Build the dashboard, rating flow and work list.</li>
+<li>Evaluation report, demo recording, and polish.</li>
+</ol>
+<h3>10.5 Risks and mitigations</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Risk</th>
+<th style="text-align:left">Impact</th>
+<th style="text-align:left">Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">Expo Go incompatibility with native modules</td>
+<td style="text-align:left">Blocks testing</td>
+<td style="text-align:left">Use a development build from day 1</td>
+</tr>
+<tr>
+<td style="text-align:left">Audio model false positives</td>
+<td style="text-align:left">Alert fatigue</td>
+<td style="text-align:left">Pretrained embeddings, 3-of-5 rule, PIN cancel, feedback loop, report numbers honestly</td>
+</tr>
+<tr>
+<td style="text-align:left">Sparse OSM data in the area</td>
+<td style="text-align:left">Weak scores</td>
+<td style="text-align:left">Verify coverage early; add manual surveys and pre-loaded ratings for the demo area</td>
+</tr>
+<tr>
+<td style="text-align:left">Android background limits</td>
+<td style="text-align:left">Tracking stops</td>
+<td style="text-align:left">Foreground service with correct types, battery exemption guide, test on several OEMs</td>
+</tr>
+<tr>
+<td style="text-align:left">SMS delivery or DLT blocks</td>
+<td style="text-align:left">Alert not delivered</td>
+<td style="text-align:left">Native phone SMS for offline path; register DLT early; test two carriers</td>
+</tr>
+<tr>
+<td style="text-align:left">Fake or malicious ratings</td>
+<td style="text-align:left">Biased scores</td>
+<td style="text-align:left">RATE-2/3 rules, anonymisation, moderator review</td>
+</tr>
+<tr>
+<td style="text-align:left">Privacy complaints</td>
+<td style="text-align:left">Trust loss</td>
+<td style="text-align:left">Minimisation, consent screens, clear retention, no demographic inputs</td>
+</tr>
+<tr>
+<td style="text-align:left">Over-claiming</td>
+<td style="text-align:left">Credibility</td>
+<td style="text-align:left">Use the wording rules ROUTE-8, EVID-6; label mockups as concepts</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>11. Requirements Traceability (summary)</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Pitch promise</th>
+<th style="text-align:left">Requirements</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">Safer routes before the walk</td>
+<td style="text-align:left">ROUTE-1 to 9, Section 6.1</td>
+</tr>
+<tr>
+<td style="text-align:left">Protection during the walk</td>
+<td style="text-align:left">WALK-1 to 8, DET-1 to 8, ALERT-1 to 12, DUR-1 to 4</td>
+</tr>
+<tr>
+<td style="text-align:left">Works offline</td>
+<td style="text-align:left">ALERT-4 to 7, Section 6.4, NFR-5</td>
+</tr>
+<tr>
+<td style="text-align:left">Privacy and evidence</td>
+<td style="text-align:left">EVID-1 to 6, NFR-9 to 12</td>
+</tr>
+<tr>
+<td style="text-align:left">Data for the city</td>
+<td style="text-align:left">RATE-1 to 6, DASH-3 to 5</td>
+</tr>
+<tr>
+<td style="text-align:left">Responder coordination</td>
+<td style="text-align:left">GRD-4/5, ALERT-8, DASH-1/2</td>
+</tr>
+</tbody>
+</table>
+<h2>12. Open Issues</h2>
+<ol>
+<li>Which pilot area and partner (campus security or local police) will validate the alert flow?</li>
+<li>Confirm whether 112 accepts SMS in the pilot state, and agree on the contact protocol with the control room.</li>
+<li>Choose the SMS gateway and start DLT registration.</li>
+<li>Decide on key-pair management for guardians (device-generated keys with QR verification is recommended).</li>
+<li>Decide the final PIN length (4 digits is weak; 6 digits is recommended where usability allows).</li>
+<li>Confirm the licence terms of the map tile and routing providers for the intended use.</li>
+</ol>
+
+
+<!--claude-mermaid-runtime-begin:3477-->
+<style>.mermaid-diagram{margin-block:4px}.mermaid-diagram svg{display:block;margin:0 auto;max-width:100%;height:auto}</style>
+<script src="/_runtime/mermaid-11.16.1.min.js"></script>
+<script>(function(){
+var CFG={"palettes":{"light":{"surface":"#f4efe4","text":"#42392e","line":"#8a7f6d","border":"#7a6c52","bg":"#fffdf8"},"dark":{"surface":"#262b34","text":"#f2f3f5","line":"#a8adb8","border":"#9aa4b8","bg":"#1f232b"}}};
+if(typeof mermaid==='undefined')return;
+var pres=Array.prototype.slice.call(document.querySelectorAll('pre.mermaid')).filter(function(p){if(p.hasAttribute('data-claude-mermaid-claimed'))return false;p.setAttribute('data-claude-mermaid-claimed','1');return true;});
+if(!pres.length)return;
+var mq=window.matchMedia?window.matchMedia('(prefers-color-scheme: dark)'):null;
+var root=document.documentElement;
+var items=pres.map(function(pre){
+var mount=document.createElement('div');mount.className='mermaid-diagram';
+return {pre:pre,mount:mount,src:pre.textContent||''};
+});
+var seq=0;
+var renderGen=0;
+var lastKey='';
+function pageBg(fallback){
+var els=[document.body,document.documentElement];
+for(var i=0;i<els.length;i++){
+var c=els[i]&&getComputedStyle(els[i]).backgroundColor;
+if(c&&c!=='transparent'&&c!=='rgba(0, 0, 0, 0)')return c;
+}
+return fallback;
+}
+function render(){
+var theme=root.getAttribute('data-theme');
+var dark=theme==='dark'||(!!(mq&&mq.matches)&&theme!=='light');
+var pal=dark?CFG.palettes.dark:CFG.palettes.light;
+var bg=pageBg(pal.bg);
+var key=(dark?'d':'l')+'|'+bg;
+if(key===lastKey)return;
+lastKey=key;
+var gen=++renderGen;
+var font=getComputedStyle(document.body).fontFamily||'sans-serif';
+var nat={useMaxWidth:false};
+mermaid.initialize({
+startOnLoad:false,securityLevel:'strict',theme:'base',
+flowchart:nat,sequence:nat,er:nat,state:nat,class:nat,pie:nat,
+gantt:nat,journey:nat,timeline:nat,gitGraph:nat,mindmap:nat,xyChart:nat,
+quadrantChart:nat,sankey:nat,c4:nat,requirement:nat,block:nat,
+packet:nat,kanban:nat,architecture:nat,radar:nat,
+themeVariables:{background:bg,mainBkg:pal.surface,primaryColor:pal.surface,
+primaryTextColor:pal.text,lineColor:pal.line,primaryBorderColor:pal.border,
+nodeBorder:pal.border,clusterBorder:pal.border,edgeLabelBackground:bg,
+clusterBkg:'rgba(127,127,127,0.07)',titleColor:pal.text,
+darkMode:dark,rowOdd:bg,rowEven:'rgba(127,127,127,0.07)',
+attributeBackgroundColorOdd:bg,attributeBackgroundColorEven:'rgba(127,127,127,0.07)',
+fontSize:'16px',fontFamily:font},
+themeCSS:'.node rect, .node circle, .node polygon, .node path, .cluster rect { stroke-width: 2px; }'
+});
+items.forEach(function(it){
+var id='claude-mermaid-'+seq++;
+mermaid.render(id,it.src).then(function(r){
+if(gen!==renderGen)return;
+var prev=it.pre.previousElementSibling;
+if(prev&&prev.className==='mermaid-diagram'&&prev!==it.mount)return;
+it.mount.innerHTML=r.svg;
+if(!it.mount.parentNode)it.pre.parentNode.insertBefore(it.mount,it.pre);
+it.pre.style.display='none';
+},function(){
+var scratch=document.getElementById(id);
+if(scratch)scratch.parentNode.removeChild(scratch);
+scratch=document.getElementById('d'+id);
+if(scratch)scratch.parentNode.removeChild(scratch);
+if(gen!==renderGen)return;
+if(it.mount.parentNode)it.mount.parentNode.removeChild(it.mount);
+it.pre.style.display='';
+});
+});
+}
+render();
+if(mq&&mq.addEventListener)mq.addEventListener('change',render);
+if(typeof MutationObserver!=='undefined')new MutationObserver(render).observe(root,{attributes:true,attributeFilter:['data-theme']});
+})();</script>
+<!--claude-mermaid-runtime-end-->
+</body></html>

@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SHIELD Walk - Authority Command & Analytics Dashboard</title>
+  
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Leaflet Heat Plugin -->
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body class="dark-theme">
+  <div class="app-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="shield-badge">
+          <i data-lucide="shield-alert"></i>
+        </div>
+        <div class="brand-text">
+          <h2>SHIELD<span>Walk</span></h2>
+          <span class="badge-version">AUTHORITY v1.0</span>
+        </div>
+      </div>
+
+      <!-- Role Selector (DASH-1, DASH-3) -->
+      <div class="role-selector-card">
+        <label for="role-select">OPERATING CONTEXT</label>
+        <div class="role-toggle-group">
+          <button class="role-btn active" id="btn-role-responder" onclick="setRole('responder')">
+            <i data-lucide="radio"></i> Responder
+          </button>
+          <button class="role-btn" id="btn-role-analyst" onclick="setRole('analyst')">
+            <i data-lucide="bar-chart-3"></i> Analyst
+          </button>
+        </div>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="nav-menu">
+        <a href="#live-dispatch" class="nav-item active" onclick="switchTab('live-dispatch')">
+          <i data-lucide="activity"></i>
+          <span>Live Alerts & Dispatch</span>
+          <span class="badge-count" id="active-alert-count">0</span>
+        </a>
+        <a href="#heatmap-analysis" class="nav-item" onclick="switchTab('heatmap-analysis')">
+          <i data-lucide="flame"></i>
+          <span>Safety Heatmap</span>
+        </a>
+        <a href="#infrastructure-gaps" class="nav-item" onclick="switchTab('infrastructure-gaps')">
+          <i data-lucide="lightbulb-off"></i>
+          <span>Infrastructure Gaps</span>
+          <span class="badge-chip">CSV</span>
+        </a>
+        <a href="#audit-log-view" class="nav-item" onclick="switchTab('audit-log-view')">
+          <i data-lucide="file-check"></i>
+          <span>Compliance & Audit</span>
+        </a>
+      </nav>
+
+      <!-- System Status Footer -->
+      <div class="sidebar-footer">
+        <div class="status-indicator">
+          <span class="pulse-dot"></span>
+          <span>Core Gateway: <strong>Connected</strong></span>
+        </div>
+        <p class="disclaimer-mini">Assisted Safety System &bull; IEEE SRS Compliant</p>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Header -->
+      <header class="top-bar">
+        <div class="search-header">
+          <h1 id="page-title">Live Responder Command Console</h1>
+          <p id="page-subtitle">Real-time incident response, silent duress escalation, and live trail surveillance</p>
+        </div>
+        <div class="header-actions">
+          <div class="api-status-badge" id="api-status">
+            <i data-lucide="server"></i> <span>Backend API: Online</span>
+          </div>
+          <button class="btn-refresh" onclick="refreshDashboardData()">
+            <i data-lucide="refresh-cw"></i> Refresh
+          </button>
+          <div class="user-profile">
+            <div class="avatar">CR</div>
+            <div class="user-info">
+              <span class="user-name">Central Dispatch</span>
+              <span class="user-role" id="current-role-badge">Officer On Duty</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- TAB 1: Responder View - Live Alerts & Map -->
+      <section id="tab-live-dispatch" class="tab-pane active">
+        <!-- Live Metrics Bar -->
+        <div class="metrics-grid">
+          <div class="metric-card danger-card">
+            <div class="metric-icon"><i data-lucide="alert-triangle"></i></div>
+            <div class="metric-info">
+              <span class="metric-title">Active Emergency SOS</span>
+              <h3 id="stat-active-sos">0</h3>
+              <span class="metric-trend text-red">High Priority Dispatch</span>
+            </div>
+          </div>
+          <div class="metric-card warning-card">
+            <div class="metric-icon"><i data-lucide="eye-off"></i></div>
+            <div class="metric-info">
+              <span class="metric-title">Duress / Silent Alarms</span>
+              <h3 id="stat-duress">0</h3>
+              <span class="metric-trend text-orange">Covert Response Required</span>
+            </div>
+          </div>
+          <div class="metric-card info-card">
+            <div class="metric-icon"><i data-lucide="footprints"></i></div>
+            <div class="metric-info">
+              <span class="metric-title">Active Monitored Walks</span>
+              <h3 id="stat-active-walks">4</h3>
+              <span class="metric-trend text-blue">Live GPS Trailing</span>
+            </div>
+          </div>
+          <div class="metric-card success-card">
+            <div class="metric-icon"><i data-lucide="shield-check"></i></div>
+            <div class="metric-info">
+              <span class="metric-title">Resolved Today</span>
+              <h3 id="stat-resolved">12</h3>
+              <span class="metric-trend text-green">100% Chain-of-Custody</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Split Map & Alert Feed View -->
+        <div class="dispatch-workbench">
+          <!-- Live Leaflet Map -->
+          <div class="map-container-card">
+            <div class="map-header">
+              <div class="map-title-group">
+                <i data-lucide="map-pin"></i>
+                <span>Pilot Area Tactical Map (Central Campus / University Corridor)</span>
+              </div>
+              <div class="map-controls">
+                <button class="map-toggle-btn active" id="btn-toggle-trail" onclick="toggleMapLayer('trail')">GPS Trails</button>
+                <button class="map-toggle-btn active" id="btn-toggle-stops" onclick="toggleMapLayer('stops')">Safe Stops</button>
+                <button class="map-toggle-btn" id="btn-toggle-heat" onclick="toggleMapLayer('heat')">Risk Layer</button>
+              </div>
+            </div>
+            <div id="live-map"></div>
+          </div>
+
+          <!-- Active Incidents Feed & Action Queue -->
+          <div class="incidents-feed-panel">
+            <div class="feed-header">
+              <h3>Incoming Incidents Queue</h3>
+              <span class="filter-pill">Sorted by Severity</span>
+            </div>
+            <div class="incidents-list" id="incidents-list">
+              <!-- Dynamically populated incident cards -->
+              <div class="empty-state">
+                <i data-lucide="shield-check"></i>
+                <p>No active distress alerts in queue. System scanning 24/7.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: Safety Heatmap & Crime Clusters (DASH-3) -->
+      <section id="tab-heatmap-analysis" class="tab-pane">
+        <div class="analyst-filter-bar">
+          <div class="filter-group">
+            <label>Time Filter:</label>
+            <select id="heat-filter-time" onchange="updateHeatmap()">
+              <option value="all">All Hours</option>
+              <option value="night">Night Mode (21:00 - 06:00)</option>
+              <option value="evening">Evening (18:00 - 21:00)</option>
+              <option value="day">Daytime (06:00 - 18:00)</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Category Filter:</label>
+            <select id="heat-filter-cat" onchange="updateHeatmap()">
+              <option value="all">All Reports</option>
+              <option value="broken_light">Broken Street Lighting</option>
+              <option value="harassment_spot">Harassment Hotspots</option>
+              <option value="blocked_path">Blocked / Desolate Paths</option>
+              <option value="low_score">Sub-40 Route Segments</option>
+            </select>
+          </div>
+          <div class="privacy-callout">
+            <i data-lucide="lock"></i>
+            <span><strong>SRS DASH-5 Privacy:</strong> Minimum 5 incidents / 20 walks aggregation cell applied. No individual trails visible to analysts.</span>
+          </div>
+        </div>
+
+        <div class="heatmap-workbench">
+          <div id="analyst-heat-map"></div>
+          <div class="heat-legend-card">
+            <h4>Heatmap Density Scale</h4>
+            <div class="gradient-bar"></div>
+            <div class="legend-labels">
+              <span>Low Concern (Score > 75)</span>
+              <span>Caution Zone (Score 40-60)</span>
+              <span>High Risk / Dark Alley (&lt; 40)</span>
+            </div>
+            <hr>
+            <h4>Aggregated Incident Clusters</h4>
+            <ul class="cluster-summary-list">
+              <li><strong>North Ridge Corridor:</strong> 14 low-lighting reports &bull; Avg Score: 32</li>
+              <li><strong>Old Library Back Lane:</strong> 8 harassment alerts &bull; Avg Score: 38</li>
+              <li><strong>University Main Avenue:</strong> Well lit corridor &bull; Avg Score: 85</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: Infrastructure Gaps Ranked Work List (DASH-4) -->
+      <section id="tab-infrastructure-gaps" class="tab-pane">
+        <div class="gaps-header-card">
+          <div class="gaps-info">
+            <h2>Municipal & Campus Maintenance Work List</h2>
+            <p>Ranked street segments scoring low in lighting ($L$) with high night usage. Prioritized for solar street lamp installation and security patrols.</p>
+          </div>
+          <button class="btn-primary" onclick="exportGapsCSV()">
+            <i data-lucide="download"></i> Export Work List (CSV)
+          </button>
+        </div>
+
+        <div class="table-container-card">
+          <table class="gaps-table" id="gaps-table">
+            <thead>
+              <tr>
+                <th>Priority</th>
+                <th>Street Segment</th>
+                <th>Lamp Density / 100m</th>
+                <th>Safety Score</th>
+                <th>Rating Count</th>
+                <th>Urgency Score</th>
+                <th>Recommended Action</th>
+              </tr>
+            </thead>
+            <tbody id="gaps-tbody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 4: Compliance & Audit Logs (DASH-6) -->
+      <section id="tab-audit-log-view" class="tab-pane">
+        <div class="gaps-header-card">
+          <div class="gaps-info">
+            <h2>System Audit Trail & Chain of Custody (SRS DASH-6)</h2>
+            <p>Immutable log of every responder access to personal emergency records, dispatch assignments, and evidence queries for DPDP Act compliance.</p>
+          </div>
+          <button class="btn-secondary" onclick="loadAuditLogs()">
+            <i data-lucide="refresh-cw"></i> Refresh Audit Log
+          </button>
+        </div>
+
+        <div class="table-container-card">
+          <table class="audit-table">
+            <thead>
+              <tr>
+                <th>Timestamp (UTC)</th>
+                <th>Actor Entity</th>
+                <th>Action Taken</th>
+                <th>Target Resource</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="audit-tbody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Incident Detail Modal (DASH-1, DASH-2, REP-1) -->
+  <div class="modal-backdrop" id="incident-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span class="badge-priority high" id="modal-priority">HIGH PRIORITY</span>
+          <h2 id="modal-title">Incident Details</h2>
+        </div>
+        <button class="btn-close" onclick="closeIncidentModal()"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" id="modal-body">
+        <!-- Content filled dynamically -->
+      </div>
+      <div class="modal-footer" id="modal-footer">
+        <!-- Actions filled dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>

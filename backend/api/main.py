@@ -1,185 +1,201 @@
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, os.path.dirname(__file__))
+
 import asyncio
 import json
 import time
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+import logging
+from typing import Dict, Any, Optional
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import redis.asyncio as redis
-import asyncpg
-import logging
+from jose import jwt, JWTError
+
 from auth import router as auth_router
+from contacts import router as contacts_router
+from route_router import router as route_router
+from walk_router import router as walk_router
+from alerts_router import router as alerts_router
+from evidence_router import router as evidence_router
+from ratings_router import router as ratings_router
+from dashboard_router import router as dashboard_router
+from report_router import router as report_router
 from media import router as media_router
 from risk_router import router as ml_risk_router
 from community import router as community_router
-from incident import router as incident_router
-from contacts import router as contacts_router
+
 from security import SECRET_KEY, ALGORITHM
-from jose import jwt, JWTError
-from fastapi import Request
 from rate_limiter import limiter
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from db.storage import storage
 
-# Configure structured logging for observability
+# Configure structured logging for observability (NFR-18)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("shield-core")
 
-app = FastAPI(title="SHIELD Core Safety Service")
+app = FastAPI(
+    title="SHIELD Walk Core Safety Platform",
+    description="Backend services for safe routes, live sharing, alerts, evidence and authority dashboard (SRS v1.0)",
+    version="1.0.0"
+)
 
-# Attach Rate Limiter Exception Handler
+# Rate Limiter
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# Allowed origins for API Gateway / Clients
+# CORS Middleware (supports mobile app and web authority dashboard)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Update for production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Mount the Week 1 & 2 Auth Router
+# Mount all routers
 app.include_router(auth_router)
-# Mount the Media router for End-to-End Encrypted audio uploads
-app.include_router(media_router)
-# Mount the ML Risk Assessment endpoint
-app.include_router(ml_risk_router)
-# Mount the Network Effects (Moat) API
-app.include_router(community_router)
-# Mount the Incident Lifecycle layer
-app.include_router(incident_router)
-# Mount emergency contacts CRUD
 app.include_router(contacts_router)
+app.include_router(route_router)
+app.include_router(walk_router)
+app.include_router(alerts_router)
+app.include_router(evidence_router)
+app.include_router(ratings_router)
+app.include_router(dashboard_router)
+app.include_router(report_router)
+app.include_router(media_router)
+app.include_router(ml_risk_router)
+app.include_router(community_router)
 
-# Global variables for connection pools
+# Mount Authority Dashboard Web App (SRS Deliverable 5 & DASH-1 to 6)
+from fastapi.staticfiles import StaticFiles
+dashboard_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dashboard"))
+if os.path.exists(dashboard_dir):
+    app.mount("/dashboard", StaticFiles(directory=dashboard_dir, html=True), name="dashboard")
+
+
+# In-memory pub/sub broker for active walks (when Redis is optional/offline)
+class InMemoryWalkBroker:
+    def __init__(self):
+        self._connections: Dict[str, list[WebSocket]] = {}
+
+    async def register(self, walk_id: str, ws: WebSocket):
+        if walk_id not in self._connections:
+            self._connections[walk_id] = []
+        self._connections[walk_id].append(ws)
+
+    async def unregister(self, walk_id: str, ws: WebSocket):
+        if walk_id in self._connections and ws in self._connections[walk_id]:
+            self._connections[walk_id].remove(ws)
+            if not self._connections[walk_id]:
+                del self._connections[walk_id]
+
+    async def broadcast(self, walk_id: str, data: Dict[str, Any]):
+        if walk_id in self._connections:
+            dead = []
+            for ws in self._connections[walk_id]:
+                try:
+                    await ws.send_json(data)
+                except Exception:
+                    dead.append(ws)
+            for ws in dead:
+                await self.unregister(walk_id, ws)
+
+walk_broker = InMemoryWalkBroker()
 redis_pool = None
-db_pool = None
 
 @app.on_event("startup")
 async def startup_event():
-    global redis_pool, db_pool
-    # Initialize Redis for pub/sub and caching
-    redis_pool = redis.Redis(host='localhost', port=6380, db=0, decode_responses=True)
-    app.state.redis_pool = redis_pool
-    
-    # Initialize connection to PostgreSQL (PostGIS)
-    db_pool = await asyncpg.create_pool(
-        dsn="postgresql://postgres:postgres_password@localhost:5432/shield_db"
-    )
-    # Store the pool on the app state so routers can access it
-    app.state.db_pool = db_pool
-    logger.info("Core Data dependencies connected (Redis, PostgreSQL)")
+    global redis_pool
+    # 1. Initialize persistent storage engine with SRS entities and pilot seed data
+    await storage.init_db()
+    app.state.storage = storage
+
+    # 2. Try Redis connection if available
+    try:
+        redis_pool = redis.Redis(host='localhost', port=6380, db=0, decode_responses=True)
+        await asyncio.wait_for(redis_pool.ping(), timeout=1.0)
+        app.state.redis_pool = redis_pool
+        logger.info("Connected to Redis Pub/Sub")
+    except Exception:
+        redis_pool = None
+        app.state.redis_pool = None
+        logger.info("Using high-performance in-memory pub/sub broker")
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    await redis_pool.close()
-    await db_pool.close()
+    if redis_pool:
+        await redis_pool.close()
 
-# Models
-class LocationUpdate(BaseModel):
-    alert_id: str
-    user_id: str
-    lat: float
-    lon: float
-    accuracy: float
-    speed: float = 0.0
-    heading: float = 0.0
+# WebSocket for Live Location Streaming (WALK-3, NFR-10)
+@app.websocket("/ws/walk/{walk_id}")
+async def walk_live_stream(websocket: WebSocket, walk_id: str):
+    """
+    WALK-3 & NFR-10:
+    WebSocket stream for live location updates with one-time short-lived tickets.
+    Never exposes JWT token in WebSocket URLs.
+    """
+    ticket = websocket.query_params.get("ticket")
+    if not ticket:
+        await websocket.close(code=1008, reason="Missing WS Ticket")
+        return
 
-@app.websocket("/ws/location/{alert_id}")
-async def location_stream(websocket: WebSocket, alert_id: str):
-    """
-    Week 3: WebSocket with Auth Guard.
-    Requires token in the URL or headers (browsers prevent JS from setting custom headers for WS, 
-    so typically token is passed in query param ?token=JWT).
-    """
+    # Authenticate one-time ticket
+    ticket_record = await storage.consume_ws_ticket(ticket, walk_id)
+    if not ticket_record:
+        await websocket.close(code=1008, reason="Invalid or Expired WS Ticket")
+        return
+
     await websocket.accept()
-    logger.info(f"New WebSocket connection attempt for alert tracking: {alert_id}")
-    
-    # Authenticate WebSocket Connection
+    await walk_broker.register(walk_id, websocket)
+    logger.info(f"Guardian connected to live walk {walk_id} with verified ticket")
+
+    try:
+        while True:
+            # Handle client heartbeats or incoming location pings
+            data = await websocket.receive_text()
+            try:
+                parsed = json.loads(data)
+                # If walker sends location over WS, broadcast to all guardians
+                await walk_broker.broadcast(walk_id, parsed)
+            except Exception:
+                pass
+    except WebSocketDisconnect:
+        await walk_broker.unregister(walk_id, websocket)
+        logger.info(f"WebSocket client disconnected for walk {walk_id}")
+    except Exception as e:
+        await walk_broker.unregister(walk_id, websocket)
+        logger.error(f"WebSocket error on walk {walk_id}: {e}")
+
+# Legacy location websocket route
+@app.websocket("/ws/location/{alert_id}")
+async def legacy_location_stream(websocket: WebSocket, alert_id: str):
+    await websocket.accept()
     token = websocket.query_params.get("token")
     if not token:
         await websocket.close(code=1008, reason="Missing Token")
         return
-        
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id = payload.get("sub")
-        # Ensure the user requesting this WebSocket has permission to view this alert
-        # (Omitted strict permission check logic for brevity)
+        jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     except JWTError:
         await websocket.close(code=1008, reason="Invalid Token")
         return
-        
-    logger.info(f"User {user_id} authenticated for WebSocket {alert_id}")
-    pubsub = redis_pool.pubsub()
-    await pubsub.subscribe(f"location:{alert_id}")
-    
     try:
-        async for message in pubsub.listen():
-            if message['type'] == 'message':
-                # Forward the location coordinates directly to the frontend/contacts
-                data = json.loads(message['data'])
-                await websocket.send_json(data)
-                
-    except WebSocketDisconnect:
-        logger.info(f"WebSocket disconnected for alert: {alert_id}")
-        await pubsub.unsubscribe(f"location:{alert_id}")
-    except Exception as e:
-        logger.error(f"WebSocket Error: {str(e)}")
-        if pubsub.subscribed:
-            await pubsub.unsubscribe(f"location:{alert_id}")
+        while True:
+            await websocket.receive_text()
+    except Exception:
+        pass
 
-@app.post("/api/v1/location")
-@limiter.limit("60/minute") # Only enough for 1 update per second max
-async def push_location(request: Request, update: LocationUpdate):
-    """
-    Mobile client pushes live location here every 2 seconds during an active alert.
-    1. Publish to Redis for sub-50ms latency distribution to WebSockets.
-    2. Insert into PostGIS database for the permanent location trail.
-    """
-    current_time = time.time()
-    
-    # 1. Publish to Redis for real-time subscribers
-    payload = {
-        'lat': update.lat,
-        'lon': update.lon,
-        'accuracy': update.accuracy,
-        'speed': update.speed,
-        'heading': update.heading,
-        'timestamp': current_time
-    }
-    
-    await redis_pool.publish(f"location:{update.alert_id}", json.dumps(payload))
-    
-    # 2. Store in PostGIS
-    try:
-        async with db_pool.acquire() as conn:
-            # Create a PostGIS point format: ST_SetSRID(ST_MakePoint(lon, lat), 4326)
-            query = """
-                INSERT INTO location_trail 
-                (alert_id, user_id, location, accuracy, speed, heading, device_timestamp)
-                VALUES ($1, $2, ST_SetSRID(ST_MakePoint($3, $4), 4326), $5, $6, $7, to_timestamp($8))
-            """
-            await conn.execute(
-                query, 
-                update.alert_id, 
-                update.user_id, 
-                update.lon,        # PostGIS takes Lon then Lat
-                update.lat, 
-                update.accuracy, 
-                update.speed, 
-                update.heading, 
-                current_time
-            )
-    except Exception as e:
-        logger.error(f"Database insertion failed for location trail: {e}")
-        # Not throwing an exception here so the critical WebSocket path still succeeds
-    
-    return {"status": "success", "latency_ms": (time.time() - current_time) * 1000}
-
-# Health check
+# Health Check Endpoint
 @app.get("/health")
-@limiter.limit("10/minute")
+@limiter.limit("30/minute")
 def health_check(request: Request):
-    return {"status": "healthy", "service": "shield-core-service"}
+    return {
+        "status": "healthy",
+        "service": "shield-walk-core",
+        "srs_version": "1.0",
+        "timestamp": time.time()
+    }

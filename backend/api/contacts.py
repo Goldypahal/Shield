@@ -1,130 +1,93 @@
+import logging
 from typing import List, Optional
-
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
-
 from rate_limiter import limiter
 from security import get_current_user
+from db.storage import storage
 
-router = APIRouter(prefix="/api/v1/contacts", tags=["Contacts"])
+logger = logging.getLogger("shield-guardians")
 
+router = APIRouter(tags=["Guardians & Contacts"])
 
-class EmergencyContactPayload(BaseModel):
+class GuardianPayload(BaseModel):
     name: str
-    phone_number: str
+    phone: str
+    priority: Optional[int] = 1
     public_key: Optional[str] = None
-    priority: int = 1
 
-
-async def ensure_contacts_schema(conn):
-    await conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS emergency_contacts (
-            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-            user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-            name VARCHAR(100) NOT NULL,
-            phone_number VARCHAR(20) NOT NULL,
-            public_key TEXT,
-            priority INT DEFAULT 1,
-            is_verified BOOLEAN DEFAULT FALSE,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(user_id, phone_number)
-        );
-        """
-    )
-
-
-@router.get("/")
+@router.get("/api/v1/guardians")
+@router.get("/api/v1/contacts")
 @limiter.limit("30/minute")
-async def list_contacts(
+async def list_guardians(
     request: Request,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user)
 ):
-    async with request.app.state.db_pool.acquire() as conn:
-        await ensure_contacts_schema(conn)
-        rows = await conn.fetch(
-            """
-            SELECT id, name, phone_number, public_key, priority, is_verified
-            FROM emergency_contacts
-            WHERE user_id = $1
-            ORDER BY priority ASC, created_at ASC
-            """,
-            current_user["user_id"],
+    """
+    GRD-1: List up to 5 guardians in priority order with key fingerprints (GRD-3).
+    """
+    user_id = str(current_user["user_id"])
+    guardians = await storage.get_guardians(user_id)
+    return {"guardians": guardians, "contacts": guardians}
+
+@router.post("/api/v1/guardians", status_code=status.HTTP_201_CREATED)
+@router.post("/api/v1/contacts", status_code=status.HTTP_201_CREATED)
+@limiter.limit("20/minute")
+async def add_guardian(
+    request: Request,
+    payload: GuardianPayload,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    GRD-1: Add guardian with name, phone, priority order (up to 5 max).
+    Generates out-of-band key fingerprint QR (GRD-3).
+    """
+    user_id = str(current_user["user_id"])
+    try:
+        guardian = await storage.add_or_update_guardian(
+            user_id=user_id,
+            name=payload.name,
+            phone=payload.phone,
+            priority=payload.priority or 1,
+            public_key=payload.public_key
         )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     return {
-        "contacts": [
-            {
-                "id": str(row["id"]),
-                "name": row["name"],
-                "phone_number": row["phone_number"],
-                "public_key": row["public_key"],
-                "priority": row["priority"],
-                "is_verified": row["is_verified"],
-            }
-            for row in rows
-        ]
+        "status": "guardian_added",
+        "guardian": guardian,
+        "contact": guardian,
+        "invitation_link": f"https://shield.app/invite/{guardian['id']}"
     }
 
-
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post("/api/v1/guardians/{guardian_id}/verify")
 @limiter.limit("20/minute")
-async def create_or_update_contact(
+async def verify_guardian(
     request: Request,
-    payload: EmergencyContactPayload,
-    current_user: dict = Depends(get_current_user),
+    guardian_id: str
 ):
-    async with request.app.state.db_pool.acquire() as conn:
-        await ensure_contacts_schema(conn)
-        row = await conn.fetchrow(
-            """
-            INSERT INTO emergency_contacts (user_id, name, phone_number, public_key, priority, is_verified)
-            VALUES ($1, $2, $3, $4, $5, FALSE)
-            ON CONFLICT (user_id, phone_number)
-            DO UPDATE SET
-                name = EXCLUDED.name,
-                public_key = EXCLUDED.public_key,
-                priority = EXCLUDED.priority
-            RETURNING id, name, phone_number, public_key, priority, is_verified
-            """,
-            current_user["user_id"],
-            payload.name,
-            payload.phone_number,
-            payload.public_key,
-            payload.priority,
-        )
-
+    """
+    GRD-2: Guardian accepts SMS link invitation, enabling live tracking access.
+    """
+    success = await storage.verify_guardian(guardian_id)
     return {
-        "contact": {
-            "id": str(row["id"]),
-            "name": row["name"],
-            "phone_number": row["phone_number"],
-            "public_key": row["public_key"],
-            "priority": row["priority"],
-            "is_verified": row["is_verified"],
-        }
+        "status": "verified" if success else "failed",
+        "guardian_id": guardian_id,
+        "message": "Guardian verified. Live tracking enabled for shared walks."
     }
 
-
-@router.delete("/{contact_id}")
+@router.delete("/api/v1/guardians/{guardian_id}")
+@router.delete("/api/v1/contacts/{guardian_id}")
 @limiter.limit("20/minute")
-async def delete_contact(
+async def delete_guardian(
     request: Request,
-    contact_id: str,
-    current_user: dict = Depends(get_current_user),
+    guardian_id: str,
+    current_user: dict = Depends(get_current_user)
 ):
-    async with request.app.state.db_pool.acquire() as conn:
-        await ensure_contacts_schema(conn)
-        result = await conn.execute(
-            """
-            DELETE FROM emergency_contacts
-            WHERE id = $1 AND user_id = $2
-            """,
-            contact_id,
-            current_user["user_id"],
-        )
-
-    if result == "DELETE 0":
-        raise HTTPException(status_code=404, detail="Contact not found")
-
-    return {"status": "deleted", "contact_id": contact_id}
+    """Remove guardian."""
+    user_id = str(current_user["user_id"])
+    deleted = await storage.delete_guardian(guardian_id, user_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Guardian not found")
+    return {"status": "deleted", "guardian_id": guardian_id}
