@@ -17,20 +17,34 @@ export type UserProfile = {
   routineEnabled?: boolean;
 };
 
+export type DistressState = 'MONITORING' | 'SUSPECTED' | 'PRE_ALERT' | 'ACTIVE' | 'CANCELLED';
+
+export type SRSThreatSignals = {
+  audioScore: number;          // 0-100 (from on-device audio model)
+  motionScore: number;         // 0-100 (from fall/struggle detection)
+  contextScore: number;        // 0-100 (from route risk & environmental context)
+  isNight?: boolean;           // night multiplier M_night = 1.2
+  segmentSafetyScore?: number; // segment safety score (threshold drops to 60 when < 40)
+  manualSOS?: boolean;         // +40 manual SOS boost
+};
+
 export type ThreatSignals = {
   audioScore: number;
   motionScore: number;
-  heartRateScore: number;
-  routineDeviationScore: number;
-  nightMultiplier: number;
-  manualSOS: boolean;
+  heartRateScore?: number;
+  routineDeviationScore?: number;
+  contextScore?: number;
+  nightMultiplier?: number;
+  manualSOS?: boolean;
 };
 
 export type ThreatResult = {
   totalScore: number;
   level: 'LOW' | 'MEDIUM' | 'HIGH';
   shouldTrigger: boolean;
-  breakdown: ThreatSignals;
+  threshold: number;
+  state?: DistressState;
+  breakdown: any;
 };
 
 export type IncidentLog = {

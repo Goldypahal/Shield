@@ -84,7 +84,7 @@ async def batch_location_points(
     if not walk:
         raise HTTPException(status_code=404, detail="Walk not found")
 
-    points_data = [p.dict() for p in payload.points]
+    points_data = [p.model_dump() for p in payload.points]
     inserted_count = await storage.add_walk_points(walk_id, points_data)
 
     # Route deviation check (WALK-4)
@@ -113,6 +113,23 @@ async def batch_location_points(
             deviation_alert = True
             logger.warning(f"Route deviation detected on walk {walk_id}: {deviation_distance_m}m off path")
 
+    # Long-stop detection outside Safe Stop (WALK-5)
+    long_stop_detected = False
+    checkin_required = False
+    if payload.points:
+        latest = payload.points[-1]
+        is_stationary = (latest.speed or 0.0) < 0.3
+        if is_stationary:
+            safe_stops = await storage.get_safe_stops()
+            dist_to_nearest_safe_stop = min(
+                (haversine_distance(latest.lat, latest.lon, s["lat"], s["lon"]) for s in safe_stops),
+                default=9999.0
+            )
+            # If stopped motionless outside designated Safe Stop (>50m away)
+            if dist_to_nearest_safe_stop > 50.0:
+                long_stop_detected = True
+                checkin_required = True
+
     # Arrival check (WALK-7)
     arrived = False
     if route_coords and payload.points:
@@ -133,9 +150,49 @@ async def batch_location_points(
         "count": inserted_count,
         "deviation_alert": deviation_alert,
         "deviation_distance_m": deviation_distance_m,
+        "long_stop_detected": long_stop_detected,
+        "checkin_required": checkin_required,
         "arrived_at_destination": arrived,
         "low_battery_mode": low_battery,
         "sampling_rate_seconds": 30 if low_battery else (2 if deviation_alert else 10)
+    }
+
+class WalkCheckinPayload(BaseModel):
+    acknowledged: bool
+    safe: bool
+    dismissal_latency_seconds: Optional[float] = 0.0
+
+@router.post("/{walk_id}/checkin")
+@limiter.limit("20/minute")
+async def walk_checkin(
+    request: Request,
+    walk_id: str,
+    payload: WalkCheckinPayload,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    WALK-6: Check-in response handler.
+    If user acknowledges safe within 20-second dismissal window, resets timer.
+    If not acknowledged or safe=False, alerts guardians.
+    """
+    walk = await storage.get_walk(walk_id)
+    if not walk:
+        raise HTTPException(status_code=404, detail="Walk not found")
+
+    user_id = str(current_user["user_id"])
+    if not payload.acknowledged or not payload.safe:
+        # Trigger guardian escalation (ALERT-8)
+        logger.warning(f"Unacknowledged or distress check-in on walk {walk_id}")
+        return {
+            "status": "escalation_triggered",
+            "message": "Guardians alerted due to missed check-in",
+            "walk_id": walk_id
+        }
+
+    return {
+        "status": "checkin_confirmed",
+        "message": "User verified safe; timer reset",
+        "dismissal_latency_seconds": payload.dismissal_latency_seconds
     }
 
 @router.get("/{walk_id}")

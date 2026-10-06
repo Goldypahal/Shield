@@ -16,9 +16,31 @@ export interface AlertData {
   contacts: string[];
 }
 
+export interface RegionalEmergencyConfig {
+  region: string;
+  emergencySmsEnabled: boolean;
+  verifiedNumbers: string[];
+}
+
 class OfflineQueueService {
   private db: SQLiteDatabase | null = null;
   private readonly API_URL = `${BACKEND_URL}/api/v1/alerts/sync`;
+  private regionalConfig: RegionalEmergencyConfig = {
+    region: 'IN-DL',
+    emergencySmsEnabled: false, // ALERT-4, ALERT-6: Disabled until verified for relevant region
+    verifiedNumbers: []
+  };
+
+  /**
+   * Configures regional emergency dispatch settings.
+   */
+  setRegionalConfig(config: Partial<RegionalEmergencyConfig>) {
+    this.regionalConfig = { ...this.regionalConfig, ...config };
+  }
+
+  getRegionalConfig(): RegionalEmergencyConfig {
+    return { ...this.regionalConfig };
+  }
 
   async initDatabase() {
     this.db = await SQLite.openDatabase({
@@ -46,13 +68,18 @@ class OfflineQueueService {
     if (!this.db) await this.initDatabase();
 
     try {
-      // Add Police/Emergency services to the contact list for this specific payload
-      const emergencyContacts = [...alertData.contacts, '112', '100', '1091']; // Unified & Police
+      // ALERT-4, ALERT-6: Only include emergency numbers if explicitly enabled and verified for region
+      const targetContacts = [...alertData.contacts];
+      if (this.regionalConfig.emergencySmsEnabled && this.regionalConfig.verifiedNumbers.length > 0) {
+        targetContacts.push(...this.regionalConfig.verifiedNumbers);
+      }
       
       const payloadWithServices = {
           ...alertData,
-          contacts: emergencyContacts,
-          message: `${alertData.message}\nShared with Emergency Services and Guardians.`
+          contacts: targetContacts,
+          message: this.regionalConfig.emergencySmsEnabled 
+            ? `${alertData.message}\nShared with Emergency Services and Guardians.`
+            : `${alertData.message}\nShared with Verified Guardians.`
       };
 
       // 1. Store the alert locally immediately
@@ -63,7 +90,7 @@ class OfflineQueueService {
 
       // 2. Fallback to SMS directly over the cellular network if offline
       // This is critical for zones with poor data.
-      await this.sendSMSViaCellular(emergencyContacts, payloadWithServices.message);
+      await this.sendSMSViaCellular(targetContacts, payloadWithServices.message);
 
       // 3. Try to sync to server for live dashboard tracking
       this.syncWhenOnline();

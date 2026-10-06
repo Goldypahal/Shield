@@ -2,6 +2,7 @@ import sys
 import os
 import time
 import uuid
+import hashlib
 import pytest
 from fastapi.testclient import TestClient
 
@@ -237,11 +238,13 @@ def test_criterion_9_evidence_encryption_and_chaining():
     }, headers=headers)
 
     # Chunk 0
+    c0_payload_text = "GCM_ENCRYPTED_CIPHERTEXT_BURST_000=="
+    c0_hash = hashlib.sha256(c0_payload_text.encode('utf-8')).hexdigest()
     chunk0 = {
         "alert_id": alert_uuid,
         "seq": 0,
-        "ciphertext_base64": "GCM_ENCRYPTED_CIPHERTEXT_BURST_000==",
-        "sha256": "4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a",
+        "ciphertext_base64": c0_payload_text,
+        "sha256": c0_hash,
         "prev_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
         "wrapped_keys": {"guardian_1": "RSA_OAEP_SEALED_KEY_1=="}
     }
@@ -249,17 +252,19 @@ def test_criterion_9_evidence_encryption_and_chaining():
     assert c0_res.status_code == 201
 
     # Chunk 1 chained with chunk 0 hash (EVID-4)
+    c1_payload_text = "GCM_ENCRYPTED_CIPHERTEXT_BURST_001=="
+    c1_hash = hashlib.sha256(c1_payload_text.encode('utf-8')).hexdigest()
     chunk1 = {
         "alert_id": alert_uuid,
         "seq": 1,
-        "ciphertext_base64": "GCM_ENCRYPTED_CIPHERTEXT_BURST_001==",
-        "sha256": "ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d",
-        "prev_sha256": chunk0["sha256"],
+        "ciphertext_base64": c1_payload_text,
+        "sha256": c1_hash,
+        "prev_sha256": c0_hash,
         "wrapped_keys": {"guardian_1": "RSA_OAEP_SEALED_KEY_2=="}
     }
     c1_res = client.post("/api/v1/evidence/chunks", json=chunk1, headers=headers)
     assert c1_res.status_code == 201
-    assert c1_res.json()["prev_sha256"] == chunk0["sha256"]
+    assert c1_res.json()["prev_sha256"] == c0_hash
 
     # Verify server cannot decrypt audio (EVID-3, EVID-6)
     assert "cannot read" in c1_res.json()["privacy_notice"].lower()
@@ -274,3 +279,102 @@ def test_criterion_10_audio_evaluation_report():
     assert "ESC-50" in content
     assert "glass_breaking" in content
     assert "crying_baby" in content
+
+# Additional Verification: Strict Evidence SHA-256 Hash Integrity (EVID-4)
+def test_evidence_hash_rejection_on_mismatch():
+    headers = create_authenticated_header()
+    alert_uuid = str(uuid.uuid4())
+    client.post("/api/v1/alerts/sync", json={
+        "id": alert_uuid,
+        "trigger_type": "SOS_BUTTON",
+        "lat": 28.6910,
+        "lon": 77.2120
+    }, headers=headers)
+
+    tampered_chunk = {
+        "alert_id": alert_uuid,
+        "seq": 0,
+        "ciphertext_base64": "TAMPERED_CIPHERTEXT_BURST_DATA==",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000", # Intentionally invalid hash
+        "prev_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "wrapped_keys": {"guardian_1": "RSA_OAEP_KEY=="}
+    }
+    res = client.post("/api/v1/evidence/chunks", json=tampered_chunk, headers=headers)
+    assert res.status_code == 400, f"Expected HTTP 400 for tampered hash, got {res.status_code}"
+    assert "integrity violation" in res.json()["detail"].lower()
+
+# Additional Verification: NFR-10 One-time WS Ticket Issuance (No JWT in URL)
+def test_nfr10_websocket_ticket_issuance():
+    headers = create_authenticated_header()
+    channel_id = str(uuid.uuid4())
+    res = client.post("/api/v1/auth/ws-ticket", json={"channel_id": channel_id}, headers=headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "ticket_created"
+    assert data["ticket"].startswith("wstk_")
+    assert data["channel_id"] == channel_id
+    assert data["expires_in_seconds"] == 60
+
+# Additional Verification: WALK-5 Long-stop Detection and WALK-6 Check-in Timer
+def test_walk_monitoring_long_stop_and_checkin():
+    headers = create_authenticated_header()
+    start_payload = {
+        "origin_name": "Metro Station",
+        "destination_name": "Hostel 9",
+        "chosen_route_id": "route_safest",
+        "route_coords": [{"lat": 28.6910, "lon": 77.2120}, {"lat": 28.6950, "lon": 77.2160}],
+        "safety_score": 82.0,
+        "fastest_time_seconds": 600
+    }
+    start_res = client.post("/api/v1/walks", json=start_payload, headers=headers)
+    assert start_res.status_code == 201
+    walk_id = start_res.json()["walk"]["id"]
+
+    # Push stationary point far from Safe Stops (speed 0.05 m/s)
+    stop_point = {
+        "points": [
+            {"lat": 28.7500, "lon": 77.1500, "speed": 0.05, "accuracy": 3.0, "battery_level": 0.12}
+        ]
+    }
+    res_points = client.post(f"/api/v1/walks/{walk_id}/points", json=stop_point, headers=headers)
+    assert res_points.status_code == 200
+    data = res_points.json()
+    assert data["long_stop_detected"] is True, "Expected long stop detection when stopped outside safe stop"
+    assert data["checkin_required"] is True
+    assert data["low_battery_mode"] is True
+    assert data["sampling_rate_seconds"] == 30 # WALK-8 low battery conservation
+
+    # Acknowledge check-in (WALK-6)
+    checkin_res = client.post(f"/api/v1/walks/{walk_id}/checkin", json={
+        "acknowledged": True,
+        "safe": True,
+        "dismissal_latency_seconds": 4.5
+    }, headers=headers)
+    assert checkin_res.status_code == 200
+    assert checkin_res.json()["status"] == "checkin_confirmed"
+
+# Additional Verification: Generalizable Coordinate Routing & ROUTE-9 Cache
+def test_generalizable_coordinate_routing_and_route9_cache():
+    headers = create_authenticated_header()
+    payload = {
+        "origin": {"lat": 28.5355, "lon": 77.3910},
+        "destination": {"lat": 28.5480, "lon": 77.4080},
+        "walk_time": "2026-10-06T20:00:00"
+    }
+
+    # First request: computes dynamically
+    t0 = time.time()
+    res1 = client.post("/api/v1/routes/compare", json=payload, headers=headers)
+    t_first = time.time() - t0
+    assert res1.status_code == 200
+    data1 = res1.json()
+    assert len(data1["routes"]) >= 2
+    assert any(r["is_safest"] for r in data1["routes"])
+
+    # Second request: served from ROUTE-9 score cache
+    t1 = time.time()
+    res2 = client.post("/api/v1/routes/compare", json=payload, headers=headers)
+    t_cached = time.time() - t1
+    assert res2.status_code == 200
+    assert t_cached <= t_first + 0.1
+

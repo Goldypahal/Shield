@@ -36,11 +36,13 @@ async def upload_evidence_chunk(
     Uploads encrypted 30s rolling chunk metadata with chained SHA-256 hashes and sealed keys.
     The server stores ciphertext only and mathematically cannot decrypt the audio.
     """
-    # Verify hash integrity
+    # Verify hash integrity (EVID-4)
     computed_hash = hashlib.sha256(payload.ciphertext_base64.encode('utf-8')).hexdigest()
     if payload.sha256 and computed_hash != payload.sha256:
-        # If hash provided does not match, log warning but accept normalized hash
-        logger.warning(f"Provided SHA256 {payload.sha256} vs computed {computed_hash}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cryptographic evidence hash integrity violation: submitted '{payload.sha256}' does not match computed '{computed_hash}'"
+        )
 
     storage_key = f"evidence/{payload.alert_id}/chunk_{payload.seq}.enc"
     local_path = os.path.join(STORAGE_ROOT, f"{payload.alert_id}_chunk_{payload.seq}.enc")

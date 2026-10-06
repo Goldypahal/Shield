@@ -22,7 +22,45 @@ export async function stopIncidentRecording() {
   return uri;
 }
 
-// Stub until TFLite integration is added.
+import AudioClassifier from '../ml/AudioClassifier';
+import DistressWindowBuffer, { TemporalBufferStatus } from '../ml/DistressWindowBuffer';
+
+let latestAudioProbability: number = 0.0;
+
+/**
+ * SRS DET-1 & DET-8: Process a 0.975-second audio buffer on device.
+ * Evaluates distress probability via on-device audio model, updates 3-of-5 temporal buffer.
+ * Raw audio is held strictly in memory and discarded unless an active alert is generated.
+ */
+export async function processAudioWindow(pcmSamples: Float32Array): Promise<{
+  probability: number;
+  bufferStatus: TemporalBufferStatus;
+  shouldTriggerPreAlert: boolean;
+}> {
+  const prob = await AudioClassifier.classifyWindow(pcmSamples);
+  latestAudioProbability = prob;
+  const status = DistressWindowBuffer.pushWindow(prob);
+
+  return {
+    probability: prob,
+    bufferStatus: status,
+    shouldTriggerPreAlert: status.thresholdMet
+  };
+}
+
+/**
+ * Returns latest audio threat score [0, 100] for SRS Section 6.2 Threat Fusion.
+ */
 export async function getAudioThreatScore(): Promise<number> {
-  return 0;
+  const status = DistressWindowBuffer.getStatus();
+  // If 3 of 5 windows triggered, boost score to 95+
+  if (status.thresholdMet) {
+    return Math.max(90, Math.round(latestAudioProbability * 100));
+  }
+  return Math.round(latestAudioProbability * 100);
+}
+
+export function resetAudioBuffer(): void {
+  DistressWindowBuffer.reset();
+  latestAudioProbability = 0.0;
 }

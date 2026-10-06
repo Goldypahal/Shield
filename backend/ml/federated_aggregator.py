@@ -1,3 +1,9 @@
+"""
+EXPERIMENTAL MODULE (SRS v2 Future Scope)
+Federated learning is out of scope for SHIELD Walk v1.0.
+Retained for research reference and Phase 2 decentralized edge learning.
+"""
+
 import os
 import json
 import numpy as np

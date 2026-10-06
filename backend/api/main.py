@@ -170,19 +170,28 @@ async def walk_live_stream(websocket: WebSocket, walk_id: str):
         await walk_broker.unregister(walk_id, websocket)
         logger.error(f"WebSocket error on walk {walk_id}: {e}")
 
-# Legacy location websocket route
+# Location websocket route with one-time ticket support (NFR-10)
 @app.websocket("/ws/location/{alert_id}")
 async def legacy_location_stream(websocket: WebSocket, alert_id: str):
+    ticket = websocket.query_params.get("ticket")
+    if ticket:
+        ticket_record = await storage.consume_ws_ticket(ticket, alert_id)
+        if not ticket_record:
+            await websocket.close(code=1008, reason="Invalid or Expired WS Ticket")
+            return
+    else:
+        # Fallback check for backward compatibility
+        token = websocket.query_params.get("token")
+        if not token:
+            await websocket.close(code=1008, reason="Missing WS Ticket (NFR-10)")
+            return
+        try:
+            jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        except JWTError:
+            await websocket.close(code=1008, reason="Invalid Token")
+            return
+
     await websocket.accept()
-    token = websocket.query_params.get("token")
-    if not token:
-        await websocket.close(code=1008, reason="Missing Token")
-        return
-    try:
-        jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    except JWTError:
-        await websocket.close(code=1008, reason="Invalid Token")
-        return
     try:
         while True:
             await websocket.receive_text()

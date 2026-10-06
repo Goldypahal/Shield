@@ -58,6 +58,9 @@ class SetPinsPayload(BaseModel):
 class PushTokenPayload(BaseModel):
     expo_push_token: str
 
+class WSTicketPayload(BaseModel):
+    channel_id: str
+
 @router.post("/api/v1/auth/otp/request")
 @limiter.limit("5/minute")
 async def request_otp(request: Request, payload: OTPRequestPayload):
@@ -297,3 +300,24 @@ async def delete_account(
         "status": "deleted" if success else "failed",
         "message": "All personal data, walks, and account records completely erased."
     }
+
+@router.post("/api/v1/auth/ws-ticket")
+@limiter.limit("30/minute")
+async def create_websocket_ticket(
+    request: Request,
+    payload: WSTicketPayload,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    NFR-10: Issue a short-lived one-time ticket for WebSocket connections.
+    Prevents placing JWT in URLs or WebSocket query parameters.
+    """
+    user_id = str(current_user["user_id"])
+    ticket = await storage.create_ws_ticket(walk_id=payload.channel_id, user_id=user_id, ttl_seconds=60)
+    return {
+        "status": "ticket_created",
+        "ticket": ticket,
+        "channel_id": payload.channel_id,
+        "expires_in_seconds": 60
+    }
+

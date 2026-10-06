@@ -1,25 +1,49 @@
 import { Accelerometer } from 'expo-sensors';
+import MotionClassifier, { MotionClassificationResult } from '../ml/MotionClassifier';
 
-let latestMagnitude = 0;
+let latestResult: MotionClassificationResult = {
+  threatScore: 0,
+  event: 'NORMAL',
+  peakImpactG: 1.0,
+  stillnessDurationSec: 0,
+  erraticIndex: 0
+};
 let subscribed = false;
 
 function ensureSubscription() {
   if (subscribed) return;
 
   subscribed = true;
-  Accelerometer.setUpdateInterval(400);
+  // Sample at 50Hz (20ms) for impact & fall detection per SRS DET-5
+  Accelerometer.setUpdateInterval(50);
   Accelerometer.addListener(({ x, y, z }) => {
-    latestMagnitude = Math.sqrt(x * x + y * y + z * z);
+    // Convert g-force to m/s^2 for classifier
+    const G = 9.80665;
+    latestResult = MotionClassifier.addReading({
+      ax: x * G,
+      ay: y * G,
+      az: z * G,
+      gx: 0.0,
+      gy: 0.0,
+      gz: 0.0,
+      timestamp: Date.now()
+    });
   });
 }
 
-// Lightweight fallback until TFLite + sequence modeling is added.
+/**
+ * Returns latest motion threat score [0, 100] derived from
+ * SRS DET-5 impact (>2.5g) + 10s stillness or sustained erratic motion.
+ */
 export async function getMotionThreatScore(): Promise<number> {
   ensureSubscription();
+  return latestResult.threatScore;
+}
 
-  const deltaFromRest = Math.abs(latestMagnitude - 1);
-  if (deltaFromRest >= 1.2) return 85;
-  if (deltaFromRest >= 0.8) return 60;
-  if (deltaFromRest >= 0.45) return 35;
-  return 5;
+export function getLatestMotionEvent(): MotionClassificationResult {
+  return { ...latestResult };
+}
+
+export function resetMotionDetector(): void {
+  MotionClassifier.reset();
 }

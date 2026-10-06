@@ -66,21 +66,30 @@ class LocationTrackerService {
 
   /**
    * Called when an Emergency Contact opens the app to track their friend.
-   * Week 3/4 Auth Guard: We must append ?token= to bypass the server's HTTPBearer block.
+   * NFR-10: Obtains a short-lived one-time WS ticket to ensure JWT is NEVER exposed in URLs.
    */
   async subscribeToLiveIncident(alertId: string, onLocationUpdate: (locationData: any) => void) {
-    const token = await AuthService.getToken();
-    
-    if (!token) {
-      throw new Error('You must be logged in to track a live incident');
+    const authClient = await AuthService.getAuthenticatedClient();
+
+    // 1. Fetch short-lived one-time WebSocket ticket via Authorization Bearer header
+    let wsTicket = '';
+    try {
+      const res = await authClient.post('/api/v1/auth/ws-ticket', { channel_id: alertId });
+      wsTicket = res.data?.ticket || '';
+    } catch (ticketErr) {
+      console.warn('[WebSocket] Failed to fetch one-time ticket, falling back to direct endpoint', ticketErr);
     }
 
-    // Connect securely using the JWT as a URL Query Parameter
     if (this.ws) {
       this.ws.close();
     }
 
-    this.ws = new WebSocket(`${this.WS_URL}/${alertId}?token=${token}`);
+    // Connect using one-time ticket (NFR-10 compliant)
+    const connectUrl = wsTicket 
+      ? `${this.WS_URL}/${alertId}?ticket=${wsTicket}`
+      : `${this.WS_URL}/${alertId}`;
+
+    this.ws = new WebSocket(connectUrl);
 
     this.ws.onopen = () => {
       console.log(`[WebSocket] Connected securely to incident ${alertId}`);

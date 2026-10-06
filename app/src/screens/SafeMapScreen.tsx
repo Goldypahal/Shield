@@ -32,6 +32,8 @@ type ScoredRoute = {
   segments: any[];
 };
 
+const DEMO_MODE = false; // Set to true only for offline trade-show / simulation demos
+
 export default function SafeMapScreen() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [destination, setDestination] = useState('');
@@ -116,8 +118,12 @@ export default function SafeMapScreen() {
         selectRoute(safest, dLat, dLon);
       }
     } catch (err) {
-      console.warn("Backend route comparison failed, using local multi-route calculation", err);
-      generateLocalComparison(dLat, dLon, targetName);
+      console.warn("Backend route comparison error:", err);
+      if (DEMO_MODE) {
+        generateLocalComparison(dLat, dLon, targetName);
+      } else {
+        RNAlert.alert("Routing Error", "Unable to retrieve safe routes. Please verify network connectivity.");
+      }
     }
 
     setShowHistory(false);
@@ -348,9 +354,9 @@ export default function SafeMapScreen() {
                       onPress={() => selectRoute(r)}
                     >
                       <View style={styles.routeHeader}>
-                        {r.is_safest && <span style={styles.badgeSafest}>HIGHER SAFETY SCORE</span>}
-                        {r.is_fastest && <span style={styles.badgeFastest}>FASTEST</span>}
-                        {isCaution && <span style={styles.badgeCaution}>CAUTION STRETCH</span>}
+                        {r.is_safest && <Text style={styles.badgeSafest}>HIGHER SAFETY SCORE</Text>}
+                        {r.is_fastest && <Text style={styles.badgeFastest}>FASTEST</Text>}
+                        {isCaution && <Text style={styles.badgeCaution}>CAUTION STRETCH</Text>}
                       </View>
                       <Text style={styles.routeName}>{r.name}</Text>
                       <View style={styles.routeStats}>
