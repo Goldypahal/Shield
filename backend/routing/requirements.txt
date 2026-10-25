@@ -1,0 +1,8 @@
+numpy>=1.24
+networkx>=3.0
+folium>=0.15
+fastapi>=0.110
+uvicorn>=0.27
+osmnx>=2.0  # only for the real-OSM adapter
+pytest>=8
+httpx>=0.27

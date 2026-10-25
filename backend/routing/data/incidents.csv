@@ -1,0 +1,1221 @@
+edge,period,lat,lon,type,synthetic
+6,day,30.728262,76.706731,vehicle-related,True
+6,night,30.729208,76.705607,harassment,True
+8,evening,30.726542,76.702899,theft / snatching,True
+9,day,30.724962,76.699812,theft / snatching,True
+11,night,30.723679,76.698464,theft / snatching,True
+14,day,30.716942,76.696388,suspicious activity,True
+21,night,30.709439,76.683424,theft / snatching,True
+24,day,30.733747,76.714459,assault,True
+26,night,30.731718,76.712184,vehicle-related,True
+27,night,30.72946,76.711569,suspicious activity,True
+32,night,30.722942,76.703147,suspicious activity,True
+35,day,30.718965,76.700335,theft / snatching,True
+36,day,30.7192,76.699225,suspicious activity,True
+41,night,30.70985,76.693032,theft / snatching,True
+42,day,30.710691,76.690322,suspicious activity,True
+43,night,30.706742,76.690886,harassment,True
+45,day,30.704383,76.687906,theft / snatching,True
+46,evening,30.731691,76.720935,vehicle-related,True
+47,day,30.732467,76.719318,theft / snatching,True
+50,day,30.726499,76.715455,assault,True
+53,night,30.724065,76.709934,assault,True
+53,night,30.722733,76.708559,harassment,True
+54,night,30.720891,76.710287,suspicious activity,True
+55,evening,30.720041,76.706038,vehicle-related,True
+57,evening,30.719152,76.705057,suspicious activity,True
+57,night,30.71938,76.705341,harassment,True
+57,night,30.718379,76.704098,harassment,True
+60,evening,30.713586,76.701097,vehicle-related,True
+63,day,30.7104,76.695587,theft / snatching,True
+64,evening,30.707426,76.696614,suspicious activity,True
+65,night,30.70718,76.692166,theft / snatching,True
+70,night,30.780877,76.774959,suspicious activity,True
+71,night,30.778562,76.773391,theft / snatching,True
+72,day,30.776375,76.770257,theft / snatching,True
+76,night,30.772103,76.765798,theft / snatching,True
+79,night,30.767905,76.762123,harassment,True
+81,day,30.764934,76.759703,theft / snatching,True
+82,day,30.764296,76.757646,harassment,True
+87,evening,30.757157,76.750976,assault,True
+91,night,30.750982,76.746432,theft / snatching,True
+93,evening,30.748415,76.74349,harassment,True
+101,day,30.738701,76.731009,theft / snatching,True
+102,day,30.737745,76.729924,theft / snatching,True
+108,evening,30.730508,76.722839,harassment,True
+112,day,30.723324,76.715057,harassment,True
+115,day,30.718298,76.713579,harassment,True
+116,night,30.717758,76.709127,harassment,True
+116,night,30.718869,76.710415,harassment,True
+120,night,30.714402,76.705604,vehicle-related,True
+120,night,30.713598,76.7047,theft / snatching,True
+123,day,30.709074,76.700304,harassment,True
+125,day,30.705139,76.699219,assault,True
+126,night,30.706335,76.697174,harassment,True
+130,day,30.778323,76.779947,assault,True
+136,night,30.769305,76.772817,vehicle-related,True
+137,night,30.769226,76.768419,vehicle-related,True
+137,night,30.770319,76.769561,harassment,True
+139,day,30.766727,76.76581,harassment,True
+140,night,30.764019,76.76713,theft / snatching,True
+141,night,30.765544,76.764575,vehicle-related,True
+142,night,30.762815,76.762433,theft / snatching,True
+143,night,30.761842,76.760709,suspicious activity,True
+144,night,30.760054,76.75974,harassment,True
+145,day,30.759406,76.758166,harassment,True
+150,night,30.751197,76.752403,vehicle-related,True
+152,night,30.747427,76.751009,vehicle-related,True
+157,day,30.74176,76.739741,theft / snatching,True
+157,night,30.744278,76.742371,suspicious activity,True
+162,day,30.734143,76.736878,suspicious activity,True
+164,night,30.733455,76.731516,suspicious activity,True
+167,evening,30.730616,76.728096,harassment,True
+167,night,30.72991,76.727338,vehicle-related,True
+168,evening,30.728147,76.725809,theft / snatching,True
+168,night,30.726545,76.727979,theft / snatching,True
+168,night,30.726723,76.727738,suspicious activity,True
+174,day,30.719107,76.71864,vehicle-related,True
+174,night,30.719984,76.717671,theft / snatching,True
+177,evening,30.715773,76.71271,harassment,True
+179,evening,30.712713,76.70949,theft / snatching,True
+180,night,30.711974,76.708952,harassment,True
+182,night,30.708996,76.707022,theft / snatching,True
+184,day,30.70625,76.704082,assault,True
+191,evening,30.776261,76.782602,theft / snatching,True
+193,night,30.771957,76.781897,vehicle-related,True
+195,night,30.770143,76.777986,vehicle-related,True
+196,night,30.771293,76.776203,suspicious activity,True
+199,night,30.765273,76.771762,theft / snatching,True
+201,night,30.76105,76.770952,harassment,True
+201,night,30.761501,76.770371,harassment,True
+201,night,30.761416,76.770481,suspicious activity,True
+204,night,30.758041,76.762367,theft / snatching,True
+207,night,30.753424,76.76203,harassment,True
+211,night,30.74882,76.755464,theft / snatching,True
+213,night,30.745411,76.753605,harassment,True
+214,night,30.747238,76.751087,harassment,True
+219,day,30.738415,76.743872,suspicious activity,True
+220,night,30.738728,76.742201,suspicious activity,True
+221,night,30.735793,76.741001,theft / snatching,True
+222,day,30.735486,76.738817,theft / snatching,True
+223,evening,30.733622,76.737549,theft / snatching,True
+223,night,30.733015,76.738331,harassment,True
+223,night,30.733122,76.738192,theft / snatching,True
+227,day,30.728473,76.731685,suspicious activity,True
+227,evening,30.727953,76.732355,suspicious activity,True
+233,night,30.720002,76.723564,suspicious activity,True
+235,night,30.71669,76.721689,vehicle-related,True
+238,day,30.714529,76.716763,suspicious activity,True
+238,night,30.713293,76.715291,vehicle-related,True
+239,day,30.710781,76.717299,vehicle-related,True
+239,night,30.711264,76.716663,theft / snatching,True
+240,night,30.710033,76.71238,theft / snatching,True
+241,night,30.70809,76.714692,harassment,True
+242,evening,30.707615,76.709681,theft / snatching,True
+243,day,30.706329,76.709812,harassment,True
+243,night,30.706185,76.710017,suspicious activity,True
+244,day,30.706138,76.708159,suspicious activity,True
+248,evening,30.701126,76.702902,suspicious activity,True
+248,night,30.701209,76.702975,suspicious activity,True
+250,day,30.696809,76.698501,suspicious activity,True
+250,night,30.697019,76.698744,harassment,True
+253,day,30.77233,76.782912,assault,True
+257,evening,30.768392,76.7788,theft / snatching,True
+258,night,30.765318,76.777952,suspicious activity,True
+261,day,30.761388,76.771487,vehicle-related,True
+261,evening,30.761779,76.771896,assault,True
+261,evening,30.762085,76.772215,suspicious activity,True
+262,day,30.759044,76.773536,harassment,True
+262,night,30.759852,76.772495,suspicious activity,True
+264,evening,30.757199,76.769664,vehicle-related,True
+265,day,30.757536,76.767464,suspicious activity,True
+265,night,30.75569,76.765538,suspicious activity,True
+265,night,30.756194,76.766064,harassment,True
+265,night,30.755728,76.765577,suspicious activity,True
+266,evening,30.753691,76.767934,theft / snatching,True
+270,day,30.749495,76.760842,vehicle-related,True
+272,night,30.746276,76.75874,harassment,True
+274,night,30.742543,76.757301,suspicious activity,True
+274,night,30.743322,76.756297,suspicious activity,True
+275,day,30.744652,76.754013,theft / snatching,True
+279,night,30.738162,76.747236,vehicle-related,True
+281,day,30.734721,76.743644,vehicle-related,True
+281,night,30.735494,76.744451,vehicle-related,True
+284,evening,30.729738,76.742552,vehicle-related,True
+286,day,30.728024,76.738511,harassment,True
+286,day,30.727556,76.739114,harassment,True
+286,evening,30.726768,76.740128,theft / snatching,True
+286,night,30.728203,76.738281,harassment,True
+288,night,30.723828,76.737667,assault,True
+289,day,30.72396,76.732249,assault,True
+289,night,30.724871,76.733265,assault,True
+290,day,30.721778,76.73372,theft / snatching,True
+298,day,30.711561,76.722378,assault,True
+299,day,30.712537,76.720482,harassment,True
+302,night,30.704876,76.718208,harassment,True
+303,evening,30.707527,76.715163,theft / snatching,True
+306,day,30.700261,76.711372,assault,True
+308,day,30.697361,76.709355,suspicious activity,True
+311,day,30.695571,76.703188,theft / snatching,True
+311,night,30.694538,76.701957,assault,True
+315,night,30.767265,76.78794,theft / snatching,True
+319,day,30.762842,76.78114,suspicious activity,True
+319,day,30.762321,76.781811,harassment,True
+320,day,30.762946,76.77874,theft / snatching,True
+320,night,30.763322,76.779132,suspicious activity,True
+320,night,30.762938,76.778731,vehicle-related,True
+321,night,30.760544,76.777852,theft / snatching,True
+321,night,30.759469,76.779238,theft / snatching,True
+323,night,30.757537,76.775476,theft / snatching,True
+326,evening,30.755136,76.770584,vehicle-related,True
+327,night,30.752841,76.769029,assault,True
+327,night,30.753158,76.76862,theft / snatching,True
+328,night,30.750777,76.766034,theft / snatching,True
+329,night,30.749974,76.766473,theft / snatching,True
+332,night,30.746776,76.761855,suspicious activity,True
+334,day,30.744331,76.759302,suspicious activity,True
+334,night,30.744724,76.759712,theft / snatching,True
+336,day,30.741536,76.756385,suspicious activity,True
+336,day,30.741908,76.756773,theft / snatching,True
+345,night,30.727191,76.745831,harassment,True
+347,evening,30.72445,76.743115,vehicle-related,True
+349,evening,30.721562,76.740586,assault,True
+349,night,30.723532,76.738049,theft / snatching,True
+349,night,30.722095,76.739898,theft / snatching,True
+351,night,30.719936,76.736219,vehicle-related,True
+356,day,30.714521,76.728017,harassment,True
+357,day,30.713029,76.72696,harassment,True
+358,night,30.710499,76.724239,theft / snatching,True
+361,night,30.707374,76.720936,theft / snatching,True
+361,night,30.706542,76.722161,harassment,True
+362,day,30.706088,76.719501,theft / snatching,True
+363,night,30.70326,76.720228,suspicious activity,True
+372,night,30.692967,76.70532,harassment,True
+374,night,30.767501,76.793884,harassment,True
+375,day,30.768445,76.790106,harassment,True
+379,night,30.762512,76.783911,harassment,True
+379,night,30.761784,76.783151,assault,True
+379,night,30.762855,76.78427,suspicious activity,True
+381,evening,30.760711,76.782031,assault,True
+381,evening,30.758887,76.780127,vehicle-related,True
+381,evening,30.759911,76.781195,theft / snatching,True
+381,night,30.7607,76.78202,theft / snatching,True
+381,night,30.76065,76.781968,suspicious activity,True
+383,day,30.757746,76.778936,vehicle-related,True
+383,day,30.758481,76.779703,suspicious activity,True
+383,day,30.758684,76.779914,theft / snatching,True
+383,evening,30.758382,76.779599,theft / snatching,True
+383,night,30.756233,76.777356,harassment,True
+384,night,30.754143,76.779848,suspicious activity,True
+385,day,30.755646,76.776743,assault,True
+387,evening,30.752592,76.773554,theft / snatching,True
+387,night,30.751862,76.772792,theft / snatching,True
+390,night,30.747503,76.769655,vehicle-related,True
+393,day,30.743761,76.764334,theft / snatching,True
+393,night,30.743102,76.763646,theft / snatching,True
+394,evening,30.741521,76.764863,suspicious activity,True
+395,night,30.740535,76.760965,assault,True
+396,day,30.739032,76.761821,theft / snatching,True
+397,evening,30.739774,76.760171,theft / snatching,True
+397,night,30.738031,76.75835,harassment,True
+398,night,30.735003,76.760762,theft / snatching,True
+401,evening,30.732287,76.752353,theft / snatching,True
+403,night,30.731439,76.751468,harassment,True
+404,night,30.72916,76.749543,vehicle-related,True
+405,night,30.726905,76.746734,theft / snatching,True
+405,night,30.728941,76.748859,harassment,True
+405,night,30.729294,76.749228,theft / snatching,True
+405,night,30.728342,76.748235,harassment,True
+406,day,30.725291,76.74828,harassment,True
+407,day,30.724386,76.744104,harassment,True
+407,evening,30.725346,76.745107,assault,True
+407,night,30.725211,76.744965,theft / snatching,True
+407,night,30.725738,76.745516,theft / snatching,True
+409,night,30.723287,76.742957,harassment,True
+409,night,30.721691,76.74129,theft / snatching,True
+411,day,30.720474,76.740068,theft / snatching,True
+416,night,30.711313,76.735162,theft / snatching,True
+421,evening,30.706148,76.725079,harassment,True
+423,day,30.704523,76.723384,assault,True
+423,evening,30.7052,76.724079,assault,True
+423,night,30.703574,76.722409,harassment,True
+423,night,30.704481,76.72334,vehicle-related,True
+425,evening,30.701835,76.720574,harassment,True
+425,night,30.701177,76.719846,harassment,True
+426,night,30.697372,76.72138,suspicious activity,True
+427,evening,30.699044,76.717608,harassment,True
+427,night,30.698825,76.717399,suspicious activity,True
+429,night,30.695072,76.713445,suspicious activity,True
+432,evening,30.68986,76.712603,theft / snatching,True
+433,day,30.691087,76.709469,theft / snatching,True
+434,day,30.688847,76.707673,theft / snatching,True
+439,evening,30.761599,76.788989,assault,True
+444,night,30.753754,76.780393,vehicle-related,True
+446,night,30.751564,76.778106,theft / snatching,True
+451,day,30.744428,76.773617,theft / snatching,True
+454,day,30.74046,76.766513,harassment,True
+455,day,30.739526,76.767433,theft / snatching,True
+457,night,30.737245,76.764124,vehicle-related,True
+461,day,30.731771,76.758677,assault,True
+461,day,30.731515,76.759006,suspicious activity,True
+465,evening,30.726202,76.753354,suspicious activity,True
+466,evening,30.724379,76.749722,assault,True
+467,night,30.722076,76.752419,vehicle-related,True
+469,day,30.720989,76.747571,harassment,True
+470,day,30.7209,76.746089,harassment,True
+474,evening,30.716256,76.741094,theft / snatching,True
+480,night,30.706164,76.730735,vehicle-related,True
+481,day,30.704857,76.730871,theft / snatching,True
+482,day,30.703697,76.72804,vehicle-related,True
+485,night,30.698498,76.726566,assault,True
+490,night,30.693389,76.717741,harassment,True
+497,night,30.763904,76.796615,theft / snatching,True
+500,night,30.757379,76.794424,suspicious activity,True
+502,day,30.755419,76.7907,suspicious activity,True
+506,evening,30.749914,76.785294,harassment,True
+506,evening,30.750413,76.784651,theft / snatching,True
+506,night,30.750204,76.784921,assault,True
+507,evening,30.750508,76.782629,harassment,True
+512,night,30.741639,76.777208,theft / snatching,True
+515,night,30.738847,76.770454,theft / snatching,True
+515,night,30.739764,76.771411,assault,True
+516,day,30.736599,76.771202,suspicious activity,True
+516,night,30.737562,76.769963,harassment,True
+517,evening,30.735398,76.766852,harassment,True
+517,night,30.737466,76.769012,theft / snatching,True
+520,evening,30.731623,76.765115,harassment,True
+521,day,30.732229,76.763544,suspicious activity,True
+522,night,30.727554,76.764109,suspicious activity,True
+523,day,30.727286,76.758382,theft / snatching,True
+523,night,30.728339,76.759482,harassment,True
+523,night,30.727247,76.758342,suspicious activity,True
+525,evening,30.726016,76.757056,theft / snatching,True
+528,day,30.721489,76.753175,vehicle-related,True
+529,night,30.720203,76.750987,theft / snatching,True
+529,night,30.720991,76.751811,harassment,True
+530,night,30.718753,76.75045,harassment,True
+530,night,30.718052,76.751353,theft / snatching,True
+532,night,30.715348,76.748589,vehicle-related,True
+534,night,30.713413,76.744618,assault,True
+539,evening,30.706139,76.736268,suspicious activity,True
+540,day,30.70319,76.738908,harassment,True
+540,night,30.704359,76.737685,vehicle-related,True
+543,night,30.702892,76.732901,suspicious activity,True
+544,evening,30.698652,76.732697,harassment,True
+545,day,30.698513,76.728358,harassment,True
+559,evening,30.759365,76.798114,theft / snatching,True
+560,night,30.759152,76.79728,harassment,True
+562,night,30.75501,76.792955,suspicious activity,True
+562,night,30.755003,76.792947,theft / snatching,True
+564,day,30.752716,76.79056,theft / snatching,True
+568,night,30.746869,76.784455,suspicious activity,True
+568,night,30.748697,76.786364,vehicle-related,True
+570,day,30.743703,76.78115,harassment,True
+571,night,30.74158,76.783532,harassment,True
+573,night,30.739328,76.780183,assault,True
+577,day,30.733784,76.774828,suspicious activity,True
+579,night,30.730851,76.772358,harassment,True
+582,evening,30.728452,76.765226,theft / snatching,True
+585,day,30.724133,76.762267,theft / snatching,True
+590,day,30.71905,76.755409,suspicious activity,True
+591,night,30.714514,76.755912,theft / snatching,True
+593,night,30.712913,76.751725,assault,True
+594,night,30.713645,76.749768,vehicle-related,True
+595,night,30.710373,76.748906,assault,True
+598,day,30.708653,76.744174,theft / snatching,True
+599,day,30.705676,76.742317,theft / snatching,True
+600,evening,30.704205,76.740014,theft / snatching,True
+601,night,30.701221,76.741762,vehicle-related,True
+605,evening,30.69639,76.735516,suspicious activity,True
+610,day,30.692594,76.727575,theft / snatching,True
+613,day,30.685105,76.725474,vehicle-related,True
+614,night,30.684982,76.720239,harassment,True
+615,evening,30.683117,76.721434,theft / snatching,True
+615,night,30.683418,76.720971,suspicious activity,True
+616,evening,30.682554,76.717465,harassment,True
+616,night,30.683693,76.718873,harassment,True
+617,night,30.680315,76.718632,theft / snatching,True
+618,day,30.758534,76.805432,harassment,True
+618,night,30.757536,76.806718,theft / snatching,True
+619,night,30.759284,76.803043,theft / snatching,True
+622,day,30.75245,76.800771,vehicle-related,True
+622,night,30.753724,76.799131,harassment,True
+625,night,30.750591,76.793967,harassment,True
+628,night,30.746116,76.790186,harassment,True
+628,night,30.744504,76.792261,suspicious activity,True
+630,day,30.741562,76.789803,harassment,True
+632,night,30.739031,76.786815,theft / snatching,True
+635,evening,30.736716,76.77948,suspicious activity,True
+635,night,30.73659,76.779349,suspicious activity,True
+635,night,30.736844,76.779614,harassment,True
+637,night,30.733567,76.776192,harassment,True
+643,evening,30.726869,76.769198,theft / snatching,True
+644,night,30.724849,76.76759,theft / snatching,True
+645,night,30.723217,76.765386,harassment,True
+647,night,30.720239,76.762276,harassment,True
+648,day,30.717608,76.764422,theft / snatching,True
+651,night,30.715331,76.757151,harassment,True
+653,day,30.71293,76.754645,vehicle-related,True
+653,night,30.714169,76.755938,assault,True
+655,day,30.709965,76.75161,assault,True
+655,night,30.71052,76.75217,harassment,True
+655,night,30.70908,76.750717,harassment,True
+656,evening,30.706878,76.75328,theft / snatching,True
+657,day,30.708257,76.749851,harassment,True
+661,night,30.702565,76.74396,suspicious activity,True
+665,evening,30.695779,76.736894,assault,True
+668,day,30.692764,76.734162,theft / snatching,True
+669,day,30.691817,76.732697,harassment,True
+669,night,30.692574,76.733432,harassment,True
+671,night,30.689353,76.730205,theft / snatching,True
+673,day,30.685865,76.726374,theft / snatching,True
+673,day,30.686076,76.726598,suspicious activity,True
+674,evening,30.684778,76.725838,suspicious activity,True
+678,night,30.678023,76.721702,suspicious activity,True
+682,evening,30.753929,76.803078,theft / snatching,True
+685,evening,30.748214,76.799979,theft / snatching,True
+686,day,30.748373,76.797277,harassment,True
+687,night,30.746486,76.795957,vehicle-related,True
+688,day,30.746344,76.795159,vehicle-related,True
+688,night,30.746327,76.795141,theft / snatching,True
+690,evening,30.74348,76.792167,suspicious activity,True
+693,night,30.737058,76.789355,theft / snatching,True
+694,evening,30.738406,76.786871,harassment,True
+695,night,30.734456,76.786459,theft / snatching,True
+700,day,30.729036,76.777087,assault,True
+703,evening,30.723954,76.774992,theft / snatching,True
+704,night,30.724674,76.772533,vehicle-related,True
+708,night,30.719322,76.766944,harassment,True
+713,night,30.710238,76.761417,theft / snatching,True
+717,night,30.704303,76.756693,harassment,True
+718,night,30.70496,76.751902,harassment,True
+726,day,30.695203,76.741663,harassment,True
+727,day,30.691885,76.741396,assault,True
+728,night,30.690728,76.737027,theft / snatching,True
+729,night,30.690482,76.736922,theft / snatching,True
+731,night,30.68725,76.734735,theft / snatching,True
+732,night,30.68786,76.733868,theft / snatching,True
+735,night,30.680928,76.730143,suspicious activity,True
+736,night,30.681572,76.727484,assault,True
+740,evening,30.753998,76.811273,harassment,True
+741,night,30.753982,76.808759,suspicious activity,True
+743,evening,30.751396,76.806059,harassment,True
+743,evening,30.751662,76.806337,theft / snatching,True
+743,night,30.750679,76.80531,harassment,True
+744,day,30.749208,76.804947,vehicle-related,True
+745,night,30.747084,76.801556,theft / snatching,True
+747,evening,30.744712,76.799081,vehicle-related,True
+749,night,30.744214,76.798561,suspicious activity,True
+750,evening,30.740425,76.797515,harassment,True
+750,night,30.740845,76.796973,assault,True
+751,day,30.739462,76.793599,theft / snatching,True
+753,night,30.736994,76.791021,harassment,True
+754,night,30.735486,76.791379,theft / snatching,True
+755,night,30.735457,76.789416,suspicious activity,True
+756,night,30.732104,76.789488,theft / snatching,True
+758,night,30.730764,76.784965,harassment,True
+759,evening,30.730658,76.784407,harassment,True
+761,evening,30.727825,76.781449,theft / snatching,True
+761,evening,30.725738,76.779269,harassment,True
+761,night,30.726198,76.779749,theft / snatching,True
+761,night,30.727971,76.7816,theft / snatching,True
+762,evening,30.725142,76.77971,assault,True
+762,night,30.723891,76.781321,harassment,True
+763,evening,30.724411,76.777883,suspicious activity,True
+765,evening,30.721245,76.774578,harassment,True
+765,night,30.720293,76.773583,theft / snatching,True
+765,night,30.722465,76.775851,suspicious activity,True
+766,day,30.717848,76.776608,vehicle-related,True
+766,evening,30.718056,76.776341,harassment,True
+766,night,30.718465,76.775814,theft / snatching,True
+767,night,30.719588,76.772848,suspicious activity,True
+768,night,30.716988,76.771467,harassment,True
+773,night,30.710138,76.76298,theft / snatching,True
+773,night,30.709534,76.76235,theft / snatching,True
+776,night,30.70627,76.76028,theft / snatching,True
+782,evening,30.697216,76.753262,vehicle-related,True
+786,night,30.691881,76.747717,theft / snatching,True
+787,night,30.692749,76.744822,assault,True
+792,day,30.685305,76.736982,suspicious activity,True
+792,evening,30.684678,76.737871,theft / snatching,True
+792,night,30.683105,76.7401,theft / snatching,True
+792,night,30.683367,76.739728,harassment,True
+793,day,30.685292,76.736828,suspicious activity,True
+797,night,30.678353,76.729726,harassment,True
+798,day,30.677153,76.729027,theft / snatching,True
+799,day,30.675422,76.726715,harassment,True
+799,day,30.677281,76.728459,assault,True
+804,day,30.749867,76.810087,assault,True
+804,night,30.747595,76.807715,suspicious activity,True
+804,night,30.749332,76.809529,theft / snatching,True
+807,evening,30.744016,76.805385,theft / snatching,True
+809,night,30.741076,76.802924,theft / snatching,True
+809,night,30.740904,76.803145,suspicious activity,True
+809,night,30.741354,76.802566,harassment,True
+811,day,30.737143,76.801743,harassment,True
+811,day,30.73876,76.799659,assault,True
+811,night,30.737972,76.800675,harassment,True
+813,day,30.735616,76.79746,harassment,True
+817,night,30.731047,76.790849,assault,True
+819,night,30.72692,76.789916,suspicious activity,True
+822,day,30.723898,76.782973,suspicious activity,True
+823,night,30.722791,76.782739,vehicle-related,True
+824,day,30.722405,76.781415,suspicious activity,True
+824,night,30.721255,76.780214,theft / snatching,True
+826,night,30.718213,76.777038,vehicle-related,True
+832,day,30.709902,76.76836,vehicle-related,True
+832,evening,30.712414,76.770983,assault,True
+832,night,30.709967,76.768428,vehicle-related,True
+833,evening,30.707504,76.771185,harassment,True
+833,night,30.707399,76.771321,suspicious activity,True
+833,night,30.70813,76.77038,theft / snatching,True
+835,day,30.705163,76.767952,theft / snatching,True
+835,night,30.706983,76.765609,suspicious activity,True
+841,day,30.698834,76.757312,theft / snatching,True
+845,night,30.6929,76.75261,suspicious activity,True
+848,day,30.690191,76.747526,theft / snatching,True
+849,day,30.686011,76.748719,theft / snatching,True
+849,night,30.687601,76.746843,harassment,True
+855,night,30.679197,76.738944,harassment,True
+856,day,30.680201,76.737303,theft / snatching,True
+856,day,30.68007,76.737173,assault,True
+856,night,30.679217,76.736325,harassment,True
+860,evening,30.672768,76.7292,harassment,True
+860,evening,30.673143,76.729709,suspicious activity,True
+860,evening,30.672946,76.729442,theft / snatching,True
+863,evening,30.745421,76.811071,theft / snatching,True
+865,day,30.740637,76.809738,theft / snatching,True
+866,evening,30.740861,76.80631,theft / snatching,True
+869,day,30.735184,76.804265,suspicious activity,True
+870,day,30.734273,76.799432,suspicious activity,True
+870,night,30.735134,76.800331,vehicle-related,True
+880,night,30.723354,76.788031,assault,True
+881,night,30.720736,76.785384,harassment,True
+885,day,30.714185,76.781326,vehicle-related,True
+888,night,30.712024,76.776201,theft / snatching,True
+891,night,30.705652,76.773571,harassment,True
+893,evening,30.704424,76.768906,suspicious activity,True
+893,evening,30.70329,76.770366,theft / snatching,True
+893,evening,30.704562,76.768727,theft / snatching,True
+895,evening,30.701726,76.766132,theft / snatching,True
+898,night,30.696935,76.760331,theft / snatching,True
+902,night,30.69191,76.755447,harassment,True
+908,day,30.684762,76.747785,harassment,True
+908,night,30.684271,76.747235,suspicious activity,True
+910,night,30.68123,76.744068,theft / snatching,True
+911,day,30.679051,76.745536,theft / snatching,True
+914,night,30.677112,76.739547,harassment,True
+920,night,30.738982,76.811868,theft / snatching,True
+921,day,30.737488,76.808414,harassment,True
+923,day,30.736879,76.807778,harassment,True
+923,day,30.735237,76.806064,theft / snatching,True
+923,night,30.735288,76.806117,theft / snatching,True
+925,night,30.733263,76.804003,suspicious activity,True
+936,night,30.716324,76.791067,theft / snatching,True
+936,night,30.718283,76.788544,harassment,True
+936,night,30.718055,76.788837,theft / snatching,True
+937,night,30.717176,76.787206,suspicious activity,True
+939,night,30.713405,76.783267,theft / snatching,True
+939,night,30.713358,76.783218,theft / snatching,True
+942,night,30.709392,76.78125,harassment,True
+944,day,30.707169,76.777865,suspicious activity,True
+946,night,30.703871,76.775865,vehicle-related,True
+946,night,30.703602,76.776212,theft / snatching,True
+950,night,30.699145,76.769455,vehicle-related,True
+950,night,30.697693,76.771325,suspicious activity,True
+952,night,30.695518,76.767909,theft / snatching,True
+953,night,30.69654,76.765506,harassment,True
+958,day,30.686849,76.760716,suspicious activity,True
+961,night,30.684512,76.753209,suspicious activity,True
+963,day,30.682312,76.750809,harassment,True
+964,night,30.680713,76.749125,suspicious activity,True
+967,night,30.677512,76.745974,assault,True
+974,night,30.666435,76.736643,harassment,True
+976,night,30.736835,76.813358,theft / snatching,True
+976,night,30.737174,76.813712,harassment,True
+976,night,30.737292,76.813835,vehicle-related,True
+978,night,30.73333,76.809698,theft / snatching,True
+978,night,30.733744,76.810131,suspicious activity,True
+980,night,30.732009,76.808318,harassment,True
+982,day,30.729046,76.805225,harassment,True
+985,day,30.722626,76.801694,vehicle-related,True
+991,night,30.715123,76.792613,theft / snatching,True
+993,day,30.712135,76.790213,assault,True
+993,night,30.711861,76.790566,suspicious activity,True
+994,evening,30.711516,76.786922,assault,True
+994,night,30.710817,76.786192,theft / snatching,True
+995,evening,30.708619,76.788493,harassment,True
+998,night,30.705399,76.780535,theft / snatching,True
+1000,day,30.704645,76.779748,vehicle-related,True
+1001,day,30.70109,76.779447,harassment,True
+1001,night,30.701712,76.778645,harassment,True
+1002,night,30.700665,76.775592,suspicious activity,True
+1004,evening,30.698121,76.772936,theft / snatching,True
+1005,night,30.695951,76.773569,suspicious activity,True
+1010,day,30.690227,76.764806,suspicious activity,True
+1013,day,30.685002,76.763117,suspicious activity,True
+1015,day,30.682414,76.759536,theft / snatching,True
+1015,night,30.683105,76.758715,harassment,True
+1019,night,30.678338,76.752478,harassment,True
+1022,day,30.6745,76.748211,harassment,True
+1023,night,30.672296,76.747708,suspicious activity,True
+1030,day,30.733495,76.818935,harassment,True
+1033,night,30.731135,76.813032,theft / snatching,True
+1034,day,30.72936,76.811764,assault,True
+1034,night,30.727315,76.814398,assault,True
+1035,evening,30.728761,76.810553,theft / snatching,True
+1035,night,30.729484,76.811308,assault,True
+1036,day,30.726321,76.809431,harassment,True
+1043,night,30.718655,76.800001,assault,True
+1046,night,30.713293,76.794971,vehicle-related,True
+1046,night,30.713145,76.795161,assault,True
+1047,day,30.711187,76.792204,harassment,True
+1047,day,30.710951,76.791957,theft / snatching,True
+1050,evening,30.707964,76.789338,theft / snatching,True
+1050,night,30.706484,76.791243,assault,True
+1051,day,30.706017,76.786806,suspicious activity,True
+1053,day,30.703451,76.784126,harassment,True
+1053,evening,30.704903,76.785643,suspicious activity,True
+1056,night,30.698857,76.782322,harassment,True
+1057,night,30.698794,76.779265,harassment,True
+1057,night,30.698411,76.778865,theft / snatching,True
+1058,evening,30.696945,76.778538,suspicious activity,True
+1059,evening,30.696869,76.777254,theft / snatching,True
+1059,night,30.696375,76.776739,theft / snatching,True
+1063,night,30.69142,76.771456,harassment,True
+1064,night,30.687814,76.771471,assault,True
+1069,night,30.68248,76.762126,harassment,True
+1076,evening,30.671412,76.755841,theft / snatching,True
+1076,night,30.671973,76.754909,assault,True
+1077,night,30.671868,76.751277,theft / snatching,True
+1084,day,30.662623,76.741388,harassment,True
+1085,evening,30.74033,76.828877,theft / snatching,True
+1086,day,30.740467,76.828401,harassment,True
+1088,night,30.736461,76.824218,vehicle-related,True
+1089,night,30.734849,76.823439,suspicious activity,True
+1090,night,30.734421,76.822088,harassment,True
+1094,night,30.72795,76.815333,theft / snatching,True
+1098,evening,30.723902,76.811106,harassment,True
+1104,day,30.714672,76.801468,harassment,True
+1106,day,30.712524,76.799226,harassment,True
+1106,night,30.713295,76.800031,theft / snatching,True
+1112,evening,30.704618,76.790971,harassment,True
+1115,evening,30.699719,76.78746,suspicious activity,True
+1116,evening,30.69815,76.784218,theft / snatching,True
+1117,night,30.696404,76.785482,vehicle-related,True
+1119,day,30.694202,76.782069,suspicious activity,True
+1119,night,30.694167,76.782115,theft / snatching,True
+1121,night,30.690879,76.780101,vehicle-related,True
+1124,evening,30.685538,76.770947,suspicious activity,True
+1127,night,30.677996,76.763126,theft / snatching,True
+1129,night,30.672198,76.757064,vehicle-related,True
+1129,night,30.67236,76.757208,theft / snatching,True
+1130,day,30.66992,76.7547,suspicious activity,True
+1130,night,30.670545,76.755417,suspicious activity,True
+1131,day,30.668011,76.752602,vehicle-related,True
+1131,night,30.667913,76.75251,assault,True
+1133,night,30.660867,76.74519,assault,True
+1137,evening,30.733201,76.82644,suspicious activity,True
+1138,day,30.730659,76.828836,theft / snatching,True
+1139,evening,30.731933,76.825117,assault,True
+1140,night,30.729458,76.824135,harassment,True
+1141,night,30.729539,76.822617,suspicious activity,True
+1142,night,30.725649,76.822793,harassment,True
+1144,evening,30.724209,76.8184,theft / snatching,True
+1150,night,30.715844,76.810429,theft / snatching,True
+1150,night,30.716526,76.809551,harassment,True
+1152,night,30.713161,76.807635,vehicle-related,True
+1155,day,30.70891,76.801077,harassment,True
+1155,night,30.710123,76.802345,suspicious activity,True
+1158,night,30.705591,76.798641,theft / snatching,True
+1160,night,30.702412,76.796488,vehicle-related,True
+1162,evening,30.698795,76.794897,theft / snatching,True
+1163,night,30.700427,76.79222,harassment,True
+1164,day,30.696599,76.791479,theft / snatching,True
+1168,day,30.692059,76.78483,theft / snatching,True
+1168,evening,30.690236,76.787178,harassment,True
+1173,night,30.73097,76.834683,suspicious activity,True
+1175,evening,30.729219,76.83069,theft / snatching,True
+1175,night,30.728653,76.831419,harassment,True
+1178,day,30.72645,76.825017,theft / snatching,True
+1179,day,30.723471,76.825598,theft / snatching,True
+1180,night,30.724848,76.823344,harassment,True
+1181,day,30.720104,76.823685,theft / snatching,True
+1182,night,30.72222,76.820601,assault,True
+1187,evening,30.712038,76.81533,harassment,True
+1188,night,30.714097,76.812119,suspicious activity,True
+1189,day,30.711151,76.810225,suspicious activity,True
+1189,day,30.709423,76.81245,harassment,True
+1189,night,30.709885,76.811855,theft / snatching,True
+1193,night,30.705372,76.805171,suspicious activity,True
+1194,night,30.704162,76.801746,theft / snatching,True
+1199,night,30.697913,76.796034,theft / snatching,True
+1201,day,30.694925,76.793634,vehicle-related,True
+1201,day,30.693572,76.795377,theft / snatching,True
+1203,day,30.69138,76.791952,theft / snatching,True
+1203,evening,30.691708,76.79153,harassment,True
+1206,night,30.689047,76.785964,harassment,True
+1214,night,30.732543,76.837004,theft / snatching,True
+1218,day,30.726156,76.830335,harassment,True
+1218,night,30.727761,76.832011,theft / snatching,True
+1220,day,30.722943,76.826981,theft / snatching,True
+1222,night,30.721275,76.825239,theft / snatching,True
+1223,night,30.718429,76.825842,suspicious activity,True
+1229,evening,30.70973,76.818302,harassment,True
+1229,night,30.711431,76.816111,theft / snatching,True
+1230,night,30.711169,76.814688,theft / snatching,True
+1233,evening,30.70506,76.811821,suspicious activity,True
+1233,night,30.705537,76.811208,assault,True
+1237,evening,30.698713,76.801682,harassment,True
+1240,day,30.693695,76.801467,harassment,True
+1240,evening,30.695056,76.799713,suspicious activity,True
+1242,evening,30.691453,76.798107,theft / snatching,True
+1246,night,30.687053,76.791276,assault,True
+1248,day,30.736394,76.846651,vehicle-related,True
+1255,night,30.727199,76.83954,harassment,True
+1256,night,30.725641,76.835424,theft / snatching,True
+1257,night,30.724628,76.836602,harassment,True
+1258,day,30.724715,76.834457,harassment,True
+1258,day,30.723222,76.832898,suspicious activity,True
+1258,night,30.723293,76.832972,vehicle-related,True
+1262,night,30.719866,76.829393,theft / snatching,True
+1264,day,30.715597,76.824937,suspicious activity,True
+1264,day,30.717138,76.826545,suspicious activity,True
+1268,night,30.711307,76.820457,theft / snatching,True
+1269,evening,30.709302,76.818854,suspicious activity,True
+1270,night,30.708969,76.818016,harassment,True
+1272,night,30.706763,76.815713,assault,True
+1274,evening,30.699348,76.807971,harassment,True
+1274,night,30.700349,76.809017,suspicious activity,True
+1276,evening,30.694081,76.807218,harassment,True
+1276,night,30.695871,76.804911,harassment,True
+1278,night,30.693306,76.801968,harassment,True
+1283,evening,30.686679,76.794744,theft / snatching,True
+1283,night,30.686178,76.79422,suspicious activity,True
+1284,night,30.683265,76.796155,theft / snatching,True
+1287,day,30.729306,76.844876,assault,True
+1290,night,30.72218,76.837435,theft / snatching,True
+1294,evening,30.711671,76.826463,vehicle-related,True
+1294,night,30.710526,76.825267,theft / snatching,True
+1295,night,30.708565,76.823219,assault,True
+1303,evening,30.686217,76.799886,theft / snatching,True
+1304,day,30.683486,76.797034,theft / snatching,True
+1309,day,30.723397,76.856715,harassment,True
+1311,day,30.719358,76.855625,suspicious activity,True
+1311,night,30.72075,76.853394,suspicious activity,True
+1313,night,30.718544,76.850676,harassment,True
+1314,day,30.718242,76.850316,assault,True
+1315,day,30.714716,76.849676,theft / snatching,True
+1316,day,30.714507,76.846233,theft / snatching,True
+1316,day,30.714766,76.846539,assault,True
+1316,night,30.715229,76.847087,vehicle-related,True
+1318,evening,30.712093,76.843754,theft / snatching,True
+1321,evening,30.706925,76.840783,suspicious activity,True
+1324,night,30.704716,76.836393,vehicle-related,True
+1324,night,30.704077,76.83567,assault,True
+1334,night,30.691394,76.821813,suspicious activity,True
+1337,day,30.685189,76.81869,harassment,True
+1339,night,30.726476,76.864395,harassment,True
+1342,night,30.719663,76.861705,suspicious activity,True
+1342,night,30.71952,76.861902,vehicle-related,True
+1349,night,30.711391,76.848628,vehicle-related,True
+1357,night,30.702341,76.839267,theft / snatching,True
+1368,evening,30.68623,76.823418,assault,True
+1373,night,30.721717,76.86561,harassment,True
+1373,night,30.719717,76.867888,assault,True
+1376,night,30.716498,76.859653,harassment,True
+1377,evening,30.716094,76.860067,suspicious activity,True
+1377,evening,30.714335,76.861909,harassment,True
+1382,night,30.710127,76.852865,harassment,True
+1385,day,30.704059,76.850765,theft / snatching,True
+1386,evening,30.705263,76.847965,assault,True
+1386,night,30.703837,76.846561,harassment,True
+1388,day,30.700593,76.842867,theft / snatching,True
+1388,evening,30.700823,76.84314,theft / snatching,True
+1388,night,30.700972,76.843317,suspicious activity,True
+1390,day,30.699092,76.841474,theft / snatching,True
+1393,night,30.69353,76.839133,harassment,True
+1394,day,30.692256,76.834486,vehicle-related,True
+1397,night,30.687879,76.833825,suspicious activity,True
+1398,day,30.688504,76.830426,theft / snatching,True
+1398,evening,30.687864,76.829827,theft / snatching,True
+1409,day,30.714211,76.862691,vehicle-related,True
+1415,day,30.70634,76.85441,harassment,True
+1422,day,30.697026,76.847194,assault,True
+1425,evening,30.693772,76.841592,theft / snatching,True
+1430,night,30.686995,76.835049,vehicle-related,True
+1437,day,30.669432,76.820245,suspicious activity,True
+1439,day,30.668242,76.815538,suspicious activity,True
+1439,evening,30.666372,76.817533,vehicle-related,True
+1443,evening,30.661406,76.811445,theft / snatching,True
+1447,night,30.658597,76.804753,suspicious activity,True
+1447,night,30.656667,76.802858,harassment,True
+1448,day,30.653346,76.802585,suspicious activity,True
+1448,night,30.654477,76.801541,theft / snatching,True
+1450,night,30.650808,76.795906,harassment,True
+1453,night,30.647248,76.791991,suspicious activity,True
+1455,day,30.643472,76.792129,suspicious activity,True
+1456,night,30.718425,76.875852,theft / snatching,True
+1462,day,30.709429,76.868669,assault,True
+1462,day,30.710648,76.867136,theft / snatching,True
+1465,night,30.707057,76.861022,suspicious activity,True
+1469,day,30.703713,76.857479,theft / snatching,True
+1469,night,30.70096,76.85473,vehicle-related,True
+1471,night,30.698321,76.852099,harassment,True
+1473,day,30.697609,76.851338,theft / snatching,True
+1476,night,30.69114,76.848654,suspicious activity,True
+1478,day,30.688084,76.846123,suspicious activity,True
+1485,night,30.681769,76.83467,suspicious activity,True
+1486,night,30.67738,76.835164,harassment,True
+1488,night,30.676078,76.830217,harassment,True
+1490,evening,30.664615,76.820047,suspicious activity,True
+1492,day,30.663852,76.815405,vehicle-related,True
+1498,evening,30.65114,76.804765,suspicious activity,True
+1503,night,30.645911,76.799979,vehicle-related,True
+1514,day,30.708442,76.868408,suspicious activity,True
+1521,day,30.69804,76.858688,suspicious activity,True
+1521,night,30.698553,76.858178,assault,True
+1521,night,30.697646,76.85908,theft / snatching,True
+1523,night,30.693799,76.85743,assault,True
+1529,night,30.686764,76.847817,harassment,True
+1537,night,30.676797,76.835911,theft / snatching,True
+1538,day,30.674668,76.832884,suspicious activity,True
+1538,day,30.676181,76.834314,theft / snatching,True
+1540,evening,30.6633,76.822381,suspicious activity,True
+1540,night,30.666552,76.824045,assault,True
+1543,day,30.660797,76.818455,vehicle-related,True
+1543,evening,30.658003,76.816529,harassment,True
+1545,day,30.65695,76.815132,harassment,True
+1545,night,30.656945,76.815116,assault,True
+1546,day,30.65351,76.815639,suspicious activity,True
+1547,night,30.655178,76.811503,harassment,True
+1550,evening,30.650108,76.808067,suspicious activity,True
+1552,night,30.645835,76.802442,theft / snatching,True
+1567,evening,30.702777,76.867934,suspicious activity,True
+1569,night,30.700847,76.866001,suspicious activity,True
+1570,night,30.697492,76.86516,suspicious activity,True
+1575,night,30.693084,76.857794,vehicle-related,True
+1575,night,30.692184,76.856805,harassment,True
+1577,day,30.689271,76.853795,suspicious activity,True
+1584,evening,30.678782,76.845515,harassment,True
+1584,night,30.67861,76.845717,theft / snatching,True
+1586,night,30.677111,76.841421,vehicle-related,True
+1589,day,30.672857,76.83652,theft / snatching,True
+1589,day,30.673888,76.837702,assault,True
+1591,night,30.661353,76.829694,theft / snatching,True
+1592,night,30.660765,76.824966,assault,True
+1595,night,30.655854,76.817739,suspicious activity,True
+1598,night,30.650798,76.813692,harassment,True
+1598,night,30.65142,76.813282,vehicle-related,True
+1599,evening,30.650995,76.812222,vehicle-related,True
+1601,night,30.646623,76.809618,suspicious activity,True
+1606,day,30.638872,76.803682,harassment,True
+1606,night,30.637475,76.804879,suspicious activity,True
+1610,night,30.711191,76.882234,vehicle-related,True
+1618,day,30.70003,76.870501,theft / snatching,True
+1618,night,30.700037,76.870508,theft / snatching,True
+1619,evening,30.698089,76.870736,harassment,True
+1619,night,30.698986,76.86959,theft / snatching,True
+1620,evening,30.698932,76.86939,suspicious activity,True
+1621,day,30.694187,76.869382,assault,True
+1623,night,30.691453,76.867256,suspicious activity,True
+1624,night,30.693428,76.863814,harassment,True
+1624,night,30.691165,76.861644,theft / snatching,True
+1630,evening,30.683364,76.853422,vehicle-related,True
+1634,evening,30.679187,76.848664,harassment,True
+1637,evening,30.674678,76.844522,harassment,True
+1637,night,30.673428,76.84626,vehicle-related,True
+1640,night,30.672248,76.841132,suspicious activity,True
+1643,night,30.65976,76.828615,theft / snatching,True
+1644,night,30.65579,76.830705,theft / snatching,True
+1647,day,30.654201,76.821335,theft / snatching,True
+1647,day,30.656579,76.82354,suspicious activity,True
+1648,day,30.653711,76.82095,suspicious activity,True
+1649,night,30.650535,76.817239,theft / snatching,True
+1656,evening,30.641348,76.809535,theft / snatching,True
+1657,night,30.638369,76.810131,suspicious activity,True
+1657,night,30.638244,76.810473,suspicious activity,True
+1659,night,30.636221,76.807592,theft / snatching,True
+1660,evening,30.635414,76.804813,harassment,True
+1669,night,30.701147,76.877517,theft / snatching,True
+1672,day,30.69657,76.872684,vehicle-related,True
+1675,night,30.692186,76.868292,assault,True
+1677,night,30.691144,76.867176,theft / snatching,True
+1679,night,30.687363,76.862963,theft / snatching,True
+1686,day,30.678048,76.85298,theft / snatching,True
+1686,day,30.677663,76.853495,harassment,True
+1690,day,30.671638,76.848526,suspicious activity,True
+1693,night,30.667453,76.842113,theft / snatching,True
+1695,night,30.657839,76.834461,theft / snatching,True
+1695,night,30.658445,76.83343,harassment,True
+1696,night,30.656205,76.831766,theft / snatching,True
+1704,night,30.647221,76.820909,suspicious activity,True
+1704,night,30.645807,76.819803,harassment,True
+1706,day,30.642399,76.817495,vehicle-related,True
+1706,evening,30.641712,76.818331,theft / snatching,True
+1707,day,30.643104,76.816512,harassment,True
+1708,day,30.639051,76.815861,theft / snatching,True
+1708,night,30.640472,76.813609,harassment,True
+1708,night,30.638618,76.816547,vehicle-related,True
+1709,night,30.63859,76.811036,theft / snatching,True
+1710,day,30.636421,76.812636,theft / snatching,True
+1710,evening,30.638007,76.810805,theft / snatching,True
+1712,night,30.632479,76.811225,theft / snatching,True
+1714,night,30.705831,76.892049,theft / snatching,True
+1715,night,30.705932,76.887881,harassment,True
+1718,day,30.700719,76.886242,suspicious activity,True
+1718,night,30.700225,76.886743,suspicious activity,True
+1719,day,30.701084,76.882861,harassment,True
+1721,day,30.697671,76.879321,vehicle-related,True
+1722,night,30.695838,76.880034,harassment,True
+1723,day,30.696665,76.878288,theft / snatching,True
+1724,day,30.692671,76.877835,theft / snatching,True
+1730,night,30.684176,76.869933,theft / snatching,True
+1731,night,30.684329,76.865419,harassment,True
+1734,night,30.679054,76.864171,suspicious activity,True
+1739,night,30.673979,76.854523,assault,True
+1742,night,30.669373,76.851232,theft / snatching,True
+1745,night,30.6668,76.847128,vehicle-related,True
+1747,evening,30.654725,76.838931,harassment,True
+1747,night,30.655179,76.838353,harassment,True
+1747,night,30.654848,76.838774,theft / snatching,True
+1748,evening,30.655442,76.835502,vehicle-related,True
+1753,night,30.648597,76.827469,theft / snatching,True
+1753,night,30.648866,76.827998,assault,True
+1754,night,30.646914,76.825356,suspicious activity,True
+1755,night,30.643312,76.821965,harassment,True
+1758,day,30.641003,76.81885,theft / snatching,True
+1767,night,30.70178,76.890856,suspicious activity,True
+1767,night,30.700291,76.892848,suspicious activity,True
+1776,night,30.690111,76.877079,suspicious activity,True
+1778,night,30.686657,76.873408,suspicious activity,True
+1780,day,30.686323,76.873061,suspicious activity,True
+1780,day,30.685664,76.872295,theft / snatching,True
+1792,day,30.667917,76.85402,theft / snatching,True
+1799,night,30.65335,76.838965,assault,True
+1800,night,30.651038,76.83604,theft / snatching,True
+1801,day,30.647428,76.835225,harassment,True
+1803,night,30.644267,76.828846,harassment,True
+1803,night,30.643672,76.82838,harassment,True
+1805,evening,30.6427,76.827413,harassment,True
+1807,day,30.639427,76.824506,suspicious activity,True
+1807,evening,30.63804,76.82352,harassment,True
+1807,night,30.639768,76.824748,suspicious activity,True
+1807,night,30.641397,76.825906,theft / snatching,True
+1813,night,30.629937,76.813993,theft / snatching,True
+1814,night,30.626827,76.81182,theft / snatching,True
+1822,night,30.693262,76.886206,harassment,True
+1824,night,30.690633,76.883333,harassment,True
+1825,day,30.689227,76.881886,theft / snatching,True
+1825,day,30.687082,76.884871,suspicious activity,True
+1825,evening,30.68889,76.882355,harassment,True
+1826,night,30.687441,76.879931,vehicle-related,True
+1830,day,30.683087,76.875404,theft / snatching,True
+1830,night,30.681756,76.873967,assault,True
+1835,evening,30.674403,76.870344,harassment,True
+1841,night,30.667626,76.859998,theft / snatching,True
+1843,day,30.663392,76.859308,harassment,True
+1846,night,30.662532,76.853819,harassment,True
+1847,night,30.658324,76.853358,suspicious activity,True
+1848,day,30.651467,76.844472,theft / snatching,True
+1849,evening,30.649353,76.839435,theft / snatching,True
+1855,night,30.642619,76.832481,theft / snatching,True
+1857,night,30.641739,76.831649,harassment,True
+1858,night,30.636658,76.830354,theft / snatching,True
+1861,day,30.633694,76.823328,theft / snatching,True
+1865,day,30.628554,76.818557,theft / snatching,True
+1867,night,30.624432,76.816721,assault,True
+1874,night,30.683054,76.881164,harassment,True
+1876,day,30.676761,76.874502,assault,True
+1878,night,30.672414,76.869632,suspicious activity,True
+1883,night,30.657692,76.854345,vehicle-related,True
+1884,night,30.649041,76.8451,theft / snatching,True
+1886,night,30.637852,76.834132,suspicious activity,True
+1890,evening,30.628202,76.822789,suspicious activity,True
+1892,night,30.72167,76.699442,harassment,True
+1893,night,30.727298,76.70293,theft / snatching,True
+1893,night,30.727322,76.703663,suspicious activity,True
+1895,night,30.723037,76.714284,harassment,True
+1895,night,30.725352,76.713988,vehicle-related,True
+1896,night,30.722856,76.711286,assault,True
+1897,day,30.706151,76.694386,harassment,True
+1897,night,30.705416,76.694436,harassment,True
+1898,night,30.773202,76.767349,theft / snatching,True
+1899,day,30.73756,76.733993,assault,True
+1900,night,30.738541,76.730973,theft / snatching,True
+1901,night,30.732386,76.728387,theft / snatching,True
+1901,night,30.735758,76.728181,theft / snatching,True
+1902,evening,30.728809,76.722882,theft / snatching,True
+1902,night,30.726976,76.722871,harassment,True
+1902,night,30.729037,76.722883,theft / snatching,True
+1904,evening,30.768437,76.766781,vehicle-related,True
+1904,night,30.76844,76.766846,vehicle-related,True
+1904,night,30.768302,76.763792,theft / snatching,True
+1905,day,30.765539,76.759124,suspicious activity,True
+1905,evening,30.765787,76.764618,theft / snatching,True
+1905,night,30.765607,76.760628,theft / snatching,True
+1905,night,30.765768,76.764191,suspicious activity,True
+1906,evening,30.756375,76.756531,theft / snatching,True
+1906,evening,30.753833,76.756685,theft / snatching,True
+1908,day,30.742789,76.742556,suspicious activity,True
+1909,evening,30.723384,76.725788,harassment,True
+1909,night,30.724191,76.725758,theft / snatching,True
+1910,day,30.725618,76.71998,suspicious activity,True
+1910,evening,30.7258,76.722718,vehicle-related,True
+1910,night,30.725754,76.722027,suspicious activity,True
+1910,night,30.725756,76.722055,theft / snatching,True
+1911,night,30.714811,76.710229,suspicious activity,True
+1911,night,30.714826,76.710859,theft / snatching,True
+1912,night,30.776593,76.781944,theft / snatching,True
+1913,night,30.771119,76.779317,theft / snatching,True
+1913,night,30.769161,76.779436,assault,True
+1914,night,30.752511,76.753282,theft / snatching,True
+1914,night,30.75253,76.753695,harassment,True
+1915,night,30.749922,76.752473,suspicious activity,True
+1916,day,30.746857,76.751189,theft / snatching,True
+1916,day,30.745237,76.751287,assault,True
+1916,evening,30.745714,76.751258,vehicle-related,True
+1917,day,30.73212,76.740243,theft / snatching,True
+1917,night,30.734799,76.740081,harassment,True
+1917,night,30.732355,76.740229,theft / snatching,True
+1917,night,30.73251,76.74022,suspicious activity,True
+1917,night,30.73647,76.739979,theft / snatching,True
+1919,evening,30.774321,76.784,vehicle-related,True
+1920,night,30.76845,76.779479,theft / snatching,True
+1921,night,30.758957,76.774135,suspicious activity,True
+1921,night,30.76024,76.774057,suspicious activity,True
+1921,night,30.759841,76.774081,theft / snatching,True
+1922,day,30.739438,76.75164,theft / snatching,True
+1922,evening,30.737562,76.751754,harassment,True
+1922,night,30.741532,76.751513,suspicious activity,True
+1923,night,30.716414,76.726417,suspicious activity,True
+1924,night,30.712835,76.720177,harassment,True
+1925,evening,30.701917,76.706159,theft / snatching,True
+1926,night,30.699164,76.702746,suspicious activity,True
+1927,evening,30.759886,76.777039,theft / snatching,True
+1927,evening,30.759655,76.777053,theft / snatching,True
+1927,evening,30.758376,76.777131,harassment,True
+1927,night,30.760337,76.777012,suspicious activity,True
+1928,night,30.742225,76.751635,theft / snatching,True
+1929,night,30.726152,76.734894,assault,True
+1929,night,30.726377,76.739891,harassment,True
+1929,night,30.726221,76.736419,theft / snatching,True
+1931,night,30.704925,76.721034,vehicle-related,True
+1931,night,30.705031,76.721025,suspicious activity,True
+1932,night,30.734842,76.757839,theft / snatching,True
+1933,day,30.72909,76.743405,theft / snatching,True
+1935,day,30.751044,76.777304,theft / snatching,True
+1935,evening,30.750989,76.776097,suspicious activity,True
+1935,night,30.750879,76.773656,harassment,True
+1936,day,30.741223,76.769292,harassment,True
+1936,night,30.741421,76.76928,theft / snatching,True
+1936,night,30.737936,76.769492,vehicle-related,True
+1937,night,30.740106,76.761243,vehicle-related,True
+1938,day,30.722789,76.749692,theft / snatching,True
+1939,evening,30.708182,76.731268,suspicious activity,True
+1939,night,30.707889,76.727223,harassment,True
+1939,night,30.707989,76.728593,theft / snatching,True
+1940,night,30.737057,76.772506,harassment,True
+1941,night,30.731804,76.766905,suspicious activity,True
+1942,day,30.721753,76.750529,theft / snatching,True
+1942,day,30.721628,76.747754,harassment,True
+1942,night,30.721829,76.752221,assault,True
+1944,day,30.713654,76.741188,assault,True
+1944,evening,30.713773,76.738851,suspicious activity,True
+1944,night,30.713663,76.741019,harassment,True
+1945,evening,30.689453,76.715249,theft / snatching,True
+1945,night,30.689705,76.718512,suspicious activity,True
+1945,night,30.689561,76.716643,harassment,True
+1945,night,30.689702,76.718475,harassment,True
+1946,evening,30.754897,76.798064,harassment,True
+1946,night,30.756032,76.797995,theft / snatching,True
+1947,day,30.746158,76.782177,theft / snatching,True
+1947,evening,30.746116,76.781255,suspicious activity,True
+1948,night,30.738982,76.778309,theft / snatching,True
+1951,evening,30.703092,76.734608,suspicious activity,True
+1951,evening,30.70309,76.734483,theft / snatching,True
+1951,night,30.703083,76.733889,suspicious activity,True
+1951,night,30.703106,76.735701,theft / snatching,True
+1952,day,30.688507,76.7279,suspicious activity,True
+1952,night,30.688533,76.727899,theft / snatching,True
+1952,night,30.690343,76.727767,harassment,True
+1953,night,30.748729,76.795478,suspicious activity,True
+1954,day,30.749168,76.792286,harassment,True
+1954,evening,30.749018,76.788971,assault,True
+1954,evening,30.749127,76.791379,theft / snatching,True
+1954,night,30.748927,76.786967,suspicious activity,True
+1954,night,30.748916,76.786718,harassment,True
+1954,night,30.749004,76.788674,suspicious activity,True
+1955,night,30.740436,76.787102,theft / snatching,True
+1956,night,30.736116,76.781444,harassment,True
+1958,night,30.730127,76.772927,theft / snatching,True
+1959,night,30.727511,76.76495,vehicle-related,True
+1959,night,30.727635,76.7677,harassment,True
+1960,night,30.724887,76.763394,vehicle-related,True
+1961,day,30.713246,76.756192,theft / snatching,True
+1961,evening,30.7096,76.756413,theft / snatching,True
+1961,night,30.711664,76.756288,theft / snatching,True
+1962,night,30.70628,76.746208,theft / snatching,True
+1963,night,30.743833,76.787195,harassment,True
+1964,night,30.725251,76.771443,theft / snatching,True
+1964,night,30.725315,76.772865,suspicious activity,True
+1964,night,30.725238,76.771167,suspicious activity,True
+1964,night,30.725076,76.767577,harassment,True
+1965,night,30.687805,76.732524,vehicle-related,True
+1966,evening,30.744832,76.804596,vehicle-related,True
+1966,night,30.748107,76.804397,theft / snatching,True
+1966,night,30.747337,76.804444,theft / snatching,True
+1967,day,30.725573,76.778562,harassment,True
+1967,evening,30.725586,76.778857,suspicious activity,True
+1967,evening,30.725457,76.775997,assault,True
+1967,night,30.72536,76.773869,theft / snatching,True
+1968,evening,30.717344,76.765936,theft / snatching,True
+1968,night,30.717436,76.767968,vehicle-related,True
+1969,night,30.709424,76.760148,harassment,True
+1970,night,30.704146,76.756433,theft / snatching,True
+1970,night,30.70401,76.752556,suspicious activity,True
+1970,night,30.704143,76.756332,vehicle-related,True
+1970,night,30.704151,76.75656,assault,True
+1971,night,30.682482,76.731253,suspicious activity,True
+1971,night,30.682481,76.731105,suspicious activity,True
+1972,day,30.741897,76.800869,theft / snatching,True
+1972,night,30.741923,76.801427,vehicle-related,True
+1973,night,30.732368,76.796473,harassment,True
+1974,day,30.723137,76.781155,theft / snatching,True
+1974,evening,30.723086,76.780011,theft / snatching,True
+1974,night,30.72313,76.781002,vehicle-related,True
+1976,day,30.709533,76.762564,theft / snatching,True
+1976,night,30.70963,76.764709,vehicle-related,True
+1977,night,30.674834,76.728439,harassment,True
+1977,night,30.674778,76.72643,harassment,True
+1978,night,30.737935,76.807975,harassment,True
+1979,evening,30.739373,76.801488,harassment,True
+1979,evening,30.73942,76.802535,theft / snatching,True
+1979,night,30.739268,76.799176,suspicious activity,True
+1980,day,30.734142,76.798723,harassment,True
+1980,evening,30.734114,76.798114,vehicle-related,True
+1980,night,30.733949,76.794454,theft / snatching,True
+1981,day,30.724471,76.793992,harassment,True
+1981,day,30.727919,76.793783,vehicle-related,True
+1981,evening,30.727451,76.793812,suspicious activity,True
+1981,night,30.728405,76.793754,theft / snatching,True
+1982,evening,30.716873,76.782613,suspicious activity,True
+1982,night,30.716028,76.782664,theft / snatching,True
+1982,night,30.713365,76.782826,vehicle-related,True
+1982,night,30.713626,76.78281,harassment,True
+1984,evening,30.729363,76.805536,harassment,True
+1984,evening,30.73203,76.805374,assault,True
+1985,day,30.726145,76.79122,vehicle-related,True
+1985,evening,30.726382,76.79647,harassment,True
+1985,night,30.72637,76.796201,harassment,True
+1985,night,30.726137,76.791031,harassment,True
+1985,night,30.726273,76.794046,vehicle-related,True
+1986,evening,30.707513,76.774348,assault,True
+1986,night,30.707497,76.774,suspicious activity,True
+1989,evening,30.680739,76.747547,theft / snatching,True
+1990,evening,30.737139,76.808564,assault,True
+1990,evening,30.737203,76.809978,harassment,True
+1990,evening,30.737369,76.813634,assault,True
+1991,night,30.732536,76.811264,harassment,True
+1992,night,30.719681,76.797244,suspicious activity,True
+1992,night,30.719771,76.797238,theft / snatching,True
+1993,evening,30.71845,76.790403,assault,True
+1994,evening,30.715758,76.787327,theft / snatching,True
+1995,day,30.699736,76.771742,assault,True
+1995,night,30.699842,76.774082,vehicle-related,True
+1996,night,30.727031,76.811598,harassment,True
+1997,evening,30.710803,76.790655,theft / snatching,True
+1997,evening,30.710794,76.790463,suspicious activity,True
+1999,night,30.727118,76.812756,theft / snatching,True
+2000,day,30.716365,76.800775,harassment,True
+2001,evening,30.713704,76.798377,harassment,True
+2001,evening,30.713645,76.797061,theft / snatching,True
+2002,day,30.705652,76.789663,vehicle-related,True
+2002,day,30.705691,76.790523,harassment,True
+2002,day,30.705547,76.787331,theft / snatching,True
+2004,evening,30.735268,76.823623,suspicious activity,True
+2005,evening,30.724776,76.817402,theft / snatching,True
+2006,evening,30.711361,76.803013,harassment,True
+2006,evening,30.711243,76.800388,suspicious activity,True
+2006,evening,30.711256,76.800687,harassment,True
+2006,evening,30.711147,76.79828,theft / snatching,True
+2006,night,30.711292,76.801481,vehicle-related,True
+2007,day,30.705784,76.792597,suspicious activity,True
+2007,night,30.705917,76.795525,assault,True
+2007,night,30.706031,76.798041,harassment,True
+2007,night,30.70587,76.794485,theft / snatching,True
+2008,night,30.703132,76.795289,harassment,True
+2008,night,30.70142,76.795393,suspicious activity,True
+2008,night,30.698861,76.795549,suspicious activity,True
+2009,day,30.697949,76.788671,vehicle-related,True
+2009,night,30.697901,76.787611,harassment,True
+2010,day,30.719611,76.816103,theft / snatching,True
+2010,night,30.719493,76.813503,theft / snatching,True
+2010,night,30.719605,76.815965,harassment,True
+2011,day,30.690169,76.785969,vehicle-related,True
+2012,day,30.702924,76.839834,suspicious activity,True
+2012,night,30.705861,76.839665,suspicious activity,True
+2013,night,30.724285,76.862186,assault,True
+2013,night,30.724275,76.862186,theft / snatching,True
+2013,night,30.722277,76.862259,theft / snatching,True
+2014,evening,30.715937,76.847932,harassment,True
+2014,night,30.715997,76.851668,theft / snatching,True
+2015,evening,30.697048,76.830173,harassment,True
+2015,evening,30.697037,76.829647,harassment,True
+2016,day,30.687802,76.828926,vehicle-related,True
+2017,evening,30.70328,76.851223,harassment,True
+2017,night,30.703241,76.850241,suspicious activity,True
+2017,night,30.703238,76.850181,harassment,True
+2018,day,30.695278,76.840255,vehicle-related,True
+2020,evening,30.703239,76.860317,theft / snatching,True
+2020,evening,30.703064,76.860325,harassment,True
+2020,night,30.704184,76.86027,suspicious activity,True
+2021,night,30.691864,76.846328,assault,True
+2023,day,30.69992,76.863587,harassment,True
+2023,night,30.703121,76.863478,suspicious activity,True
+2024,evening,30.69894,76.860494,suspicious activity,True
+2024,night,30.696441,76.860575,suspicious activity,True
+2024,night,30.699988,76.86046,harassment,True
+2024,night,30.698087,76.860521,theft / snatching,True
+2025,night,30.698297,76.854297,theft / snatching,True
+2026,night,30.700087,76.866692,theft / snatching,True
+2026,night,30.700972,76.86668,theft / snatching,True
+2029,day,30.690485,76.850383,harassment,True
+2030,night,30.705771,76.878214,theft / snatching,True
+2031,night,30.687987,76.858132,harassment,True
+2032,night,30.678056,76.859066,theft / snatching,True
+2034,evening,30.672778,76.853599,theft / snatching,True
+2034,night,30.671978,76.853603,theft / snatching,True
+2035,evening,30.665603,76.850827,vehicle-related,True
+2037,night,30.680336,76.87058,vehicle-related,True
+2039,night,30.675817,76.858556,suspicious activity,True
+2040,night,30.662596,76.851061,theft / snatching,True
+2041,day,30.700097,76.895925,theft / snatching,True
+2041,night,30.702039,76.895809,theft / snatching,True
+2041,night,30.700284,76.895914,suspicious activity,True
+2044,night,30.745595,76.812721,vehicle-related,True
+2045,day,30.739555,76.811343,theft / snatching,True
+2045,evening,30.740543,76.810386,suspicious activity,True
+2045,night,30.73917,76.811717,assault,True
+2045,night,30.73907,76.811813,assault,True
+2045,night,30.737394,76.813436,suspicious activity,True
+2046,night,30.735241,76.816434,harassment,True
+2046,night,30.735119,76.816645,vehicle-related,True
+2047,evening,30.733492,76.821119,theft / snatching,True
+2048,day,30.720478,76.8357,suspicious activity,True
+2048,night,30.719795,76.83658,assault,True
+2048,night,30.719709,76.836691,harassment,True
+2049,night,30.714689,76.843095,theft / snatching,True
+2050,day,30.704001,76.819532,theft / snatching,True
+2050,day,30.702678,76.821551,theft / snatching,True
+2051,day,30.697174,76.828247,harassment,True
+2051,night,30.698508,76.826785,suspicious activity,True
+2052,day,30.687358,76.8024,theft / snatching,True
+2052,night,30.687438,76.802376,theft / snatching,True
+2055,evening,30.675922,76.76312,theft / snatching,True
+2055,night,30.678886,76.758611,theft / snatching,True
+2056,day,30.670227,76.772033,harassment,True
+2058,day,30.659515,76.790565,suspicious activity,True
+2060,day,30.665559,76.840153,theft / snatching,True
+2061,evening,30.659635,76.83213,theft / snatching,True
+2061,night,30.661409,76.83552,theft / snatching,True

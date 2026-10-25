@@ -36,6 +36,15 @@ class ModelManager {
     quantization: 'INT8'
   };
 
+  private screamModel: ModelMetadata = {
+    name: 'Shield Scream Detection CNN',
+    filename: 'best.pt',
+    isLoaded: true,
+    inputShape: [1, 1, 64, 313], // 64 mels x 313 time frames (5.0s @ 16kHz)
+    version: '1.0.0',
+    quantization: 'FLOAT32'
+  };
+
   async initializeModels(): Promise<{ audioReady: boolean; motionReady: boolean }> {
     try {
       // In production React Native, react-native-fast-tflite or tflite-react-native
@@ -59,6 +68,10 @@ class ModelManager {
 
   getMotionModelMetadata(): ModelMetadata {
     return { ...this.motionModel };
+  }
+
+  getScreamModelMetadata(): ModelMetadata {
+    return { ...this.screamModel };
   }
 }
 

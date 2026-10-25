@@ -1,25 +1,33 @@
-# SHIELD On-Device Model Assets
+---
+pipeline_tag: audio-classification
+tags:
+- pytorch
+- audio-classification
+- scream-detection
+- shield
+---
 
-This directory stores the edge machine learning model assets loaded by `ModelManager.ts`:
+# Shield Scream Detection
 
-### 1. `shield_audio_v1.tflite` (SRS DET-1, DET-2, DET-3)
-- **Input:** 0.975-second audio PCM buffer at 16,000 Hz mono (Float32 tensor `[1, 15600]`) or 1024-d YAMNet embedding (`[1, 1024]`).
-- **Output:** Distress probability $P \in [0.0, 1.0]$ (`[1, 1]`).
-- **Trigger Rule:** 3 of 5 consecutive windows $\ge 0.80$ (temporal smoothing via `DistressWindowBuffer.ts`).
-- **Latency Target:** $< 200\text{ ms}$ per window (NFR-8).
-- **Quantization:** INT8 quantized.
+Private research model for classifying five-second audio clips as
+`scream` or `non_scream`.
 
-### 2. `shield_motion_v1.tflite` (SRS DET-5)
-- **Input:** 100 timesteps $\times$ 6 kinematic axes (`[1, 100, 6]`):
-  - Accelerometer: $a_x, a_y, a_z$ (in $\text{m/s}^2$)
-  - Gyroscope: $g_x, g_y, g_z$ (in $\text{rad/s}$)
-  - 50 Hz sampling rate ($\approx 2.0\text{ s}$ window).
-- **Output:** Class probabilities `[1, 3]`:
-  - Index 0: Normal walking/standing
-  - Index 1: Fall ($>2.5g$ impact peak followed by $\ge 10\text{ s}$ stillness)
-  - Index 2: Struggle (sustained high-jerk erratic motion)
+## Input
 
-### Model Drop-in:
-Place your compiled TFLite model files in this directory:
-- `app/assets/models/shield_audio_v1.tflite`
-- `app/assets/models/shield_motion_v1.tflite`
+Send a JSON request with `inputs` containing base64-encoded WAV audio.
+The model resamples audio to 16 kHz and evaluates a five-second clip.
+
+## Output
+
+Returns a predicted label and the model's sigmoid score.
+
+The score is not a calibrated probability of danger. This research model
+must not be used as the sole trigger for emergency or SOS decisions.
+
+## Files
+
+- `best.pt`: trained PyTorch checkpoint
+- `config.json`: preprocessing and model configuration
+- `inference.py`: model and preprocessing implementation
+- `handler.py`: Hugging Face Inference Endpoint handler
+- `requirements.txt`: runtime dependencies

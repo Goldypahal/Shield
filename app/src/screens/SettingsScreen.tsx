@@ -1,317 +1,332 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
-  Alert,
-  ScrollView
+  SafeAreaView,
+  StatusBar,
+  ScrollView,
+  TouchableOpacity,
+  Alert as RNAlert,
+  Modal,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-import ContactService from '../services/contactService';
-import NotificationService from '../services/notificationService';
-import AuthService from '../services/authService';
-import VoiceService from '../services/VoiceService';
-import { EmergencyContact, IncidentHistoryItem } from '../types';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../theme';
+import AppHeader from '../components/common/AppHeader';
+import SettingsRow from '../components/settings/SettingsRow';
+import ThemeToggleModal from '../components/settings/ThemeToggleModal';
+import BottomNavigation, { TabKey } from '../components/common/BottomNavigation';
+import ContactService from '../services/contactService';
 
-export default function SettingsScreen() {
-  const [contacts, setContacts] = useState<EmergencyContact[]>([]);
-  const [contactName, setContactName] = useState('');
-  const [contactPhone, setContactPhone] = useState('');
-  const [pin, setPin] = useState('');
-  const [duressPin, setDuressPin] = useState('');
-  const [keyword, setKeyword] = useState('help');
-  const [pushToken, setPushToken] = useState<string | null>(null);
-  const [history, setHistory] = useState<IncidentHistoryItem[]>([]);
-  const [voiceEnabled, setVoiceEnabled] = useState(false);
+interface SettingsScreenProps {
+  onNavigateToContacts?: () => void;
+  activeTab?: TabKey;
+  onTabPress?: (tab: TabKey) => void;
+}
+
+export default function SettingsScreen({
+  onNavigateToContacts,
+  activeTab = 'Settings',
+  onTabPress,
+}: SettingsScreenProps) {
+  const { colors, typography, isDark, mode, radii } = useTheme();
+
+  const [themeModalVisible, setThemeModalVisible] = useState(false);
+  const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
+  const [aboutModalVisible, setAboutModalVisible] = useState(false);
+  const [contactCount, setContactCount] = useState(3);
 
   useEffect(() => {
-    loadSettings();
-    loadContacts();
-    loadIncidentHistory();
-    setVoiceEnabled(VoiceService.getListeningStatus());
+    async function checkContacts() {
+      try {
+        const list = await ContactService.listContacts();
+        if (list && list.length > 0) {
+          setContactCount(list.length);
+        }
+      } catch (_) {}
+    }
+    checkContacts();
   }, []);
 
-  const loadSettings = async () => {
-    try {
-      const savedPin = await AsyncStorage.getItem('@shield_pin');
-      const savedDuressPin = await AsyncStorage.getItem('@shield_duress_pin');
-      const savedKeyword = await AsyncStorage.getItem('@shield_keyword');
-      const savedPushToken = await AsyncStorage.getItem('@shield_push_token');
-      if (savedPin) setPin(savedPin);
-      if (savedDuressPin) setDuressPin(savedDuressPin);
-      if (savedKeyword) setKeyword(savedKeyword);
-      if (savedPushToken) setPushToken(savedPushToken);
-    } catch (e) {
-      console.error('Failed to load settings', e);
-    }
-  };
-
-  const loadContacts = async () => {
-    const next = await ContactService.listContacts();
-    setContacts(next);
-  };
-
-  const loadIncidentHistory = async () => {
-    try {
-      const client = await AuthService.getAuthenticatedClient();
-      const response = await client.get<{ incidents: IncidentHistoryItem[] }>('/api/v1/incidents/history');
-      setHistory(response.data.incidents || []);
-    } catch (error) {
-      console.warn('Failed to load incident history', error);
-    }
-  };
-
-  const saveSettings = async () => {
-    try {
-      if (pin.length > 0 && pin.length < 4) {
-        Alert.alert('Invalid PIN', 'PIN must be at least 4 digits.');
-        return;
-      }
-      if (duressPin.length > 0 && duressPin.length < 4) {
-        Alert.alert('Invalid Duress PIN', 'Duress PIN must be at least 4 digits.');
-        return;
-      }
-
-      await AsyncStorage.setItem('@shield_pin', pin);
-      await AsyncStorage.setItem('@shield_duress_pin', duressPin);
-      await AsyncStorage.setItem('@shield_keyword', keyword);
-
-      try {
-        const client = await AuthService.getAuthenticatedClient();
-        await client.post('/api/v1/auth/security-settings', {
-          duress_pin: duressPin || undefined
-        });
-      } catch (error) {
-        console.warn('Security settings sync failed', error);
-      }
-
-      Alert.alert('Saved', 'Your emergency preferences have been updated.');
-    } catch (e) {
-      Alert.alert('Error', 'Could not save settings.');
-    }
-  };
-
-  const addContact = async () => {
-    if (!contactName.trim() || !contactPhone.trim()) {
-      Alert.alert('Missing Fields', 'Enter both a contact name and phone number.');
-      return;
-    }
-
-    const nameRegex = /^[A-Za-z\s]+$/;
-    if (!nameRegex.test(contactName.trim())) {
-      Alert.alert('Invalid Name', 'Name should contain only letters.');
-      return;
-    }
-
-    if (contactName.trim().length > 12) {
-      Alert.alert('Name Too Long', 'Name should be maximum 12 letters.');
-      return;
-    }
-
-    const saved = await ContactService.saveContact({
-      name: contactName.trim(),
-      phone: contactPhone.trim()
-    });
-
-    setContacts((prev) => {
-      const next = prev.filter((item) => item.id !== saved.id && item.phone !== saved.phone);
-      return [...next, saved];
-    });
-    setContactName('');
-    setContactPhone('');
-  };
-
-  const removeContact = async (contactId: string) => {
-    await ContactService.deleteContact(contactId);
-    setContacts((prev) => prev.filter((contact) => contact.id !== contactId));
-  };
-
-  const enablePushAlerts = async () => {
-    const token = await NotificationService.registerForPushNotifications();
-    if (!token) {
-      Alert.alert('Notifications Disabled', 'Permission was not granted.');
-      return;
-    }
-
-    await AsyncStorage.setItem('@shield_push_token', token);
-    setPushToken(token);
-    Alert.alert('Notifications Enabled', 'Guardian alerts can now raise local push notifications.');
-  };
-
-  const toggleVoice = async () => {
-    if (voiceEnabled) {
-      await VoiceService.stopListening();
-      setVoiceEnabled(false);
-    } else {
-      await VoiceService.startListening();
-      setVoiceEnabled(true);
-      Alert.alert(
-        'Voice Trigger Active', 
-        'The app is now listening for your secret keyword. Background support is limited in Expo Go; keep the app open for best results.'
-      );
-    }
+  const getThemeDisplayLabel = () => {
+    if (mode === 'system') return 'System default';
+    return mode === 'dark' ? 'Dark mode' : 'Light mode';
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Safety Settings</Text>
-      <Text style={styles.subtitle}>Configure contacts, duress behavior, alerts, and recent incident history.</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
 
-      <View style={styles.card}>
-        <Text style={styles.label}>Add Emergency Contact</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Contact name (Max 12 chars)"
-          placeholderTextColor="#666"
-          value={contactName}
-          onChangeText={setContactName}
-          maxLength={12}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. +1 555 123 4567"
-          placeholderTextColor="#666"
-          keyboardType="phone-pad"
-          value={contactPhone}
-          onChangeText={setContactPhone}
-        />
-        <TouchableOpacity style={styles.inlineButton} onPress={addContact}>
-          <Text style={styles.inlineButtonText}>Add Contact</Text>
+      <AppHeader title="Settings" />
+
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <TouchableOpacity
+          activeOpacity={0.8}
+          style={[
+            styles.profileCard,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              borderRadius: radii.xl,
+            },
+          ]}
+          onPress={() => {
+            RNAlert.alert('Profile', 'Account managed locally. Data stored securely on-device.');
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Profile settings for Alex"
+        >
+          <View style={[styles.avatarCircle, { backgroundColor: colors.brandAccent }]}>
+            <Text style={styles.avatarText}>A</Text>
+          </View>
+
+          <View style={styles.profileInfo}>
+            <Text style={[typography.h3, { color: colors.textPrimary }]}>Alex</Text>
+            <Text style={[typography.bodySmall, { color: colors.textSecondary }]}>
+              alex@example.com
+            </Text>
+          </View>
+
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
         </TouchableOpacity>
 
-        {contacts.length === 0 ? (
-          <Text style={styles.hint}>No emergency contacts saved yet.</Text>
-        ) : (
-          contacts.map((contact) => (
-            <View key={contact.id} style={styles.contactRow}>
-              <View>
-                <Text style={styles.contactName}>{contact.name}</Text>
-                <Text style={styles.contactPhone}>{contact.phone}</Text>
+        <View style={styles.sectionContainer}>
+          <SettingsRow
+            iconName="people-outline"
+            title="Trusted Contacts"
+            subtitle={`Manage your ${contactCount} emergency contacts`}
+            onPress={() => {
+              if (onNavigateToContacts) onNavigateToContacts();
+            }}
+          />
+
+          <SettingsRow
+            iconName="lock-closed-outline"
+            title="Privacy"
+            subtitle="Control data and permissions"
+            onPress={() => setPrivacyModalVisible(true)}
+          />
+
+          <SettingsRow
+            iconName="options-outline"
+            title="App Preferences"
+            subtitle={`Theme: ${getThemeDisplayLabel()}`}
+            onPress={() => setThemeModalVisible(true)}
+          />
+
+          <SettingsRow
+            iconName="information-circle-outline"
+            title="About"
+            subtitle="App version 1.0.0"
+            onPress={() => setAboutModalVisible(true)}
+          />
+        </View>
+      </ScrollView>
+
+      <ThemeToggleModal
+        visible={themeModalVisible}
+        onClose={() => setThemeModalVisible(false)}
+      />
+
+      <Modal
+        visible={privacyModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPrivacyModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalBackdrop}
+          activeOpacity={1}
+          onPress={() => setPrivacyModalVisible(false)}
+        >
+          <View
+            style={[
+              styles.modalCard,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                borderRadius: radii.xl,
+              },
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <View style={[styles.modalIconBox, { backgroundColor: colors.surfaceSecondary }]}>
+                <Ionicons name="lock-closed" size={20} color={colors.brandAccent} />
               </View>
-              <TouchableOpacity onPress={() => removeContact(contact.id)}>
-                <Text style={styles.removeText}>Remove</Text>
+              <Text style={[typography.h3, { color: colors.textPrimary, flex: 1, marginLeft: 12 }]}>
+                Privacy & Data
+              </Text>
+              <TouchableOpacity onPress={() => setPrivacyModalVisible(false)}>
+                <Ionicons name="close" size={22} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
-          ))
-        )}
-      </View>
 
-      <View style={styles.card}>
-        <Text style={styles.label}>SOS Cancellation PIN</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="4-digit PIN"
-          placeholderTextColor="#666"
-          keyboardType="number-pad"
-          secureTextEntry
-          maxLength={4}
-          value={pin}
-          onChangeText={setPin}
-        />
-        <Text style={styles.hint}>This PIN is required to cancel a live or pending SOS.</Text>
-      </View>
+            <Text style={[typography.bodyMedium, { color: colors.textSecondary, marginTop: 14, lineHeight: 22 }]}>
+              Heimdal adheres to strict on-device data sovereignty. Location data is shared only when emergency SOS is triggered or during active Live Sharing sessions.
+            </Text>
 
-      <View style={styles.card}>
-        <Text style={styles.label}>Duress PIN</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="4-digit duress PIN"
-          placeholderTextColor="#666"
-          keyboardType="number-pad"
-          secureTextEntry
-          maxLength={4}
-          value={duressPin}
-          onChangeText={setDuressPin}
-        />
-        <Text style={styles.hint}>Logging in with this PIN silently opens a high-risk incident in the backend.</Text>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.label}>Voice SOS Trigger</Text>
-        <Text style={styles.hint}>
-          Trigger an emergency alert hands-free by speaking your secret keyword: "{keyword}"
-        </Text>
-        <TouchableOpacity 
-          style={[styles.inlineButton, voiceEnabled && { backgroundColor: '#4CAF50' }]} 
-          onPress={toggleVoice}
-        >
-          <Text style={styles.inlineButtonText}>
-            {voiceEnabled ? 'Listening Active' : 'Enable Voice Listening'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.label}>Secret Voice Keyword</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. Help Me"
-          placeholderTextColor="#666"
-          autoCapitalize="none"
-          value={keyword}
-          onChangeText={setKeyword}
-        />
-        <Text style={styles.hint}>Stored locally for voice-trigger support.</Text>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.label}>Guardian Push Alerts</Text>
-        <Text style={styles.hint}>
-          {pushToken ? 'Push token registered on this device.' : 'Register this device for guardian alert notifications.'}
-        </Text>
-        <TouchableOpacity style={styles.inlineButton} onPress={enablePushAlerts}>
-          <Text style={styles.inlineButtonText}>{pushToken ? 'Refresh Push Token' : 'Enable Push Alerts'}</Text>
-        </TouchableOpacity>
-      </View>
-
-      <TouchableOpacity style={styles.saveButton} onPress={saveSettings}>
-        <Text style={styles.saveButtonText}>Save Configuration</Text>
-      </TouchableOpacity>
-
-      <View style={styles.card}>
-        <Text style={styles.label}>Recent Incident History</Text>
-        {history.length === 0 ? (
-          <Text style={styles.hint}>No incidents recorded yet.</Text>
-        ) : (
-          history.map((incident) => (
-            <View key={incident.incident_id} style={styles.historyRow}>
-              <Text style={styles.historyTitle}>
-                {incident.threat_level.toUpperCase()} • {incident.state}
-              </Text>
-              <Text style={styles.historyText}>{incident.explainable_reason}</Text>
-              <Text style={styles.historyMeta}>
-                {incident.created_at ? new Date(incident.created_at).toLocaleString() : 'Unknown time'}
+            <View style={styles.permissionItem}>
+              <Ionicons name="checkmark-circle" size={18} color={colors.statusSuccess} />
+              <Text style={[typography.bodySmall, { color: colors.textPrimary, marginLeft: 8 }]}>
+                Foreground GPS coordinates: Active
               </Text>
             </View>
-          ))
-        )}
-      </View>
-    </ScrollView>
+            <View style={styles.permissionItem}>
+              <Ionicons name="checkmark-circle" size={18} color={colors.statusSuccess} />
+              <Text style={[typography.bodySmall, { color: colors.textPrimary, marginLeft: 8 }]}>
+                On-device acoustic processing: Secure
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.modalDismissBtn, { backgroundColor: colors.brandAccent }]}
+              onPress={() => setPrivacyModalVisible(false)}
+            >
+              <Text style={[typography.button, { color: '#FFFFFF' }]}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      <Modal
+        visible={aboutModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAboutModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalBackdrop}
+          activeOpacity={1}
+          onPress={() => setAboutModalVisible(false)}
+        >
+          <View
+            style={[
+              styles.modalCard,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                borderRadius: radii.xl,
+              },
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <View style={[styles.modalIconBox, { backgroundColor: colors.surfaceSecondary }]}>
+                <Ionicons name="shield-checkmark" size={20} color={colors.brandGold} />
+              </View>
+              <Text style={[typography.h3, { color: colors.textPrimary, flex: 1, marginLeft: 12 }]}>
+                Heimdal
+              </Text>
+              <TouchableOpacity onPress={() => setAboutModalVisible(false)}>
+                <Ionicons name="close" size={22} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[typography.bodyMedium, { color: colors.textSecondary, marginTop: 14, lineHeight: 22 }]}>
+              Heimdal Personal Safety Application{'\n'}
+              Version 1.0.0 (Production Foundation){'\n'}
+              "Your safety. Our priority."
+            </Text>
+
+            <TouchableOpacity
+              style={[styles.modalDismissBtn, { backgroundColor: colors.brandAccent }]}
+              onPress={() => setAboutModalVisible(false)}
+            >
+              <Text style={[typography.button, { color: '#FFFFFF' }]}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {onTabPress && (
+        <BottomNavigation activeTab={activeTab} onTabPress={onTabPress} />
+      )}
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#121212', padding: 20 },
-  title: { color: '#FFF', fontSize: 28, fontWeight: 'bold', paddingTop: 40, marginBottom: 5 },
-  subtitle: { color: '#A0A0A0', fontSize: 14, marginBottom: 30 },
-  card: { backgroundColor: '#1E1E1E', padding: 20, borderRadius: 12, marginBottom: 20 },
-  label: { color: '#FFF', fontSize: 16, fontWeight: 'bold', marginBottom: 10 },
-  input: { backgroundColor: '#2C2C2C', color: '#FFF', borderRadius: 8, padding: 15, fontSize: 16, marginBottom: 12 },
-  hint: { color: '#888', fontSize: 12, marginTop: 4, lineHeight: 18 },
-  saveButton: { backgroundColor: '#FF9800', padding: 15, borderRadius: 12, alignItems: 'center', marginTop: 10, marginBottom: 20 },
-  saveButtonText: { color: '#FFF', fontSize: 18, fontWeight: 'bold' },
-  inlineButton: { backgroundColor: '#2D6CDF', paddingVertical: 12, borderRadius: 10, alignItems: 'center', marginTop: 4 },
-  inlineButtonText: { color: '#FFF', fontWeight: '700' },
-  contactRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#2A2A2A' },
-  contactName: { color: '#FFF', fontSize: 15, fontWeight: '700' },
-  contactPhone: { color: '#AAA', fontSize: 13, marginTop: 2 },
-  removeText: { color: '#FF6B6B', fontWeight: '700' },
-  historyRow: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#2A2A2A' },
-  historyTitle: { color: '#FFF', fontWeight: '700', marginBottom: 4 },
-  historyText: { color: '#B5B5B5', fontSize: 13, lineHeight: 18 },
-  historyMeta: { color: '#777', fontSize: 12, marginTop: 4 }
+  container: {
+    flex: 1,
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 24,
+  },
+  profileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 18,
+    borderWidth: 1,
+    marginHorizontal: 20,
+    marginTop: 8,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  avatarCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  avatarText: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  sectionContainer: {
+    marginTop: 4,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 360,
+    borderWidth: 1,
+    padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  modalIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  permissionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  modalDismissBtn: {
+    marginTop: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
 });

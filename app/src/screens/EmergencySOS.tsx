@@ -72,8 +72,7 @@ export default function EmergencySOS() {
       try {
         const location = await Location.getCurrentPositionAsync({ 
           accuracy: Location.Accuracy.Balanced,
-          timeout: 5000 
-        });
+          });
         if (location && location.coords) {
           lat = location.coords.latitude;
           lon = location.coords.longitude;

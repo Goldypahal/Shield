@@ -7,9 +7,9 @@ class VoiceService {
   private checkInterval: NodeJS.Timeout | null = null;
   private onKeywordDetected: (() => void) | null = null;
 
-  async startListening(callback: () => void) {
+  async startListening(callback?: () => void) {
     if (this.isListening) return;
-    this.onKeywordDetected = callback;
+    this.onKeywordDetected = callback || null;
 
     try {
       const { status } = await Audio.requestPermissionsAsync();
@@ -22,7 +22,7 @@ class VoiceService {
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
         staysActiveInBackground: true,
-        shouldRoutingOutputsToSpeakerModeIOS: true,
+        
       });
 
       this.isListening = true;

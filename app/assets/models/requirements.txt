@@ -1,0 +1,7 @@
+gradio
+spaces
+torch
+numpy
+librosa
+soundfile
+huggingface_hub

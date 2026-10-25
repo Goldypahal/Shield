@@ -1,0 +1,19 @@
+{
+  "model_name": "Shield Scream Detection CNN",
+  "architecture": "ScreamCNN",
+  "framework": "PyTorch",
+  "sample_rate": 16000,
+  "duration_seconds": 5,
+  "n_mels": 64,
+  "n_fft": 1024,
+  "hop_length": 256,
+  "fmin": 40,
+  "fmax": 8000,
+  "threshold_used_during_validation": 0.5,
+  "best_epoch": 19,
+  "best_validation_f1": 0.9608763693270735,
+  "labels": {
+    "0": "non_scream",
+    "1": "scream"
+  }
+}

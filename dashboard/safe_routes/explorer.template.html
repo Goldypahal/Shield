@@ -1,0 +1,466 @@
+<title>Heimdal SafeRoute</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/*LEAFLET_CSS*/
+</style>
+<style>
+/* Layout: one-screen tool. Control rail (left) + live map (right); stacks map-over-rail on phones. */
+:root {
+  --bg: #eef2f0; --panel: #ffffff; --ink: #14201c; --muted: #5b6a64; --line: #d9e1dd; --soft: #f4f7f5;
+  --ground: #e6ebe7; --road: #c3ccc7; --road-major: #a9b4ae; --water: #c7dbe4; --block: #d7ddd9;
+  --fast: #2f52cc; --bal: #a86400; --safe: #0d7a5a;
+  --r0: #2f9e6e; --r1: #c19a1e; --r2: #dd7330; --r3: #cc3a3a;
+  --warn-bg: #fff4dc; --warn-ink: #6b4a00;
+  --font-ui: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-num: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0d1312; --panel: #141c1a; --ink: #e3ebe7; --muted: #92a39c; --line: #26322e; --soft: #18221f;
+  --ground: #101816; --road: #2a3632; --road-major: #3a4843; --water: #18303a; --block: #1a2421;
+  --fast: #8aa4ff; --bal: #f0b24f; --safe: #3cc99c;
+  --r0: #3fbf86; --r1: #d9b43a; --r2: #ee8a48; --r3: #ef5d5d;
+  --warn-bg: #2b2310; --warn-ink: #f1d189; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0d1312; --panel: #141c1a; --ink: #e3ebe7; --muted: #92a39c; --line: #26322e; --soft: #18221f;
+  --ground: #101816; --road: #2a3632; --road-major: #3a4843; --water: #18303a; --block: #1a2421;
+  --fast: #8aa4ff; --bal: #f0b24f; --safe: #3cc99c;
+  --r0: #3fbf86; --r1: #d9b43a; --r2: #ee8a48; --r3: #ef5d5d;
+  --warn-bg: #2b2310; --warn-ink: #f1d189; color-scheme: dark; }
+
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 14px; line-height: 1.45; }
+.app { height: 100%; display: grid; grid-template-columns: minmax(340px, 400px) 1fr; }
+.rail { background: var(--panel); border-right: 1px solid var(--line); overflow-y: auto; min-width: 0;
+  padding-block: 18px 28px; padding-left: max(18px, env(safe-area-inset-left, 0px)); padding-right: 18px;
+  display: flex; flex-direction: column; gap: 18px; }
+.mapwrap { position: relative; min-width: 0; }
+#map { position: absolute; inset: 0; background: var(--ground); }
+@media (max-width: 760px) {
+  html, body { height: auto; }
+  .app { grid-template-columns: 1fr; height: auto; }
+  .mapwrap { order: -1; height: 58vh; min-height: 340px; }
+  .rail { border-right: 0; overflow: visible; padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-left: max(16px, env(safe-area-inset-left, 0px)); }
+}
+
+h1 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.01em; text-wrap: balance; }
+.brand { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.brand small { font-size: 12px; color: var(--muted); font-weight: 500; }
+.notice { background: var(--warn-bg); color: var(--warn-ink); border-radius: 8px; padding: 9px 11px; font-size: 12.5px; }
+.notice b { font-weight: 700; }
+.label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.group { display: flex; flex-direction: column; gap: 8px; }
+
+.trip { display: grid; grid-template-columns: 1fr auto; gap: 6px 8px; align-items: center; }
+.trip .stack { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; background: var(--soft); }
+.field .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.field select { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--ink); font: inherit; padding: 9px 0; }
+.field select:focus { outline: none; }
+.field:focus-within { border-color: var(--fast); }
+.iconbtn { border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 8px; width: 36px; height: 36px; cursor: pointer; font-size: 16px; }
+.iconbtn:hover { background: var(--soft); }
+.hint { font-size: 12px; color: var(--muted); }
+
+.timebox { display: flex; align-items: baseline; justify-content: space-between; }
+.clock { font-family: var(--font-num); font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.phase { font-size: 12.5px; color: var(--muted); }
+input[type=range] { width: 100%; accent-color: var(--fast); }
+.daybar { height: 6px; border-radius: 3px; margin-top: -4px; }
+.chips, .seg { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip, .seg button { border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 999px; padding: 5px 11px; font: inherit; font-size: 12.5px; cursor: pointer; }
+.chip:hover, .seg button:hover { background: var(--soft); }
+.seg { gap: 0; border: 1px solid var(--line); border-radius: 8px; padding: 2px; width: fit-content; }
+.seg button { border: 0; border-radius: 6px; padding: 6px 12px; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--panel); }
+.row2 { display: flex; gap: 18px; flex-wrap: wrap; }
+button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--fast); outline-offset: 2px; }
+
+.cards { display: flex; flex-direction: column; gap: 8px; }
+.card { border: 1px solid var(--line); border-radius: 10px; padding: 12px 12px 12px 14px; cursor: pointer; background: var(--panel); text-align: left; color: inherit; font: inherit; width: 100%; position: relative; display: flex; flex-direction: column; gap: 8px; }
+.card[aria-pressed="true"] { border-color: var(--c); box-shadow: inset 0 0 0 1px var(--c); background: var(--soft); }
+.card .top { display: flex; align-items: center; gap: 8px; }
+.card .swatch { width: 18px; height: 5px; border-radius: 3px; background: var(--c); flex: none; }
+.card .name { font-weight: 700; }
+.card .eta { margin-left: auto; font-family: var(--font-num); font-weight: 600; font-variant-numeric: tabular-nums; }
+.metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.metric { display: flex; flex-direction: column; min-width: 0; }
+.metric .v { font-family: var(--font-num); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.metric .k { font-size: 10.5px; color: var(--muted); }
+.si { display: flex; align-items: center; gap: 8px; }
+.si .track { flex: 1; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.si .fill { height: 100%; border-radius: 3px; }
+.si .num { font-family: var(--font-num); font-size: 12px; width: 52px; text-align: right; font-variant-numeric: tabular-nums; }
+.card ul { margin: 0; padding-left: 16px; font-size: 12.5px; color: var(--muted); display: flex; flex-direction: column; gap: 2px; }
+.via { font-size: 12px; color: var(--muted); }
+.same { font-size: 12.5px; color: var(--muted); padding: 2px 2px; }
+.err { color: var(--r3); font-size: 13px; }
+
+.profile svg { width: 100%; height: 90px; display: block; }
+.profile .axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); font-family: var(--font-num); }
+.legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11.5px; color: var(--muted); }
+.legend i { display: inline-block; width: 14px; height: 4px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+
+.toggles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+.toggles label { display: flex; align-items: center; gap: 7px; font-size: 13px; cursor: pointer; }
+a.ext { color: var(--fast); font-weight: 600; text-decoration: none; font-size: 13px; }
+a.ext:hover { text-decoration: underline; }
+details { border-top: 1px solid var(--line); padding-top: 12px; }
+summary { cursor: pointer; font-weight: 700; font-size: 13px; }
+details p, details li { font-size: 12.5px; color: var(--muted); max-width: 62ch; }
+.formula { font-family: var(--font-num); font-size: 11.5px; background: var(--soft); border-radius: 8px; padding: 10px; overflow-x: auto; white-space: pre; color: var(--ink); }
+table.w { border-collapse: collapse; font-size: 12px; width: 100%; }
+table.w td { padding: 3px 4px; border-bottom: 1px solid var(--line); }
+table.w td:last-child { text-align: right; font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+/* map chrome */
+.leaflet-container { font-family: var(--font-ui); background: var(--ground); }
+.leaflet-control-attribution { background: color-mix(in srgb, var(--panel) 85%, transparent) !important; color: var(--muted) !important; }
+.leaflet-control-attribution a { color: var(--muted) !important; }
+.leaflet-bar a { background: var(--panel); color: var(--ink); border-color: var(--line); }
+.lm-label { font-size: 11px; font-weight: 600; color: var(--ink); white-space: nowrap; text-shadow: 0 0 3px var(--ground), 0 0 3px var(--ground), 0 0 2px var(--ground); pointer-events: none; }
+.zone-label { font-size: 13px; font-weight: 800; letter-spacing: 0.22em; color: var(--muted); opacity: 0.55; white-space: nowrap; pointer-events: none; }
+.pin { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 11px; font-weight: 800; border: 2px solid var(--panel); box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+.maptag { position: absolute; z-index: 500; left: max(10px, env(safe-area-inset-left, 0px)); bottom: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: 12px; color: var(--muted); max-width: calc(100% - 20px); }
+.maptag b { color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="app">
+  <aside class="rail" aria-label="Route planner">
+    <div class="brand"><h1>Heimdal SafeRoute</h1><small>Chandigarh · Mohali · Panchkula</small></div>
+    <div class="notice"><b>Synthetic data.</b> Lighting, footfall, CCTV, police posts and incidents are simulated to test the engine. Do not use these routes to judge real streets.</div>
+
+    <div class="group">
+      <span class="label">Trip</span>
+      <div class="trip">
+        <div class="stack">
+          <div class="field"><span class="dot" style="background:var(--fast)"></span><select id="from" aria-label="Start"></select></div>
+          <div class="field"><span class="dot" style="background:var(--safe)"></span><select id="to" aria-label="Destination"></select></div>
+        </div>
+        <button class="iconbtn" id="swap" title="Swap start and destination" aria-label="Swap start and destination">⇅</button>
+      </div>
+      <span class="hint">Or tap the map: the first tap sets the start, the next sets the destination.</span>
+    </div>
+
+    <div class="group">
+      <span class="label">Departure time</span>
+      <div class="timebox"><span class="clock" id="clock">22:30</span><span class="phase" id="phase"></span></div>
+      <input type="range" id="hour" min="0" max="23.5" step="0.5" value="22.5" aria-label="Departure time">
+      <div class="daybar" id="daybar" aria-hidden="true"></div>
+      <div class="chips" id="presets"></div>
+    </div>
+
+    <div class="row2">
+      <div class="group"><span class="label">Travel mode</span>
+        <div class="seg" id="mode"><button data-v="walk" aria-pressed="true">Walk</button><button data-v="drive" aria-pressed="false">Drive</button></div></div>
+      <div class="group"><span class="label">Max detour</span>
+        <div class="seg" id="detour"><button data-v="1.2" aria-pressed="false">1.2×</button><button data-v="1.5" aria-pressed="true">1.5×</button><button data-v="2" aria-pressed="false">2×</button></div></div>
+    </div>
+
+    <div class="group">
+      <span class="label">Routes</span>
+      <div class="cards" id="cards"></div>
+    </div>
+
+    <div class="group profile">
+      <span class="label" id="profileTitle">Risk along the route</span>
+      <svg id="profile" viewBox="0 0 300 90" preserveAspectRatio="none" role="img" aria-label="Risk along the selected route"></svg>
+      <div class="axis"><span>start</span><span id="profileEnd"></span></div>
+      <div class="legend"><span><i style="background:var(--r0)"></i>low</span><span><i style="background:var(--r1)"></i>moderate</span><span><i style="background:var(--r2)"></i>elevated</span><span><i style="background:var(--r3)"></i>high</span></div>
+    </div>
+
+    <div class="group">
+      <span class="label">Map layers</span>
+      <div class="toggles">
+        <label><input type="checkbox" id="lyrRisk" checked> Street risk now</label>
+        <label><input type="checkbox" id="lyrPolice" checked> Police posts</label>
+        <label><input type="checkbox" id="lyrInc"> Incidents (this period)</label>
+        <label><input type="checkbox" id="lyrLm" checked> Landmarks</label>
+      </div>
+      <a class="ext" id="osmLink" href="https://www.openstreetmap.org" target="_blank" rel="noopener">Open these endpoints in OpenStreetMap directions ↗</a>
+    </div>
+
+    <details>
+      <summary>How the engine scores a route</summary>
+      <p>Each street segment gets a risk between 0 and 1 for the chosen hour. Lighting only counts after dark. Unknown data is penalised, never assumed safe.</p>
+      <div class="formula" id="formula"></div>
+      <table class="w" id="weights"></table>
+      <p>The engine runs A* nine times with the risk weight λ rising from 0 to 20. λ = 0 gives the fastest route. Among candidates within the detour budget, the lowest length-weighted risk is <b>safest</b>; the knee of the time-versus-risk trade-off is <b>balanced</b>. Safety index = 100 × (1 − mean risk).</p>
+      <p id="stats"></p>
+    </details>
+  </aside>
+  <div class="mapwrap"><div id="map" role="application" aria-label="Map of the synthetic Tricity road network"></div><div class="maptag" id="maptag"></div></div>
+</div>
+
+<script type="application/json" id="data">/*DATA_JSON*/</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+/*ENGINE_JS*/
+</script>
+<script>
+(function () {
+  "use strict";
+  const D = JSON.parse(document.getElementById("data").textContent);
+  const engine = HeimdalEngine.createEngine(D);
+  const $ = (id) => document.getElementById(id);
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const fmtKm = (m) => m >= 1000 ? (m / 1000).toFixed(1) + " km" : m + " m";
+  const fmtMin = (s) => { const m = Math.round(s / 60); return m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`; };
+  const fmtClock = (h) => `${String(Math.floor(h)).padStart(2, "0")}:${h % 1 ? "30" : "00"}`;
+  const ROUTE_VAR = { fastest: "--fast", balanced: "--bal", safest: "--safe" };
+  const ROUTE_NAME = { fastest: "Fastest", balanced: "Balanced", safest: "Safest" };
+  const riskVar = (r) => r < 0.35 ? "--r0" : r < 0.5 ? "--r1" : r < 0.65 ? "--r2" : "--r3";
+
+  const state = {
+    from: { kind: "lm", i: D.landmarks.findIndex((l) => l.name.startsWith("ISBT")) },
+    to: { kind: "lm", i: D.landmarks.findIndex((l) => l.name.startsWith("Elante")) },
+    hour: 22.5, mode: "walk", detour: 1.5, selected: "safest", plan: null, nextTap: "from",
+  };
+  const pointOf = (s) => s.kind === "lm" ? [D.landmarks[s.i].lat, D.landmarks[s.i].lon] : s.p;
+
+  // ---------- controls
+  function fillSelect(sel, which) {
+    sel.innerHTML = "";
+    D.landmarks.forEach((l, i) => sel.add(new Option(l.name, String(i))));
+    const o = new Option("Point picked on map", "map"); o.disabled = true; sel.add(o);
+    sel.value = state[which].kind === "lm" ? String(state[which].i) : "map";
+  }
+  fillSelect($("from"), "from"); fillSelect($("to"), "to");
+  $("from").addEventListener("change", (e) => { state.from = { kind: "lm", i: +e.target.value }; run(true); });
+  $("to").addEventListener("change", (e) => { state.to = { kind: "lm", i: +e.target.value }; run(true); });
+  $("swap").addEventListener("click", () => { [state.from, state.to] = [state.to, state.from]; fillSelect($("from"), "from"); fillSelect($("to"), "to"); run(true); });
+
+  const presets = [[8, "08:00 commute"], [13, "13:00"], [19.5, "19:30 dusk"], [22.5, "22:30 late"], [2, "02:00"]];
+  presets.forEach(([h, t]) => { const b = document.createElement("button"); b.className = "chip"; b.textContent = t; b.onclick = () => { $("hour").value = h; setHour(h); }; $("presets").append(b); });
+  $("hour").addEventListener("input", (e) => setHour(+e.target.value));
+  function setHour(h) { state.hour = h; run(false); }
+
+  function segmented(id, key, parse) {
+    $(id).querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+      $(id).querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      state[key] = parse(b.dataset.v); run(false);
+    }));
+  }
+  segmented("mode", "mode", String); segmented("detour", "detour", Number);
+
+  function paintDaybar() {
+    const stops = [];
+    for (let h = 0; h <= 24; h += 1) stops.push(`color-mix(in srgb, var(--ink) ${Math.round(engine.darkness(h) * 70 + 8)}%, var(--water)) ${(h / 24 * 100).toFixed(1)}%`);
+    $("daybar").style.background = `linear-gradient(90deg, ${stops.join(",")})`;
+  }
+  paintDaybar();
+
+  // ---------- map
+  const center = [30.715, 76.80];
+  const map = L.map("map", { preferCanvas: true, zoomSnap: 0.5, attributionControl: true, minZoom: 11, maxZoom: 18 })
+    .setView(center, 13);
+  map.attributionControl.setPrefix(false);
+  map.attributionControl.addAttribution("Synthetic Tricity network · Heimdal");
+  const nodesLat = D.nodes.lat, nodesLon = D.nodes.lon, ed = D.edges;
+  const bounds = L.latLngBounds(D.landmarks.map((l) => [l.lat, l.lon]));
+  map.fitBounds(bounds.pad(0.05));
+
+  const base = L.layerGroup().addTo(map);
+  const lake = L.polygon(D.overlays.lake, { stroke: false, fillOpacity: 1, interactive: false }).addTo(base);
+  const airport = L.polygon(D.overlays.airport, { weight: 1, dashArray: "4 4", fillOpacity: 0.6, interactive: false }).addTo(base);
+  const railway = L.polyline(D.overlays.railway, { weight: 2, dashArray: "8 6", interactive: false }).addTo(base);
+  D.overlays.labels.forEach((z) => L.marker(z.p, { interactive: false, icon: L.divIcon({ className: "zone-label", html: z.t, iconSize: null }) }).addTo(base));
+
+  const net = L.layerGroup().addTo(map);
+  const edgeLines = [];
+  for (let k = 0; k < ed.u.length; k++) {
+    const pl = L.polyline([[nodesLat[ed.u[k]], nodesLon[ed.u[k]]], [nodesLat[ed.v[k]], nodesLon[ed.v[k]]]], { weight: 2, interactive: false });
+    edgeLines.push(pl); pl.addTo(net);
+  }
+  const policeLayer = L.layerGroup().addTo(map);
+  D.police.forEach((p) => L.circleMarker([p.lat, p.lon], { radius: 4.5, weight: 2, fillOpacity: 1 }).bindTooltip(p.kind).addTo(policeLayer));
+  const incLayer = L.layerGroup();
+  const lmLayer = L.layerGroup().addTo(map);
+  D.landmarks.forEach((l, i) => {
+    L.circleMarker([l.lat, l.lon], { radius: 3, weight: 0, fillOpacity: 1, interactive: false }).addTo(lmLayer);
+    L.marker([l.lat, l.lon], { interactive: false, icon: L.divIcon({ className: "lm-label", html: l.name, iconSize: null, iconAnchor: [-6, 8] }) }).addTo(lmLayer);
+  });
+  const routeLayer = L.layerGroup().addTo(map);
+  const pinLayer = L.layerGroup().addTo(map);
+
+  $("lyrRisk").addEventListener("change", () => styleNetwork());
+  $("lyrPolice").addEventListener("change", (e) => e.target.checked ? policeLayer.addTo(map) : map.removeLayer(policeLayer));
+  $("lyrInc").addEventListener("change", (e) => { e.target.checked ? incLayer.addTo(map) : map.removeLayer(incLayer); drawIncidents(); });
+  $("lyrLm").addEventListener("change", (e) => e.target.checked ? lmLayer.addTo(map) : map.removeLayer(lmLayer));
+
+  map.on("click", (e) => {
+    const p = [e.latlng.lat, e.latlng.lng];
+    state[state.nextTap] = { kind: "pt", p };
+    fillSelect($(state.nextTap), state.nextTap);
+    state.nextTap = state.nextTap === "from" ? "to" : "from";
+    run(true);
+  });
+
+  function styleBase() {
+    lake.setStyle({ fillColor: css("--water") });
+    airport.setStyle({ color: css("--muted"), fillColor: css("--block") });
+    railway.setStyle({ color: css("--muted") });
+    policeLayer.eachLayer((m) => m.setStyle({ color: css("--panel"), fillColor: css("--fast") }));
+    lmLayer.eachLayer((m) => m.setStyle && m.setStyle({ fillColor: css("--ink") }));
+  }
+
+  function styleNetwork() {
+    const M = state.plan ? state.plan.model : engine.model(state.mode, state.hour);
+    const showRisk = $("lyrRisk").checked;
+    const road = css("--road"), major = css("--road-major");
+    const rc = ["--r0", "--r1", "--r2", "--r3"].map(css);
+    for (let k = 0; k < edgeLines.length; k++) {
+      const cls = D.codes.cls[ed.cls[k]];
+      const big = cls === "V2" || cls === "hwy" || cls === "bridge";
+      const isPark = cls === "park_path";
+      if (showRisk) {
+        const r = M.risk[k]; const i = r < 0.35 ? 0 : r < 0.5 ? 1 : r < 0.65 ? 2 : 3;
+        edgeLines[k].setStyle({ color: rc[i], weight: big ? 3 : 1.8, opacity: 0.55, dashArray: isPark ? "3 4" : null });
+      } else {
+        edgeLines[k].setStyle({ color: big ? major : road, weight: big ? 3.2 : 1.8, opacity: 1, dashArray: isPark ? "3 4" : null });
+      }
+    }
+  }
+
+  function drawIncidents() {
+    incLayer.clearLayers();
+    if (!$("lyrInc").checked) return;
+    const per = engine.periodOf(state.hour), col = css("--r3");
+    D.incidents.forEach(([la, lo, p]) => { if (p === per) L.circleMarker([la, lo], { radius: 2.5, weight: 0, fillColor: col, fillOpacity: 0.7, interactive: false }).addTo(incLayer); });
+  }
+
+  function pin(p, text, varName) {
+    return L.marker(p, { icon: L.divIcon({ className: "", html: `<div class="pin" style="background:${css(varName)}">${text}</div>`, iconSize: [22, 22], iconAnchor: [11, 11] }), interactive: false });
+  }
+
+  function drawRoutes(fit) {
+    routeLayer.clearLayers(); pinLayer.clearLayers();
+    const P = state.plan; if (!P) return;
+    const order = Object.keys(P.routes).filter((k) => k !== state.selected).concat([state.selected]);
+    for (const k of order) {
+      const r = P.routes[k], sel = k === state.selected;
+      L.polyline(r.coords, { color: css("--panel"), weight: sel ? 10 : 7, opacity: sel ? 0.95 : 0.7, interactive: false }).addTo(routeLayer);
+      L.polyline(r.coords, { color: css(ROUTE_VAR[k]), weight: sel ? 6 : 4, opacity: sel ? 1 : 0.6, dashArray: sel ? null : "1 7", lineCap: "round", interactive: false }).addTo(routeLayer);
+      if (sel) r.segs.forEach((s) => { if (s.iso) L.polyline([[nodesLat[s.a], nodesLon[s.a]], [nodesLat[s.b], nodesLon[s.b]]], { color: css("--r3"), weight: 2, dashArray: "2 5", interactive: false }).addTo(routeLayer); });
+    }
+    const f = P.routes.fastest.coords;
+    pin(pointOf(state.from), "A", "--fast").addTo(pinLayer);
+    pin(pointOf(state.to), "B", "--safe").addTo(pinLayer);
+    if (fit) {
+      const all = Object.values(P.routes).flatMap((r) => r.coords);
+      map.fitBounds(L.latLngBounds(all).pad(0.15), { maxZoom: 15 });
+    }
+    const a = f[0], b = f[f.length - 1];
+    const engineName = state.mode === "walk" ? "fossgis_osrm_foot" : "fossgis_osrm_car";
+    $("osmLink").href = `https://www.openstreetmap.org/directions?engine=${engineName}&route=${a[0].toFixed(5)}%2C${a[1].toFixed(5)}%3B${b[0].toFixed(5)}%2C${b[1].toFixed(5)}`;
+  }
+
+  // ---------- results
+  function card(k, r) {
+    const btn = document.createElement("button");
+    btn.className = "card"; btn.style.setProperty("--c", css(ROUTE_VAR[k]));
+    btn.setAttribute("aria-pressed", String(k === state.selected));
+    btn.innerHTML = `
+      <div class="top"><span class="swatch"></span><span class="name">${ROUTE_NAME[k]}</span><span class="eta">${fmtMin(r.duration)}</span></div>
+      <div class="si"><div class="track"><div class="fill" style="width:${r.safety}%;background:var(${riskVar(1 - r.safety / 100)})"></div></div><span class="num">${r.safety}/100</span></div>
+      <div class="metrics">
+        <div class="metric"><span class="v">${fmtKm(r.distance)}</span><span class="k">distance</span></div>
+        <div class="metric"><span class="v">${Math.round(r.litPct)}%</span><span class="k">recorded lit</span></div>
+        <div class="metric"><span class="v">${r.isolated ? fmtKm(r.isolated) : "0 m"}</span><span class="k">dark &amp; isolated</span></div>
+        <div class="metric"><span class="v">${r.police}</span><span class="k">police ≤300 m</span></div>
+      </div>
+      ${r.roads.length ? `<div class="via">via ${r.roads.join(", ")}</div>` : ""}
+      ${r.highlights.length ? `<ul>${r.highlights.map((h) => `<li>${h}</li>`).join("")}</ul>` : ""}
+      ${r.unknownPct >= 15 ? `<div class="via">Lighting unknown on ${Math.round(r.unknownPct)}% of this route; scored cautiously.</div>` : ""}`;
+    btn.addEventListener("click", () => { state.selected = k; renderCards(); drawRoutes(false); drawProfile(); });
+    return btn;
+  }
+
+  function renderCards() {
+    const box = $("cards"); box.innerHTML = "";
+    const P = state.plan; if (!P) return;
+    if (!P.routes[state.selected]) state.selected = "safest";
+    if (P.sameRoute) {
+      box.append(card("safest", P.routes.safest));
+      const n = document.createElement("div"); n.className = "same";
+      n.textContent = "The fastest route is also the lowest-risk option within your detour budget.";
+      box.append(n);
+      return;
+    }
+    for (const k of ["fastest", "balanced", "safest"]) if (P.routes[k]) box.append(card(k, P.routes[k]));
+  }
+
+  function drawProfile() {
+    const svg = $("profile"); svg.innerHTML = "";
+    const P = state.plan; if (!P) return;
+    const r = P.routes[state.selected] || P.routes.safest;
+    $("profileTitle").textContent = `Risk along the ${ROUTE_NAME[r.label].toLowerCase()} route`;
+    $("profileEnd").textContent = fmtKm(r.distance);
+    const W = 300, H = 90, total = r.distance || 1;
+    const ns = "http://www.w3.org/2000/svg";
+    const mk = (tag, attrs) => { const el = document.createElementNS(ns, tag); for (const [a, v] of Object.entries(attrs)) el.setAttribute(a, v); svg.append(el); return el; };
+    mk("rect", { x: 0, y: 0, width: W, height: H, fill: css("--soft") });
+    [0.35, 0.5, 0.65].forEach((t) => mk("line", { x1: 0, x2: W, y1: H - t * H, y2: H - t * H, stroke: css("--line"), "stroke-width": 1, "vector-effect": "non-scaling-stroke" }));
+    let x = 0;
+    for (const s of r.segs) {
+      const w = s.len / total * W, h = Math.max(1.5, s.risk * H);
+      mk("rect", { x: x.toFixed(2), y: (H - h).toFixed(2), width: (w + 0.3).toFixed(2), height: h.toFixed(2), fill: css(riskVar(s.risk)) });
+      if (s.iso) mk("rect", { x: x.toFixed(2), y: 0, width: (w + 0.3).toFixed(2), height: 4, fill: css("--r3") });
+      x += w;
+    }
+  }
+
+  function renderInfo() {
+    const M = state.plan ? state.plan.model : null;
+    const w = state.mode === "walk"
+      ? { light: 0.28, foot: 0.22, cctv: 0.08, police: 0.12, incident: 0.20, sidewalk: 0.10 }
+      : { light: 0.30, foot: 0.12, cctv: 0.10, police: 0.18, incident: 0.30, sidewalk: 0.00 };
+    const dark = engine.darkness(state.hour);
+    $("formula").textContent =
+`risk = ${w.light}·dark·(1−light) + ${w.foot}·(1−footfall)
+     + ${w.cctv}·(1−cctv) + ${w.police}·(1−police)
+     + ${w.incident}·incidents + ${w.sidewalk}·(no sidewalk)
+dark now = ${dark.toFixed(2)}   period = ${engine.periodOf(state.hour)}
+cost = time · (1 + λ·(risk + 0.15·uncertainty + 0.25·isolated))`;
+    const rows = [["Lighting (after dark)", w.light], ["Footfall at this hour", w.foot], ["CCTV coverage", w.cctv], ["Police post distance", w.police], ["Incident history (smoothed)", w.incident], ["Sidewalk", w.sidewalk]];
+    $("weights").innerHTML = rows.map(([a, b]) => `<tr><td>${a}</td><td>${b.toFixed(2)}</td></tr>`).join("");
+    const inc = D.incidents.length;
+    $("stats").textContent = `Dataset: ${D.nodes.lat.length.toLocaleString("en-IN")} junctions, ${D.edges.u.length.toLocaleString("en-IN")} street segments, ${D.police.length} police posts, ${inc.toLocaleString("en-IN")} incidents over 3 simulated years. Seed ${D.meta.seed}.`;
+  }
+
+  function updateClock() {
+    $("clock").textContent = fmtClock(state.hour);
+    const d = engine.darkness(state.hour), per = engine.periodOf(state.hour);
+    $("phase").textContent = (d >= 1 ? "after dark" : d > 0 ? "twilight" : "daylight") + " · " + per + " incident data";
+  }
+
+  let pending = 0;
+  function run(fit) {
+    updateClock();
+    const tag = $("maptag");
+    try {
+      state.plan = engine.plan(pointOf(state.from), pointOf(state.to), state.hour, state.mode, state.detour);
+      const s = state.plan.routes.safest, f = state.plan.routes.fastest;
+      tag.innerHTML = state.plan.sameRoute
+        ? `<b>${fmtClock(state.hour)}</b> · one route is both fastest and lowest-risk · ${fmtMin(f.duration)}`
+        : `<b>${fmtClock(state.hour)}</b> · safest adds ${fmtMin(Math.max(0, s.duration - f.duration))}, safety ${f.safety} → ${s.safety}`;
+    } catch (err) {
+      state.plan = null;
+      $("cards").innerHTML = `<div class="err">${err.message}</div>`;
+      tag.textContent = err.message;
+    }
+    renderCards(); drawProfile(); renderInfo();
+    cancelAnimationFrame(pending);
+    pending = requestAnimationFrame(() => { styleNetwork(); drawRoutes(fit); drawIncidents(); });
+  }
+
+  function restyleAll() { styleBase(); styleNetwork(); drawRoutes(false); drawIncidents(); renderCards(); drawProfile(); paintDaybar(); }
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", restyleAll);
+  new MutationObserver(restyleAll).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  styleBase();
+  run(true);
+})();
+</script>

@@ -26,6 +26,7 @@ from report_router import router as report_router
 from media import router as media_router
 from risk_router import router as ml_risk_router
 from community import router as community_router
+from scream_router import router as scream_router
 
 from security import SECRET_KEY, ALGORITHM
 from rate_limiter import limiter
@@ -69,6 +70,7 @@ app.include_router(report_router)
 app.include_router(media_router)
 app.include_router(ml_risk_router)
 app.include_router(community_router)
+app.include_router(scream_router)
 
 # Mount Authority Dashboard Web App (SRS Deliverable 5 & DASH-1 to 6)
 from fastapi.staticfiles import StaticFiles

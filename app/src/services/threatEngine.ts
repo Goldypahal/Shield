@@ -41,7 +41,7 @@ export function calculateThreatScore(
   const compositeBase = 0.45 * audio + 0.30 * motion + 0.25 * context;
 
   // Night Multiplier M_night = 1.2
-  const night = signals.isNight !== undefined ? signals.isNight : (signals.nightMultiplier ? signals.nightMultiplier > 1.0 : isNightTime());
+  const night = ('isNight' in signals && signals.isNight !== undefined) ? signals.isNight : ('nightMultiplier' in signals && signals.nightMultiplier ? signals.nightMultiplier > 1.0 : isNightTime());
   const mNight = night ? 1.2 : 1.0;
 
   // Manual SOS Boost = +40
