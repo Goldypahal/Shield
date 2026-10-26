@@ -1,5 +1,7 @@
-"""Render a route plan on OpenStreetMap tiles with Folium (opens in any browser)."""
+"""Render a route plan on CARTO or OpenStreetMap tiles with Folium (opens in any browser)."""
 from __future__ import annotations
+
+import os
 
 from .engine import SafetyGraph
 
@@ -21,8 +23,16 @@ def plan_to_map(graph: SafetyGraph, plan: dict, path: str, show_network: bool = 
 
     routes = plan["routes"]
     first = routes["fastest"]["coords"]
-    m = folium.Map(location=first[len(first) // 2], zoom_start=14, tiles="OpenStreetMap",
-                   attr="© OpenStreetMap contributors")
+    # CARTO Voyager when CARTO_API_KEY is set; OpenStreetMap's own tiles otherwise.
+    # The key ends up in the saved HTML, so share exported maps accordingly.
+    carto_key = os.environ.get("CARTO_API_KEY")
+    if carto_key:
+        m = folium.Map(location=first[len(first) // 2], zoom_start=14,
+                       tiles=f"https://basemaps.cartocdn.com/rastertiles/voyager/{{z}}/{{x}}/{{y}}.png?key={carto_key}",
+                       attr="© CARTO © OpenStreetMap contributors")
+    else:
+        m = folium.Map(location=first[len(first) // 2], zoom_start=14, tiles="OpenStreetMap",
+                       attr="© OpenStreetMap contributors")
     if show_network:
         from .engine import RiskModel
         model = RiskModel(graph, plan["mode"])
@@ -48,7 +58,6 @@ def plan_to_map(graph: SafetyGraph, plan: dict, path: str, show_network: bool = 
         folium.CircleMarker((p["lat"], p["lon"]), radius=4, color="#1e3a8a", fill=True,
                             tooltip=p["kind"]).add_to(m)
     folium.LayerControl(collapsed=False).add_to(m)
-    import os
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     m.save(path)
     return path

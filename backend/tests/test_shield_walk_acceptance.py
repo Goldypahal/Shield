@@ -1,273 +1,167 @@
-import sys
+"""SRS v1.0 acceptance criteria, exercised end to end through the HTTP API."""
+import hashlib
 import os
 import time
 import uuid
-import hashlib
-import pytest
-from fastapi.testclient import TestClient
 
-# Setup sys.path
-backend_api_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "api"))
-backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-sys.path.insert(0, backend_api_dir)
-sys.path.insert(0, backend_dir)
+from conftest import backend_dir
 
-from main import app
-from db.storage import storage, haversine_distance, point_to_segment_distance
-from security import create_access_token, get_password_hash
+GENESIS = "0" * 64
 
-import asyncio
 
-# Helper fixtures
-@pytest.fixture(scope="session", autouse=True)
-def init_test_db():
-    asyncio.run(storage.init_db())
+def _alert(client, acct, **extra):
+    payload = {"id": str(uuid.uuid4()), "trigger_type": "SOS_BUTTON", "lat": 28.6910, "lon": 77.2120, **extra}
+    res = client.post("/api/v1/alerts/sync", json=payload, headers=acct.headers)
+    assert res.status_code == 201, res.text
+    return payload["id"]
 
-client = TestClient(app)
-
-def create_authenticated_header(phone="+919876543210"):
-    token = create_access_token(data={"sub": str(uuid.uuid4()), "phone_number": phone, "type": "access"})
-    return {"Authorization": f"Bearer {token}"}
 
 # Acceptance Criterion 1: Three scored routes returned, fastest and safest labelled
-def test_criterion_1_route_comparison():
-    headers = create_authenticated_header()
+def test_criterion_1_route_comparison(client, account):
+    walker = account()
     payload = {
         "origin": {"lat": 28.6910, "lon": 77.2120},
         "destination": {"lat": 28.7050, "lon": 77.2250},
-        "walk_time": "2026-10-06T22:30:00" # Night time period (weights: w_L=0.40, w_A=0.10, w_R=0.30, w_P=0.20)
+        "walk_time": "2026-10-06T22:30:00",  # night weights: w_L=0.40, w_A=0.10, w_R=0.30, w_P=0.20
     }
-
     t0 = time.time()
-    response = client.post("/api/v1/routes/compare", json=payload, headers=headers)
+    response = client.post("/api/v1/routes/compare", json=payload, headers=walker.headers)
     latency = time.time() - t0
 
     assert response.status_code == 200, response.text
     data = response.json()
     assert latency < 3.0, f"Route comparison took {latency:.2f}s, exceeding 3.0s target (NFR-1)"
-
     routes = data.get("routes", [])
     assert len(routes) >= 2, "Expected at least 2 to 3 route alternatives (ROUTE-2)"
-
-    # Check fastest and safest labels (ROUTE-4)
-    has_safest = any(r.get("is_safest") for r in routes)
-    has_fastest = any(r.get("is_fastest") for r in routes)
-    assert has_safest, "Expected one route labelled as safest (highest Safety Score)"
-    assert has_fastest, "Expected one route labelled as fastest"
-
-    # Verify score formula and caution segments (ROUTE-5)
+    assert any(r.get("is_safest") for r in routes)
+    assert any(r.get("is_fastest") for r in routes)
     for r in routes:
-        assert 0.0 <= r["safety_score"] <= 100.0, f"Invalid score {r['safety_score']}"
+        assert 0.0 <= r["safety_score"] <= 100.0
         assert r["distance_meters"] > 0
         assert r["estimated_time_minutes"] > 0
-
-    # Verify mandatory disclaimer (ROUTE-8)
     assert "higher safety score" in data.get("disclaimer", "").lower()
     assert "assistive tool" in data.get("disclaimer", "").lower()
 
+
 # Acceptance Criterion 2: Walk tracking & 150m route deviation detection
-def test_criterion_2_walk_tracking_and_deviation():
-    headers = create_authenticated_header()
+def test_criterion_2_walk_tracking_and_deviation(client, account):
+    walker = account()
+    start = client.post("/api/v1/walks", headers=walker.headers, json={
+        "origin_name": "Campus Gate", "destination_name": "Hostel 4", "chosen_route_id": "route_safest",
+        "route_coords": [{"lat": 28.6910, "lon": 77.2120}, {"lat": 28.6930, "lon": 77.2140},
+                         {"lat": 28.6960, "lon": 77.2170}],
+        "safety_score": 84.5, "fastest_time_seconds": 900,
+    })
+    assert start.status_code == 201, start.text
+    walk_id = start.json()["walk"]["id"]
+    assert start.json()["ws_ticket"].startswith("wstk_"), "Expected one-time WebSocket ticket (NFR-10)"
 
-    # 1. Start a walk (WALK-1)
-    chosen_route = [
-        {"lat": 28.6910, "lon": 77.2120},
-        {"lat": 28.6930, "lon": 77.2140},
-        {"lat": 28.6960, "lon": 77.2170}
-    ]
-    start_payload = {
-        "origin_name": "Campus Gate",
-        "destination_name": "Hostel 4",
-        "chosen_route_id": "route_safest",
-        "route_coords": chosen_route,
-        "safety_score": 84.5,
-        "fastest_time_seconds": 900
-    }
-    start_res = client.post("/api/v1/walks", json=start_payload, headers=headers)
-    assert start_res.status_code == 201, start_res.text
-    walk = start_res.json()["walk"]
-    walk_id = walk["id"]
-    ws_ticket = start_res.json()["ws_ticket"]
-    assert ws_ticket.startswith("wstk_"), "Expected one-time WebSocket ticket (NFR-10)"
+    on_route = client.post(f"/api/v1/walks/{walk_id}/points", headers=walker.headers, json={"points": [
+        {"lat": 28.6912, "lon": 77.2122, "speed": 1.2, "accuracy": 4.0},
+        {"lat": 28.6920, "lon": 77.2130, "speed": 1.3, "accuracy": 3.5}]})
+    assert on_route.status_code == 200
+    assert on_route.json()["deviation_alert"] is False
 
-    # 2. Push normal on-route points (WALK-2)
-    on_route_pts = {
-        "points": [
-            {"lat": 28.6912, "lon": 77.2122, "speed": 1.2, "accuracy": 4.0},
-            {"lat": 28.6920, "lon": 77.2130, "speed": 1.3, "accuracy": 3.5}
-        ]
-    }
-    pts_res1 = client.post(f"/api/v1/walks/{walk_id}/points", json=on_route_pts, headers=headers)
-    assert pts_res1.status_code == 200
-    assert pts_res1.json()["deviation_alert"] is False
+    off_route = client.post(f"/api/v1/walks/{walk_id}/points", headers=walker.headers,
+                            json={"points": [{"lat": 28.6950, "lon": 77.2080, "speed": 1.1, "accuracy": 5.0}]})
+    assert off_route.status_code == 200
+    assert off_route.json()["deviation_alert"] is True
+    assert off_route.json()["deviation_distance_m"] > 150.0
 
-    # 3. Push deviated point > 150m off path (WALK-4)
-    # Latitude offset ~0.003 is approx 330m off route
-    off_route_pts = {
-        "points": [
-            {"lat": 28.6950, "lon": 77.2080, "speed": 1.1, "accuracy": 5.0}
-        ]
-    }
-    pts_res2 = client.post(f"/api/v1/walks/{walk_id}/points", json=off_route_pts, headers=headers)
-    assert pts_res2.status_code == 200
-    deviation_data = pts_res2.json()
-    assert deviation_data["deviation_alert"] is True, "Expected route deviation alert for >150m deviation"
-    assert deviation_data["deviation_distance_m"] > 150.0
 
 # Acceptance Criterion 3 & 4: Offline alert sync with client UUID & idempotency
-def test_criterion_3_and_4_alert_sync_idempotency():
-    headers = create_authenticated_header()
-    client_uuid = str(uuid.uuid4())
-
-    alert_payload = {
-        "id": client_uuid,
-        "trigger_type": "AUDIO_DISTRESS",
-        "lat": 28.6925,
-        "lon": 77.2140,
-        "priority": "HIGH",
-        "state": "ACTIVE"
-    }
-
-    # 1. Initial submission
-    res1 = client.post("/api/v1/alerts/sync", json=alert_payload, headers=headers)
+def test_criterion_3_and_4_alert_sync_idempotency(client, account):
+    walker = account()
+    payload = {"id": str(uuid.uuid4()), "trigger_type": "AUDIO_DISTRESS", "lat": 28.6925, "lon": 77.2140,
+               "priority": "HIGH", "state": "ACTIVE"}
+    res1 = client.post("/api/v1/alerts/sync", json=payload, headers=walker.headers)
     assert res1.status_code == 201, res1.text
     assert res1.json()["status"] == "synced"
-
-    # 2. Duplicate submission with identical client UUID (ALERT-7)
-    res2 = client.post("/api/v1/alerts/sync", json=alert_payload, headers=headers)
+    res2 = client.post("/api/v1/alerts/sync", json=payload, headers=walker.headers)
     assert res2.status_code == 201, res2.text
     assert res2.json()["status"] == "already_synced", "Duplicate UUID must be handled idempotently"
 
+
 # Acceptance Criterion 5: Silent Duress PIN triggers covert high-priority alert
-def test_criterion_5_duress_pin():
-    phone = f"+9199{int(time.time()) % 100000000:08d}"
-    reg_payload = {
-        "phone_number": phone,
-        "pin": "1234",
-        "duress_pin": "9999",
-        "name": "Duress Test User"
-    }
-    reg_res = client.post("/api/v1/auth/register", json=reg_payload)
-    assert reg_res.status_code == 201, reg_res.text
+def test_criterion_5_duress_pin(client, account):
+    walker = account(pin="1234", duress_pin="9999")
+    # The app confirms the PIN before standing down an SOS countdown
+    normal = client.post("/api/v1/me/pin/check", headers=walker.headers, json={"pin": "1234"})
+    duress = client.post("/api/v1/me/pin/check", headers=walker.headers,
+                         json={"pin": "9999", "lat": 30.7333, "lon": 76.7794})
+    assert normal.status_code == duress.status_code == 200
+    # DUR-3: nothing in the response may reveal which PIN was used
+    assert normal.json() == duress.json()
 
-    # Login with normal PIN
-    login_norm = client.post("/api/v1/auth/login", json={"phone_number": phone, "pin": "1234"})
-    assert login_norm.status_code == 200
-    assert login_norm.json()["duress_mode_active"] is False
+    staff = account(role="responder")
+    active = client.get("/api/v1/dashboard/alerts/active", headers=staff.headers).json()["alerts"]
+    mine = [a for a in active if a["walker_phone"] == walker.phone]
+    assert len(mine) == 1 and mine[0]["trigger_type"] == "DURESS_PIN" and mine[0]["priority"] == "HIGH"
+    assert (mine[0]["lat"], mine[0]["lon"]) == (30.7333, 76.7794)
 
-    # Login with duress PIN (DUR-1 to DUR-4)
-    login_dur = client.post("/api/v1/auth/login", json={"phone_number": phone, "pin": "9999"})
-    assert login_dur.status_code == 200
-    assert login_dur.json()["duress_mode_active"] is True
 
 # Acceptance Criterion 6: Guardian Escalation Chain (60s ack timeout)
-def test_criterion_6_escalation_chain():
-    headers = create_authenticated_header()
-    alert_uuid = str(uuid.uuid4())
+def test_criterion_6_escalation_chain(client, account):
+    walker, guardian = account(), account()
+    walker.add_guardian(guardian)
+    alert_id = _alert(client, walker)
 
-    # Create active alert
-    client.post("/api/v1/alerts/sync", json={
-        "id": alert_uuid,
-        "trigger_type": "SOS_BUTTON",
-        "lat": 28.6910,
-        "lon": 77.2120,
-        "state": "ACTIVE"
-    }, headers=headers)
+    esc = client.post(f"/api/v1/alerts/{alert_id}/escalate", headers=walker.headers)
+    assert esc.status_code == 200, esc.text
+    assert esc.json()["alert"]["state"] == "ESCALATED"
 
-    # Trigger escalation (ALERT-8)
-    esc_res = client.post(f"/api/v1/alerts/{alert_uuid}/escalate", headers=headers)
-    assert esc_res.status_code == 200
-    assert esc_res.json()["alert"]["state"] == "ESCALATED"
+    ack = client.post(f"/api/v1/alerts/{alert_id}/ack", headers=guardian.headers, json={"action": "ACKNOWLEDGE"})
+    assert ack.status_code == 200, ack.text
+    assert ack.json()["alert"]["state"] == "ACKNOWLEDGED"
 
-    # Acknowledge alert (GRD-5)
-    ack_res = client.post(f"/api/v1/alerts/{alert_uuid}/ack", json={
-        "guardian_id": "guard_1",
-        "guardian_name": "Parent"
-    })
-    assert ack_res.status_code == 200
-    assert ack_res.json()["alert"]["state"] == "ACKNOWLEDGED"
 
 # Acceptance Criterion 7: Post-walk rating changes segment score
-def test_criterion_7_rating_updates_segment_score():
-    headers = create_authenticated_header()
+def test_criterion_7_rating_updates_segment_score(client, account):
+    walker = account()
+    res = client.post("/api/v1/ratings", headers=walker.headers, json={
+        "segment_id": "seg_north_ridge_cutoff", "lit": True, "busy": True, "felt_safe": True,
+        "gps_coverage_ratio": 0.85})
+    assert res.status_code == 201, res.text
+    assert res.json()["status"] == "rating_accepted"
+    assert res.json()["result"]["new_community_rating"] > 0.0
 
-    # Submit positive rating (RATE-1, RATE-2)
-    rate_payload = {
-        "segment_id": "seg_north_ridge_cutoff",
-        "lit": True,
-        "busy": True,
-        "felt_safe": True,
-        "gps_coverage_ratio": 0.85
-    }
-    rate_res = client.post("/api/v1/ratings", json=rate_payload, headers=headers)
-    assert rate_res.status_code == 201, rate_res.text
-    assert rate_res.json()["status"] == "rating_accepted"
-    new_r = rate_res.json()["result"]["new_community_rating"]
-    assert new_r > 0.0, "Community rating should update via Bayesian shrunk mean"
 
 # Acceptance Criterion 8: Authority Dashboard active alerts, heatmap & CSV work list
-def test_criterion_8_authority_dashboard():
-    headers = create_authenticated_header()
-
-    # 1. Active Alerts (DASH-1)
-    dash_res = client.get("/api/v1/dashboard/alerts/active", headers=headers)
-    assert dash_res.status_code == 200
-    assert "alerts" in dash_res.json()
-
-    # 2. Safety Heatmap (DASH-3, DASH-5)
-    heat_res = client.get("/api/v1/dashboard/heatmap", headers=headers)
-    assert heat_res.status_code == 200
-    assert len(heat_res.json()["heatmap"]) > 0
-
-    # 3. Infrastructure Gaps CSV Export (DASH-4)
-    csv_res = client.get("/api/v1/dashboard/gaps?format=csv", headers=headers)
+def test_criterion_8_authority_dashboard(client, account):
+    responder = account(role="responder")
+    assert "alerts" in client.get("/api/v1/dashboard/alerts/active", headers=responder.headers).json()
+    heat = client.get("/api/v1/dashboard/heatmap", headers=responder.headers)
+    assert heat.status_code == 200 and len(heat.json()["heatmap"]) > 0
+    csv_res = client.get("/api/v1/dashboard/gaps?format=csv", headers=responder.headers)
     assert csv_res.status_code == 200
     assert "text/csv" in csv_res.headers["content-type"]
     assert "lamp_density_per_100m" in csv_res.text
 
+
 # Acceptance Criterion 9: Encrypted audio evidence & SHA-256 hash chaining
-def test_criterion_9_evidence_encryption_and_chaining():
-    headers = create_authenticated_header()
-    alert_uuid = str(uuid.uuid4())
+def test_criterion_9_evidence_encryption_and_chaining(client, account):
+    walker = account()
+    alert_id = _alert(client, walker)
 
-    client.post("/api/v1/alerts/sync", json={
-        "id": alert_uuid,
-        "trigger_type": "SOS_BUTTON",
-        "lat": 28.6910,
-        "lon": 77.2120
-    }, headers=headers)
+    c0_text = "GCM_ENCRYPTED_CIPHERTEXT_BURST_000=="
+    c0_hash = hashlib.sha256(c0_text.encode()).hexdigest()
+    c0 = client.post("/api/v1/evidence/chunks", headers=walker.headers, json={
+        "alert_id": alert_id, "seq": 0, "ciphertext_base64": c0_text, "sha256": c0_hash,
+        "prev_sha256": GENESIS, "wrapped_keys": {"guardian_1": "RSA_OAEP_SEALED_KEY_1=="}})
+    assert c0.status_code == 201, c0.text
 
-    # Chunk 0
-    c0_payload_text = "GCM_ENCRYPTED_CIPHERTEXT_BURST_000=="
-    c0_hash = hashlib.sha256(c0_payload_text.encode('utf-8')).hexdigest()
-    chunk0 = {
-        "alert_id": alert_uuid,
-        "seq": 0,
-        "ciphertext_base64": c0_payload_text,
-        "sha256": c0_hash,
-        "prev_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-        "wrapped_keys": {"guardian_1": "RSA_OAEP_SEALED_KEY_1=="}
-    }
-    c0_res = client.post("/api/v1/evidence/chunks", json=chunk0, headers=headers)
-    assert c0_res.status_code == 201
+    c1_text = "GCM_ENCRYPTED_CIPHERTEXT_BURST_001=="
+    c1_hash = hashlib.sha256(c1_text.encode()).hexdigest()
+    c1 = client.post("/api/v1/evidence/chunks", headers=walker.headers, json={
+        "alert_id": alert_id, "seq": 1, "ciphertext_base64": c1_text, "sha256": c1_hash,
+        "prev_sha256": c0_hash, "wrapped_keys": {"guardian_1": "RSA_OAEP_SEALED_KEY_2=="}})
+    assert c1.status_code == 201, c1.text
+    assert c1.json()["prev_sha256"] == c0_hash
+    assert "cannot read" in c1.json()["privacy_notice"].lower()
 
-    # Chunk 1 chained with chunk 0 hash (EVID-4)
-    c1_payload_text = "GCM_ENCRYPTED_CIPHERTEXT_BURST_001=="
-    c1_hash = hashlib.sha256(c1_payload_text.encode('utf-8')).hexdigest()
-    chunk1 = {
-        "alert_id": alert_uuid,
-        "seq": 1,
-        "ciphertext_base64": c1_payload_text,
-        "sha256": c1_hash,
-        "prev_sha256": c0_hash,
-        "wrapped_keys": {"guardian_1": "RSA_OAEP_SEALED_KEY_2=="}
-    }
-    c1_res = client.post("/api/v1/evidence/chunks", json=chunk1, headers=headers)
-    assert c1_res.status_code == 201
-    assert c1_res.json()["prev_sha256"] == c0_hash
+    listing = client.get(f"/api/v1/evidence/chunks/{alert_id}", headers=walker.headers).json()
+    assert listing["total_chunks"] == 2 and listing["chain_intact"] is True
 
-    # Verify server cannot decrypt audio (EVID-3, EVID-6)
-    assert "cannot read" in c1_res.json()["privacy_notice"].lower()
 
 # Acceptance Criterion 10: Audio model evaluation report generated
 def test_criterion_10_audio_evaluation_report():
@@ -275,106 +169,71 @@ def test_criterion_10_audio_evaluation_report():
     assert os.path.exists(report_file), "Audio model evaluation report must exist (DET-7, Criterion 10)"
     with open(report_file, "r", encoding="utf-8") as f:
         content = f.read()
-    assert "Scream Recall" in content
-    assert "ESC-50" in content
-    assert "glass_breaking" in content
-    assert "crying_baby" in content
+    for needle in ("Scream Recall", "ESC-50", "glass_breaking", "crying_baby"):
+        assert needle in content
 
-# Additional Verification: Strict Evidence SHA-256 Hash Integrity (EVID-4)
-def test_evidence_hash_rejection_on_mismatch():
-    headers = create_authenticated_header()
-    alert_uuid = str(uuid.uuid4())
-    client.post("/api/v1/alerts/sync", json={
-        "id": alert_uuid,
-        "trigger_type": "SOS_BUTTON",
-        "lat": 28.6910,
-        "lon": 77.2120
-    }, headers=headers)
 
-    tampered_chunk = {
-        "alert_id": alert_uuid,
-        "seq": 0,
-        "ciphertext_base64": "TAMPERED_CIPHERTEXT_BURST_DATA==",
-        "sha256": "0000000000000000000000000000000000000000000000000000000000000000", # Intentionally invalid hash
-        "prev_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-        "wrapped_keys": {"guardian_1": "RSA_OAEP_KEY=="}
-    }
-    res = client.post("/api/v1/evidence/chunks", json=tampered_chunk, headers=headers)
-    assert res.status_code == 400, f"Expected HTTP 400 for tampered hash, got {res.status_code}"
+def test_evidence_hash_rejection_on_mismatch(client, account):
+    walker = account()
+    alert_id = _alert(client, walker)
+    res = client.post("/api/v1/evidence/chunks", headers=walker.headers, json={
+        "alert_id": alert_id, "seq": 0, "ciphertext_base64": "TAMPERED_CIPHERTEXT_BURST_DATA==",
+        "sha256": GENESIS, "prev_sha256": GENESIS, "wrapped_keys": {"guardian_1": "RSA_OAEP_KEY=="}})
+    assert res.status_code == 400
     assert "integrity violation" in res.json()["detail"].lower()
 
-# Additional Verification: NFR-10 One-time WS Ticket Issuance (No JWT in URL)
-def test_nfr10_websocket_ticket_issuance():
-    headers = create_authenticated_header()
-    channel_id = str(uuid.uuid4())
-    res = client.post("/api/v1/auth/ws-ticket", json={"channel_id": channel_id}, headers=headers)
-    assert res.status_code == 200
+
+def test_nfr10_websocket_ticket_issuance(client, account):
+    walker = account()
+    alert_id = _alert(client, walker)
+    res = client.post("/api/v1/auth/ws-ticket", json={"channel_id": alert_id}, headers=walker.headers)
+    assert res.status_code == 200, res.text
     data = res.json()
-    assert data["status"] == "ticket_created"
     assert data["ticket"].startswith("wstk_")
-    assert data["channel_id"] == channel_id
+    assert data["channel_id"] == alert_id and data["channel_kind"] == "alert"
     assert data["expires_in_seconds"] == 60
 
-# Additional Verification: WALK-5 Long-stop Detection and WALK-6 Check-in Timer
-def test_walk_monitoring_long_stop_and_checkin():
-    headers = create_authenticated_header()
-    start_payload = {
-        "origin_name": "Metro Station",
-        "destination_name": "Hostel 9",
-        "chosen_route_id": "route_safest",
-        "route_coords": [{"lat": 28.6910, "lon": 77.2120}, {"lat": 28.6950, "lon": 77.2160}],
-        "safety_score": 82.0,
-        "fastest_time_seconds": 600
-    }
-    start_res = client.post("/api/v1/walks", json=start_payload, headers=headers)
-    assert start_res.status_code == 201
-    walk_id = start_res.json()["walk"]["id"]
 
-    # Push stationary point far from Safe Stops (speed 0.05 m/s)
-    stop_point = {
-        "points": [
-            {"lat": 28.7500, "lon": 77.1500, "speed": 0.05, "accuracy": 3.0, "battery_level": 0.12}
-        ]
-    }
-    res_points = client.post(f"/api/v1/walks/{walk_id}/points", json=stop_point, headers=headers)
-    assert res_points.status_code == 200
-    data = res_points.json()
-    assert data["long_stop_detected"] is True, "Expected long stop detection when stopped outside safe stop"
+def test_walk_monitoring_long_stop_and_checkin(client, account):
+    walker = account()
+    start = client.post("/api/v1/walks", headers=walker.headers, json={
+        "origin_name": "Metro Station", "destination_name": "Hostel 9", "chosen_route_id": "route_safest",
+        "route_coords": [{"lat": 28.6910, "lon": 77.2120}, {"lat": 28.6950, "lon": 77.2160}],
+        "safety_score": 82.0, "fastest_time_seconds": 600})
+    walk_id = start.json()["walk"]["id"]
+
+    data = client.post(f"/api/v1/walks/{walk_id}/points", headers=walker.headers, json={"points": [
+        {"lat": 28.7500, "lon": 77.1500, "speed": 0.05, "accuracy": 3.0, "battery_level": 0.12}]}).json()
+    assert data["long_stop_detected"] is True
     assert data["checkin_required"] is True
     assert data["low_battery_mode"] is True
-    assert data["sampling_rate_seconds"] == 30 # WALK-8 low battery conservation
+    assert data["sampling_rate_seconds"] == 30  # WALK-8 low battery conservation
 
-    # Acknowledge check-in (WALK-6)
-    checkin_res = client.post(f"/api/v1/walks/{walk_id}/checkin", json={
-        "acknowledged": True,
-        "safe": True,
-        "dismissal_latency_seconds": 4.5
-    }, headers=headers)
-    assert checkin_res.status_code == 200
-    assert checkin_res.json()["status"] == "checkin_confirmed"
+    no_pin = client.post(f"/api/v1/walks/{walk_id}/checkin", headers=walker.headers,
+                         json={"acknowledged": True, "safe": True})
+    assert no_pin.status_code == 403  # someone holding the phone cannot dismiss the check
+    ok = client.post(f"/api/v1/walks/{walk_id}/checkin", headers=walker.headers,
+                     json={"acknowledged": True, "safe": True, "dismissal_latency_seconds": 4.5, "pin": walker.pin})
+    assert ok.json()["status"] == "checkin_confirmed"
 
-# Additional Verification: Generalizable Coordinate Routing & ROUTE-9 Cache
-def test_generalizable_coordinate_routing_and_route9_cache():
-    headers = create_authenticated_header()
-    payload = {
-        "origin": {"lat": 28.5355, "lon": 77.3910},
-        "destination": {"lat": 28.5480, "lon": 77.4080},
-        "walk_time": "2026-10-06T20:00:00"
-    }
+    # WALK-6: a missed check-in must open a real alert, not just log
+    missed = client.post(f"/api/v1/walks/{walk_id}/checkin", headers=walker.headers,
+                         json={"acknowledged": False, "safe": False})
+    assert missed.json()["status"] == "escalation_triggered"
+    alert = client.get(f"/api/v1/alerts/{missed.json()['alert_id']}", headers=walker.headers).json()["alert"]
+    assert alert["trigger_type"] == "CHECKIN_TIMEOUT" and alert["walk_id"] == walk_id
 
-    # First request: computes dynamically
+
+def test_generalizable_coordinate_routing_and_route9_cache(client, account):
+    walker = account()
+    payload = {"origin": {"lat": 28.5355, "lon": 77.3910}, "destination": {"lat": 28.5480, "lon": 77.4080},
+               "walk_time": "2026-10-06T20:00:00"}
     t0 = time.time()
-    res1 = client.post("/api/v1/routes/compare", json=payload, headers=headers)
+    res1 = client.post("/api/v1/routes/compare", json=payload, headers=walker.headers)
     t_first = time.time() - t0
     assert res1.status_code == 200
-    data1 = res1.json()
-    assert len(data1["routes"]) >= 2
-    assert any(r["is_safest"] for r in data1["routes"])
-
-    # Second request: served from ROUTE-9 score cache
+    assert len(res1.json()["routes"]) >= 2
+    assert any(r["is_safest"] for r in res1.json()["routes"])
     t1 = time.time()
-    res2 = client.post("/api/v1/routes/compare", json=payload, headers=headers)
-    t_cached = time.time() - t1
-    assert res2.status_code == 200
-    assert t_cached <= t_first + 0.1
-
+    assert client.post("/api/v1/routes/compare", json=payload, headers=walker.headers).status_code == 200
+    assert time.time() - t1 <= t_first + 0.1

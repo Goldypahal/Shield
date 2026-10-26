@@ -1,181 +1,123 @@
-import SQLite, { SQLiteDatabase } from 'react-native-sqlite-storage';
-import { NativeModules, Platform } from 'react-native';
-// Assuming you have an HTTP client configured or you fall back to fetch
-import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Linking, Platform } from 'react-native';
 import AuthService from './authService';
-import { BACKEND_URL } from '../config/env';
 
-SQLite.enablePromise(true);
+/** Trigger types accepted by POST /api/v1/alerts/sync. */
+export type TriggerType =
+  | 'SOS_BUTTON' | 'AUDIO' | 'AUDIO_DISTRESS' | 'MOTION' | 'FALL' | 'SHAKE' | 'VOICE'
+  | 'DEVIATION' | 'DURESS_PIN' | 'CHECKIN_TIMEOUT' | 'AUTO_TRIGGER';
 
 export interface AlertData {
-  id: string; // pre-generated UUID on device
-  type: string;
+  id: string; // UUID generated on the device: makes retries idempotent (ALERT-4)
+  trigger_type: TriggerType;
   lat: number;
   lon: number;
-  message: string;
-  contacts: string[];
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH';
+  walk_id?: string;
+  message?: string;
 }
 
-export interface RegionalEmergencyConfig {
-  region: string;
-  emergencySmsEnabled: boolean;
-  verifiedNumbers: string[];
-}
+type QueuedAlert = { payload: AlertData; createdAt: number; attempts: number };
 
+const QUEUE_KEY = '@shield_pending_alerts';
+const MAX_ATTEMPTS = 50; // an SOS is worth retrying for a long time
+
+/**
+ * Persist-first alert queue (ALERT-4, ALERT-6, ALERT-7).
+ *
+ * The alert is written to device storage before any network call, so an SOS
+ * survives no signal, a crash or an app restart; syncWhenOnline() replays it.
+ * Pure JS on AsyncStorage: no native modules, so it runs in Expo Go as well.
+ */
 class OfflineQueueService {
-  private db: SQLiteDatabase | null = null;
-  private readonly API_URL = `${BACKEND_URL}/api/v1/alerts/sync`;
-  private regionalConfig: RegionalEmergencyConfig = {
-    region: 'IN-DL',
-    emergencySmsEnabled: false, // ALERT-4, ALERT-6: Disabled until verified for relevant region
-    verifiedNumbers: []
-  };
+  private syncing: Promise<void> | null = null;
 
-  /**
-   * Configures regional emergency dispatch settings.
-   */
-  setRegionalConfig(config: Partial<RegionalEmergencyConfig>) {
-    this.regionalConfig = { ...this.regionalConfig, ...config };
-  }
-
-  getRegionalConfig(): RegionalEmergencyConfig {
-    return { ...this.regionalConfig };
-  }
-
-  async initDatabase() {
-    this.db = await SQLite.openDatabase({
-      name: 'shield_offline.db',
-      location: 'default',
-    });
-
-    await this.db.executeSql(`
-      CREATE TABLE IF NOT EXISTS pending_alerts (
-        id UUID PRIMARY KEY,
-        payload TEXT NOT NULL,
-        created_at INTEGER NOT NULL,
-        status VARCHAR(20) DEFAULT 'PENDING',
-        sync_attempts INTEGER DEFAULT 0
-      );
-    `);
-  }
-
-  /**
-   * Triggers an alert. Assumes no internet initially.
-   * Caches offline, attempts to send over cellular SMS as a fallback.
-   * When internet restores, the daemon will pick it up and sync it to FastAPI.
-   */
-  async queueAlert(alertData: AlertData) {
-    if (!this.db) await this.initDatabase();
-
+  private async read(): Promise<QueuedAlert[]> {
     try {
-      // ALERT-4, ALERT-6: Only include emergency numbers if explicitly enabled and verified for region
-      const targetContacts = [...alertData.contacts];
-      if (this.regionalConfig.emergencySmsEnabled && this.regionalConfig.verifiedNumbers.length > 0) {
-        targetContacts.push(...this.regionalConfig.verifiedNumbers);
-      }
-      
-      const payloadWithServices = {
-          ...alertData,
-          contacts: targetContacts,
-          message: this.regionalConfig.emergencySmsEnabled 
-            ? `${alertData.message}\nShared with Emergency Services and Guardians.`
-            : `${alertData.message}\nShared with Verified Guardians.`
-      };
-
-      // 1. Store the alert locally immediately
-      await this.db!.executeSql(
-        'INSERT INTO pending_alerts (id, payload, created_at, status) VALUES (?, ?, ?, ?)',
-        [alertData.id, JSON.stringify(payloadWithServices), Date.now(), 'PENDING']
-      );
-
-      // 2. Fallback to SMS directly over the cellular network if offline
-      // This is critical for zones with poor data.
-      await this.sendSMSViaCellular(targetContacts, payloadWithServices.message);
-
-      // 3. Try to sync to server for live dashboard tracking
-      this.syncWhenOnline();
-
-    } catch (error) {
-      console.error('Failed to queue alert locally:', error);
+      return JSON.parse((await AsyncStorage.getItem(QUEUE_KEY)) || '[]') as QueuedAlert[];
+    } catch {
+      return [];
     }
   }
 
-  /**
-   * Background process triggered by React Native NetInfo when connection is established
-   */
-  async syncWhenOnline() {
-    if (!this.db) await this.initDatabase();
-
-    try {
-      // Fetch all pending alerts
-      const [results] = await this.db!.executeSql(
-        "SELECT * FROM pending_alerts WHERE status = 'PENDING' AND sync_attempts < 5"
-      );
-
-      for (let i = 0; i < results.rows.length; i++) {
-        const row = results.rows.item(i);
-        const payloadStr = row.payload;
-        
-        try {
-          // Increment attempt counter
-          await this.db!.executeSql(
-            'UPDATE pending_alerts SET sync_attempts = sync_attempts + 1 WHERE id = ?',
-            [row.id]
-          );
-
-          // Get the securely stored JWT Token from device storage
-          const token = await AuthService.getToken();
-          if (!token) throw new Error('No Auth Token found. CANNOT SYNC OFFLINE ALERT!');
-
-          // Upload to server (PostgreSQL Backend)
-          const response = await axios.post(this.API_URL, JSON.parse(payloadStr), {
-            headers: {
-              Authorization: `Bearer ${token}`
-            },
-            timeout: 5000 // Short timeout since it's an emergency sync
-          });
-
-          if (response.status === 200 || response.status === 201) {
-            // Mark as synced so we don't re-upload it
-            await this.markSynced(row.id);
-            console.log(`Successfully synced offline alert ${row.id}`);
-          }
-        } catch (uploadError) {
-          console.warn(`Failed to sync alert ${row.id}, will retry later`, uploadError);
-        }
-      }
-    } catch (error) {
-      console.error('Error reading offline queue for sync:', error);
-    }
+  private async write(items: QueuedAlert[]) {
+    await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(items));
   }
 
-  /**
-   * Native bridge to send SMS via the phone's native cellular capabilities.
-   * This ensures the alert goes out even in 2G/Edge networks or strictly voice/SMS zones.
-   */
-  private async sendSMSViaCellular(contacts: string[], message: string) {
-    if (Platform.OS === 'android') {
+  async pendingCount(): Promise<number> {
+    return (await this.read()).length;
+  }
+
+  /** Stores the alert, then tries to deliver it. Returns whether the server has it yet. */
+  async queueAlert(alert: AlertData): Promise<'synced' | 'queued'> {
+    const items = await this.read();
+    if (!items.some((i) => i.payload.id === alert.id)) {
+      items.push({ payload: alert, createdAt: Date.now(), attempts: 0 });
+      await this.write(items);
+    }
+    await this.syncWhenOnline();
+    return (await this.read()).some((i) => i.payload.id === alert.id) ? 'queued' : 'synced';
+  }
+
+  async isQueued(alertId: string): Promise<boolean> {
+    return (await this.read()).some((i) => i.payload.id === alertId);
+  }
+
+  /** Drops an alert that never reached the server (stood down with the PIN while offline). */
+  async remove(alertId: string): Promise<void> {
+    await this.write((await this.read()).filter((i) => i.payload.id !== alertId));
+  }
+
+  /** Replays every pending alert. Safe to call often, e.g. on each NetInfo reconnect. */
+  syncWhenOnline(): Promise<void> {
+    if (!this.syncing) {
+      this.syncing = this.flush().finally(() => { this.syncing = null; });
+    }
+    return this.syncing;
+  }
+
+  private async flush() {
+    const items = await this.read();
+    if (items.length === 0) return;
+    const client = await AuthService.getAuthenticatedClient();
+    const remaining: QueuedAlert[] = [];
+
+    for (const item of items) {
       try {
-        const DirectSms = NativeModules.DirectSms;
-        // Requires SEND_SMS permission on Android
-        for (const phone of contacts) {
-          await DirectSms.sendDirectSms(phone, message);
+        await client.post('/api/v1/alerts/sync', item.payload, { timeout: 5000 });
+        // 201 for both "synced" and "already_synced": either way the server has it
+      } catch (error: any) {
+        const status: number | undefined = error?.response?.status;
+        const permanent = status !== undefined && status >= 400 && status < 500 && ![401, 408, 429].includes(status);
+        if (permanent) {
+          console.error(`Alert ${item.payload.id} rejected by server (${status}); dropping`, error?.response?.data);
+        } else if (item.attempts + 1 < MAX_ATTEMPTS) {
+          remaining.push({ ...item, attempts: item.attempts + 1 });
         }
-      } catch (error) {
-        console.error('Failed to trigger native SMS:', error);
       }
-    } else {
-      // iOS has heavy restrictions on direct SMS sending without user interaction (MFMessageComposeViewController).
-      // We would use an App Extension or fallback to Siri Shortcuts integration for seamless SOS.
-      console.log('Direct SMS on iOS requires native overrides or user prompt.');
     }
+    // Merge with anything queued while we were sending
+    const latest = await this.read();
+    const sentIds = new Set(items.map((i) => i.payload.id));
+    await this.write([...remaining, ...latest.filter((i) => !sentIds.has(i.payload.id))]);
   }
 
-  private async markSynced(alertId: string) {
-    await this.db!.executeSql(
-      "UPDATE pending_alerts SET status = 'SYNCED' WHERE id = ?",
-      [alertId]
-    );
+  /**
+   * Last-resort SMS when there is no data connection. Opens the SMS composer
+   * prefilled, because sending without user interaction needs a native module
+   * and a Play-Store-restricted permission (see docs/ROADMAP.md).
+   */
+  async openSmsFallback(phones: string[], message: string): Promise<boolean> {
+    const recipients = phones.filter(Boolean).join(',');
+    if (!recipients) return false;
+    const separator = Platform.OS === 'ios' ? '&' : '?';
+    const url = `sms:${recipients}${separator}body=${encodeURIComponent(message)}`;
+    try {
+      await Linking.openURL(url);
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 

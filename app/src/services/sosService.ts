@@ -1,14 +1,26 @@
+import 'react-native-get-random-values'; // must load before uuid
+import { v4 as uuidv4 } from 'uuid';
+import * as Location from 'expo-location';
 import { httpsCallable } from 'firebase/functions';
-import { functions, storage } from '../firebase/config';
-import { isFirebaseConfigured } from '../firebase/config';
-import { createIncident, updateIncident } from './firestoreService';
-import { buildMapsLink, getCurrentLocation } from './locationService';
-import { stopIncidentRecording } from './audioService';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { functions, storage, isFirebaseConfigured } from '../firebase/config';
+import { createIncident, updateIncident } from './firestoreService';
+import { buildMapsLink } from './locationService';
+import { stopIncidentRecording } from './audioService';
 import { IncidentLog, UserProfile } from '../types';
-import AuthService from './authService';
 import LocationTracker from './LocationTracker';
 import ContactService from './contactService';
+import OfflineQueue, { TriggerType } from './OfflineQueue';
+
+const GPS_TIMEOUT_MS = 8000;
+
+export type SosResult = {
+  alertId: string;
+  /** 'server': guardians are being notified by the backend; 'queued': stored on device, retrying. */
+  delivery: 'server' | 'queued';
+  locationKnown: boolean;
+  fallback: 'none' | 'firebase' | 'sms_composer' | 'unavailable';
+};
 
 async function uploadAudio(uri: string, userId: string) {
   const response = await fetch(uri);
@@ -19,10 +31,60 @@ async function uploadAudio(uri: string, userId: string) {
   return getDownloadURL(storageRef);
 }
 
-export async function triggerEmergency(profile: UserProfile, threatScore: number, threatLevel: 'LOW' | 'MEDIUM' | 'HIGH') {
-  const { latitude, longitude } = await getCurrentLocation();
-  const alertId = `${profile.uid}-${Date.now()}`;
+/** Best available fix: a fresh one if it comes quickly, else the last known one, else none. */
+async function bestEffortLocation(): Promise<{ latitude: number; longitude: number } | null> {
+  try {
+    const fresh = await Promise.race([
+      Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), GPS_TIMEOUT_MS))
+    ]);
+    if (fresh) return fresh.coords;
+  } catch {
+    // fall through to last known
+  }
+  try {
+    const last = await Location.getLastKnownPositionAsync();
+    if (last) return last.coords;
+  } catch {
+    // no fix at all
+  }
+  return null;
+}
 
+/**
+ * Raises an SOS. Never throws before the alert is stored on the device, and
+ * never invents a location: without a fix the alert says so, instead of
+ * pointing guardians somewhere wrong.
+ */
+export async function triggerEmergency(
+  profile: UserProfile,
+  threatScore: number,
+  threatLevel: 'LOW' | 'MEDIUM' | 'HIGH',
+  trigger: TriggerType = 'SOS_BUTTON',
+  options: { silent?: boolean } = {}
+): Promise<SosResult> {
+  const alertId = uuidv4();
+  const coords = await bestEffortLocation();
+  const latitude = coords?.latitude ?? 0;
+  const longitude = coords?.longitude ?? 0;
+  const mapsLink = coords ? buildMapsLink(latitude, longitude) : null;
+
+  // 1. Persist first, then attempt delivery
+  const delivery = await OfflineQueue.queueAlert({
+    id: alertId,
+    trigger_type: trigger,
+    lat: latitude,
+    lon: longitude,
+    priority: threatLevel,
+    message: coords ? undefined : 'Location unavailable at trigger time'
+  });
+
+  // 2. Live location for guardians once the server knows the alert
+  if (delivery === 'synced') {
+    LocationTracker.startBroadcastingSOS(alertId).catch((e) => console.warn('Live location failed to start', e));
+  }
+
+  // 3. Local incident history (best effort; must never block the SOS)
   const incident: IncidentLog = {
     id: alertId,
     userId: profile.uid,
@@ -31,69 +93,43 @@ export async function triggerEmergency(profile: UserProfile, threatScore: number
     longitude,
     threatScore,
     threatLevel,
-    status: 'PENDING'
+    status: delivery === 'synced' ? 'SENT' : 'PENDING'
   };
-
-  const incidentId = await createIncident(incident);
-
-  let audioUrl: string | undefined;
-  const localAudioUri = await stopIncidentRecording();
-  if (localAudioUri && isFirebaseConfigured) {
-    audioUrl = await uploadAudio(localAudioUri, profile.uid);
-    await updateIncident(incidentId, { audioUrl });
-  }
-  const mapsLink = buildMapsLink(latitude, longitude);
-  const fallbackContacts = await ContactService.listContacts();
-  const contacts = (profile.emergencyContacts.length > 0 ? profile.emergencyContacts : fallbackContacts)
-    .map((contact) => contact.phone)
-    .filter(Boolean);
-
+  let incidentId = alertId;
   try {
-    const client = await AuthService.getAuthenticatedClient();
-    await client.post('/api/v1/alerts/sync', {
-      id: alertId,
-      type: 'AUTO_TRIGGER',
-      lat: latitude,
-      lon: longitude,
-      message: `Emergency triggered for ${profile.name}. Live location: ${mapsLink}`,
-      contacts,
-      threat_score: threatScore,
-      threat_level: threatLevel.toLowerCase()
-    });
-
-    await updateIncident(incidentId, {
-      status: 'SENT',
-      delivery: { sms: contacts.length > 0, call: false },
-      audioUrl
-    });
-
-    await LocationTracker.startBroadcastingSOS(alertId, profile.uid);
-    return incidentId;
-  } catch (backendError) {
-    console.warn('Backend SOS sync failed, falling back to Firebase/local mode.', backendError);
+    incidentId = await createIncident(incident);
+  } catch (e) {
+    console.warn('Could not record local incident history', e);
   }
 
+  if (delivery === 'synced') {
+    return { alertId, delivery: 'server', locationKnown: !!coords, fallback: 'none' };
+  }
+
+  // 4. Backend unreachable: Firebase function if configured, otherwise the SMS composer
+  // A silent (duress) alert must not open anything on screen; it stays queued and syncs later
+  if (options.silent) {
+    return { alertId, delivery: 'queued', locationKnown: !!coords, fallback: 'none' };
+  }
+  const contacts = profile.emergencyContacts.length > 0 ? profile.emergencyContacts : await ContactService.listContacts();
   if (isFirebaseConfigured) {
-    const sendAlert = httpsCallable(functions, 'sendEmergencyAlerts');
-
-    await sendAlert({
-      incidentId,
-      userName: profile.name,
-      userPhone: profile.phone,
-      contacts: profile.emergencyContacts,
-      latitude,
-      longitude,
-      mapsLink,
-      audioUrl,
-      threatScore,
-      threatLevel
-    });
-
-    await updateIncident(incidentId, {
-      status: 'SENT',
-      delivery: { sms: true, call: true }
-    });
+    try {
+      let audioUrl: string | undefined;
+      const localAudioUri = await stopIncidentRecording();
+      if (localAudioUri) audioUrl = await uploadAudio(localAudioUri, profile.uid);
+      await httpsCallable(functions, 'sendEmergencyAlerts')({
+        incidentId, userName: profile.name, contacts, mapsLink: mapsLink ?? 'location unavailable',
+        audioUrl, threatScore, threatLevel
+      });
+      await updateIncident(incidentId, { status: 'SENT', delivery: { sms: true, call: true }, audioUrl });
+      return { alertId, delivery: 'queued', locationKnown: !!coords, fallback: 'firebase' };
+    } catch (e) {
+      console.warn('Firebase fallback failed', e);
+    }
   }
 
-  return incidentId;
+  const text = `SHIELD SOS: ${profile.name} needs help. ` +
+    (mapsLink ? `Location: ${mapsLink}` : 'Location unavailable.') + ' If in danger, call 112.';
+  const opened = await OfflineQueue.openSmsFallback(contacts.map((c) => c.phone), text);
+  return { alertId, delivery: 'queued', locationKnown: !!coords, fallback: opened ? 'sms_composer' : 'unavailable' };
 }

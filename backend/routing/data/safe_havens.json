@@ -1,0 +1,2783 @@
+{
+"source": "OpenStreetMap contributors (ODbL), via Overpass API",
+"bbox": [
+30.6,
+76.66,
+30.8,
+76.92
+],
+"places": [
+{
+"kind": "hospital",
+"name": "PGI Emergency",
+"lat": 30.761101,
+"lon": 76.776221,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "fuel",
+"name": "",
+"lat": 30.600392,
+"lon": 76.767636,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "",
+"lat": 30.608463,
+"lon": 76.776854,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "hospital",
+"name": "KD Cosmetic Surgery Centre,Sector 34-A",
+"lat": 30.724524,
+"lon": 76.768988,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.722844,
+"lon": 76.738101,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "",
+"lat": 30.716966,
+"lon": 76.752415,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.698681,
+"lon": 76.758612,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Vishal Service Station",
+"lat": 30.705702,
+"lon": 76.787393,
+"opening_hours": "24/7",
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.7172,
+"lon": 76.775638,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.718798,
+"lon": 76.768394,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Bharat Petroleum",
+"lat": 30.723344,
+"lon": 76.771573,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.724189,
+"lon": 76.770892,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "",
+"lat": 30.717951,
+"lon": 76.776021,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.714878,
+"lon": 76.806227,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Bharat Petroleum",
+"lat": 30.720131,
+"lon": 76.809457,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "",
+"lat": 30.732063,
+"lon": 76.797927,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "HP",
+"lat": 30.750823,
+"lon": 76.790329,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.700115,
+"lon": 76.850274,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.669607,
+"lon": 76.848985,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Bharat Petroleum",
+"lat": 30.701096,
+"lon": 76.849367,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.736779,
+"lon": 76.800006,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "HP",
+"lat": 30.730488,
+"lon": 76.773938,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "hospital",
+"name": "PGI Chandigarh",
+"lat": 30.76143,
+"lon": 76.774965,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "police",
+"name": "Police Station, Sector 39",
+"lat": 30.745196,
+"lon": 76.726411,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "fuel",
+"name": "indian Oil",
+"lat": 30.696977,
+"lon": 76.75835,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "",
+"lat": 30.737242,
+"lon": 76.683815,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "hospital",
+"name": "Dispesary",
+"lat": 30.67759,
+"lon": 76.798432,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Santokh Hospital",
+"lat": 30.747863,
+"lon": 76.748988,
+"opening_hours": null,
+"phone": "+918558866846",
+"open_24_7": true
+},
+{
+"kind": "fuel",
+"name": "Bharat Petroleum",
+"lat": 30.739297,
+"lon": 76.78012,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.738123,
+"lon": 76.7811,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Bharat Petroleum",
+"lat": 30.698798,
+"lon": 76.86194,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "HP",
+"lat": 30.71483,
+"lon": 76.742973,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "hospital",
+"name": "",
+"lat": 30.686066,
+"lon": 76.665027,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Dharam Hospital",
+"lat": 30.749174,
+"lon": 76.774026,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "police",
+"name": "Police Station Palsora",
+"lat": 30.73944,
+"lon": 76.716206,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "fuel",
+"name": "Indian oil petrol pump",
+"lat": 30.739533,
+"lon": 76.7241,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "hospital",
+"name": "Max health care",
+"lat": 30.738771,
+"lon": 76.714557,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Bharat Vikas Parishad Charitable Medical Centre",
+"lat": 30.747535,
+"lon": 76.765978,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Land Mark Hospital(Langol View Charitable Clinic and Maternity Home)",
+"lat": 30.712272,
+"lon": 76.770275,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Advance Eye Center",
+"lat": 30.763949,
+"lon": 76.780052,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "pharmacy",
+"name": "Special Pharmacy",
+"lat": 30.769101,
+"lon": 76.79195,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "hospital",
+"name": "bodysculpt",
+"lat": 30.703468,
+"lon": 76.710082,
+"opening_hours": null,
+"phone": "+91 9878650039",
+"open_24_7": true
+},
+{
+"kind": "fuel",
+"name": "",
+"lat": 30.729427,
+"lon": 76.698541,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "HP",
+"lat": 30.694515,
+"lon": 76.678065,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.720846,
+"lon": 76.810125,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "",
+"lat": 30.633986,
+"lon": 76.687838,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "HG Petro Care",
+"lat": 30.744658,
+"lon": 76.786734,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "",
+"lat": 30.681547,
+"lon": 76.718675,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "pharmacy",
+"name": "Verma Medical Hall",
+"lat": 30.734417,
+"lon": 76.770131,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "hospital",
+"name": "Government Pet Hospital",
+"lat": 30.73297,
+"lon": 76.771474,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "fuel",
+"name": "HP filling station",
+"lat": 30.641414,
+"lon": 76.822894,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.665545,
+"lon": 76.816517,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "hospital",
+"name": "Ivy Health and Life Sciences Private Limited",
+"lat": 30.706747,
+"lon": 76.70832,
+"opening_hours": "24/7",
+"phone": "01727170121;01725242120;01725044333",
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Rameshwara Hospital",
+"lat": 30.758307,
+"lon": 76.784318,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Oxford Heart and Multispeciality Hospital",
+"lat": 30.728748,
+"lon": 76.789855,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Mukat Hospital and Heart Institute",
+"lat": 30.722836,
+"lon": 76.770339,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Nins Brain and Spine Hospital",
+"lat": 30.721826,
+"lon": 76.766946,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Ashwini Maternity Hospital",
+"lat": 30.719376,
+"lon": 76.757891,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Inscol Tertiary Care Hospital",
+"lat": 30.723938,
+"lon": 76.765686,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Deep Hospital",
+"lat": 30.7636,
+"lon": 76.748321,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Civil Hospital-Sector 22",
+"lat": 30.732432,
+"lon": 76.771662,
+"opening_hours": null,
+"phone": "1722773711",
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Chaitanya Hospital",
+"lat": 30.710748,
+"lon": 76.754191,
+"opening_hours": null,
+"phone": "9988808880",
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Grewal Eye Institute",
+"lat": 30.742022,
+"lon": 76.790916,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Civil hospital, Manimajra",
+"lat": 30.712853,
+"lon": 76.842418,
+"opening_hours": null,
+"phone": "1722751004",
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Abhilasha Hospital",
+"lat": 30.727952,
+"lon": 76.759499,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Arya Hospital",
+"lat": 30.717464,
+"lon": 76.832989,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Dabur Dhanwantry Hospital",
+"lat": 30.69994,
+"lon": 76.767141,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Silver Oaks Hospitals",
+"lat": 30.692086,
+"lon": 76.733003,
+"opening_hours": "24/7",
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Arthoscopy and Spinal Endoscopy Centre",
+"lat": 30.716308,
+"lon": 76.777796,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Virdi Eye Hospital(Virk Hospital)",
+"lat": 30.719818,
+"lon": 76.768628,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Mangnum Hospital",
+"lat": 30.723771,
+"lon": 76.760497,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Grover Eye Laser and E.N.T Hospital",
+"lat": 30.730178,
+"lon": 76.76032,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Bedi Hospital",
+"lat": 30.7177,
+"lon": 76.769382,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Gupta Eye Hospital, Chandigarh",
+"lat": 30.67276,
+"lon": 76.85363,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Postgraduate Institute of Medical Education and Research (PGIMER)",
+"lat": 30.764368,
+"lon": 76.776278,
+"opening_hours": null,
+"phone": "0172-2755220",
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Neeraj Eye Hospital",
+"lat": 30.734221,
+"lon": 76.75258,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Kapoor's Kidney and Urostone Centre Pvt.Ltd.",
+"lat": 30.702963,
+"lon": 76.762,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Omni Hospital",
+"lat": 30.721697,
+"lon": 76.766972,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Tricity Hospital Pvt. Ltd.",
+"lat": 30.710446,
+"lon": 76.842968,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Shri Ram Hospital",
+"lat": 30.689099,
+"lon": 76.853355,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Institute Of Reproduction and Child Cares",
+"lat": 30.69874,
+"lon": 76.835774,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Singla Orthopaedic Centre / Ortho Nava Hospital",
+"lat": 30.701989,
+"lon": 76.839433,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Raffels Hospital",
+"lat": 30.681546,
+"lon": 76.848598,
+"opening_hours": null,
+"phone": "0172-258730003",
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Gokul Surgical Hospital",
+"lat": 30.682106,
+"lon": 76.837479,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Orthomax Bone and Joint Hospital",
+"lat": 30.685556,
+"lon": 76.840692,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "J N Shori Multi Speciality Hospital",
+"lat": 30.799528,
+"lon": 76.910494,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Chakravarty Polyclinics",
+"lat": 30.688542,
+"lon": 76.850379,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Drishti Eye Hospital",
+"lat": 30.688219,
+"lon": 76.850033,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Aarogya Hospital, Panchkula",
+"lat": 30.674763,
+"lon": 76.851386,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Phoenix Hospital, Panchkula",
+"lat": 30.695839,
+"lon": 76.838175,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Happy Family Maternitys Children Hospital Pvt Ltd",
+"lat": 30.715826,
+"lon": 76.838934,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Khera Hospital",
+"lat": 30.798371,
+"lon": 76.916052,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Grecian Hospital",
+"lat": 30.691353,
+"lon": 76.72344,
+"opening_hours": null,
+"phone": "062837 05192",
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Shivalik Hospital and ACE Heart & Vascular Institute",
+"lat": 30.694945,
+"lon": 76.721416,
+"opening_hours": null,
+"phone": "0172 221 6868",
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Kaushal Hospital, Chandigarh",
+"lat": 30.722908,
+"lon": 76.744779,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "JP Hospital, Zirakpur",
+"lat": 30.661355,
+"lon": 76.818445,
+"opening_hours": null,
+"phone": "84277 76095, 176 2331900, 331901",
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Amar Hospital, Rupnagar",
+"lat": 30.696302,
+"lon": 76.716644,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Sri Guru Harkrishan Sahib (C) Eye Institute And Super Speciality Hospital",
+"lat": 30.692894,
+"lon": 76.699076,
+"opening_hours": null,
+"phone": "+91 8725001324 ;+91 172-2295000",
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Indus Hospital,S.A.S Nagar",
+"lat": 30.708959,
+"lon": 76.722468,
+"opening_hours": null,
+"phone": "01762 512 666",
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Chawla Nursing Home",
+"lat": 30.70834,
+"lon": 76.724084,
+"opening_hours": null,
+"phone": "098145 01415",
+"open_24_7": true
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.740555,
+"lon": 76.755355,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.736484,
+"lon": 76.715921,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.711074,
+"lon": 76.742845,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.726483,
+"lon": 76.80484,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.734289,
+"lon": 76.727823,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.724882,
+"lon": 76.742347,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.731112,
+"lon": 76.836442,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.692641,
+"lon": 76.71331,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.699987,
+"lon": 76.726872,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.679782,
+"lon": 76.74636,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.731516,
+"lon": 76.800036,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.730105,
+"lon": 76.799543,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "hospital",
+"name": "J P Eye Hospital, Rupnagar",
+"lat": 30.706867,
+"lon": 76.726213,
+"opening_hours": null,
+"phone": "099148 74442",
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Max Super Speciality Hospital-Mohali",
+"lat": 30.739959,
+"lon": 76.714187,
+"opening_hours": null,
+"phone": "0172 521 2000",
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Ujjawal Eye Care",
+"lat": 30.660289,
+"lon": 76.81891,
+"opening_hours": null,
+"phone": "01762 509 993",
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Adityaj Hospital And Laboratory",
+"lat": 30.72818,
+"lon": 76.722281,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Singla Medicare Clinic",
+"lat": 30.726834,
+"lon": 76.720965,
+"opening_hours": null,
+"phone": "085560 82078",
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Chaitanya Public Hospital",
+"lat": 30.660936,
+"lon": 76.82905,
+"opening_hours": null,
+"phone": "01762 509 503",
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Behgal Multispecialty Hospital",
+"lat": 30.701834,
+"lon": 76.682568,
+"opening_hours": null,
+"phone": "098141 09573",
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Liberty Hospital",
+"lat": 30.711314,
+"lon": 76.719109,
+"opening_hours": null,
+"phone": "0172 227 3402",
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Indus Super Speciality Hospital",
+"lat": 30.729257,
+"lon": 76.722148,
+"opening_hours": null,
+"phone": "0172 522 2000",
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Dr. Sodhi's Health Care, Multispeciality Hospital- Mohali",
+"lat": 30.712996,
+"lon": 76.718298,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Police Hospital",
+"lat": 30.723238,
+"lon": 76.812297,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "ESIC Hospital Ramdarbar",
+"lat": 30.696743,
+"lon": 76.787964,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Composite Hospital I.T.B.P",
+"lat": 30.677988,
+"lon": 76.807281,
+"opening_hours": null,
+"phone": "1722655752",
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Civil Hospital SAS Nagar (Mohali)",
+"lat": 30.739313,
+"lon": 76.713873,
+"opening_hours": null,
+"phone": "0172-2271295",
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Civil Hospital Chando Gobindgarh",
+"lat": 30.77575,
+"lon": 76.665423,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Cloudnine Hospital",
+"lat": 30.700136,
+"lon": 76.787576,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Babe Ke Hospital And IMT",
+"lat": 30.724507,
+"lon": 76.732464,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Nirmal Dr. Bhasin Jannee Fertility Centre",
+"lat": 30.742139,
+"lon": 76.735669,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Dr. Ashok Sharma's Cornea Centre",
+"lat": 30.727605,
+"lon": 76.769457,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Dr. Chandan Trikha Homeopathic Hospital",
+"lat": 30.712789,
+"lon": 76.777409,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "",
+"lat": 30.731417,
+"lon": 76.7725,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Pandhi Hospital",
+"lat": 30.726638,
+"lon": 76.752325,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Dr. Priyanka Sharma Gynaecologist",
+"lat": 30.735249,
+"lon": 76.800628,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Chd City Hospital",
+"lat": 30.741709,
+"lon": 76.794256,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Guru Nanak Multispeciality Hospital",
+"lat": 30.72554,
+"lon": 76.76229,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Kaushal Clinic & Clinical Lab",
+"lat": 30.752584,
+"lon": 76.717353,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Fortis Medcentre Hospital",
+"lat": 30.760621,
+"lon": 76.782037,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Chhuttani Medical Centre - Psychiatrist & De-addiction Centre",
+"lat": 30.740194,
+"lon": 76.782629,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "ARV Othopaedic Hospital",
+"lat": 30.726406,
+"lon": 76.773247,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Eden Hospital",
+"lat": 30.709148,
+"lon": 76.802711,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Mamta Child Health Care Centre",
+"lat": 30.731388,
+"lon": 76.784999,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Sarhind Orthopaedic Multispeciality Medical Centre",
+"lat": 30.713433,
+"lon": 76.768741,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "AM Eye Hospital",
+"lat": 30.66343,
+"lon": 76.87805,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Medgenius Multispeciality Hospital",
+"lat": 30.757135,
+"lon": 76.669294,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Tricity Eye Hospital",
+"lat": 30.741557,
+"lon": 76.676007,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Prime Hospital",
+"lat": 30.743158,
+"lon": 76.675443,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Chhabra Hospital",
+"lat": 30.748954,
+"lon": 76.674675,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Omega Hospital",
+"lat": 30.74192,
+"lon": 76.666357,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "HMS Child Speciality Hospital",
+"lat": 30.759661,
+"lon": 76.664749,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Aditya Multispeciality Hospital & Hair Transplant Centre",
+"lat": 30.74389,
+"lon": 76.666326,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Hamdard Ayurvedic Hospital",
+"lat": 30.745432,
+"lon": 76.674463,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Ziva Hospital",
+"lat": 30.742111,
+"lon": 76.669465,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Bhupindera Hospital",
+"lat": 30.729319,
+"lon": 76.694635,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Universal Institute & Charitable Hospiital",
+"lat": 30.683514,
+"lon": 76.723983,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Sohana Hospital",
+"lat": 30.692971,
+"lon": 76.699132,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "BSF Hospital",
+"lat": 30.697452,
+"lon": 76.67879,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "R.P Hospital",
+"lat": 30.641623,
+"lon": 76.684714,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Pancham Hospital",
+"lat": 30.732776,
+"lon": 76.682105,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Chahal Hospital",
+"lat": 30.681651,
+"lon": 76.743628,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Shri Guru Nanak Dev Ji Hospital",
+"lat": 30.732474,
+"lon": 76.695404,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Dr. Amritpal Hospital",
+"lat": 30.713207,
+"lon": 76.717471,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Gopal Hospital",
+"lat": 30.70766,
+"lon": 76.723614,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Grand Hospital",
+"lat": 30.684294,
+"lon": 76.74268,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Vinod Hospital",
+"lat": 30.733442,
+"lon": 76.668259,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Trauma and Emergency Critical Care",
+"lat": 30.691666,
+"lon": 76.721233,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Aayush Hospital",
+"lat": 30.731994,
+"lon": 76.69388,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Trehan Hospital",
+"lat": 30.679541,
+"lon": 76.724947,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Mayo Healthcare Super Speciality Hospital",
+"lat": 30.691547,
+"lon": 76.716421,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "I- Med Hospital",
+"lat": 30.681326,
+"lon": 76.744445,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Harmony Hospital",
+"lat": 30.719722,
+"lon": 76.705683,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Dhingra Hospital and Surgical Centre",
+"lat": 30.719702,
+"lon": 76.713574,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "ENT Hospital",
+"lat": 30.679946,
+"lon": 76.745555,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Dr. Virendra Dhanlhar Mayo Health Care Super Speciality Hospital",
+"lat": 30.689984,
+"lon": 76.71047,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Ashirwad Hospital",
+"lat": 30.636688,
+"lon": 76.814532,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Sethi Hospital",
+"lat": 30.66385,
+"lon": 76.828903,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "S.S Hospital",
+"lat": 30.651605,
+"lon": 76.822804,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Dashmesh Hospital",
+"lat": 30.650867,
+"lon": 76.813201,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Arya Hospital",
+"lat": 30.657538,
+"lon": 76.82222,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Charitable Hospital",
+"lat": 30.616132,
+"lon": 76.861875,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Dr. R.C.P. Singh Memorial Charitable Hospital",
+"lat": 30.643555,
+"lon": 76.814295,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Life Line Care",
+"lat": 30.648143,
+"lon": 76.813153,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Trinity Hospital & Medical Research Institute",
+"lat": 30.647272,
+"lon": 76.804755,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Multispeciality Hospital",
+"lat": 30.638285,
+"lon": 76.815826,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Amcare Hospital",
+"lat": 30.667707,
+"lon": 76.85319,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Doctor Square Multispeciality Hospital",
+"lat": 30.639226,
+"lon": 76.815782,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Tara Hospital",
+"lat": 30.654523,
+"lon": 76.82151,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Swastik Nursing Home",
+"lat": 30.642802,
+"lon": 76.826017,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Osmed Healthcare Multispeciality Hospital",
+"lat": 30.647778,
+"lon": 76.812932,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Blessings Hospital",
+"lat": 30.655211,
+"lon": 76.844939,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Gavean Joti Hospital",
+"lat": 30.616863,
+"lon": 76.855208,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Divine Physiotherapy and Neuro Rehabilitation Centre",
+"lat": 30.647744,
+"lon": 76.81294,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Netra Eye Hospital",
+"lat": 30.672544,
+"lon": 76.855923,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Jai Shree Shyam Skin Hospital",
+"lat": 30.665817,
+"lon": 76.855325,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Matsya Hospital",
+"lat": 30.662937,
+"lon": 76.818202,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Amcare Hospital",
+"lat": 30.639136,
+"lon": 76.816943,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Saini Hospital",
+"lat": 30.657978,
+"lon": 76.816611,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Mom and Me Hospital",
+"lat": 30.653513,
+"lon": 76.845072,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Vishwas Hospital",
+"lat": 30.648273,
+"lon": 76.81247,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "V Care Hospital",
+"lat": 30.639108,
+"lon": 76.816079,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Advamed Hospital",
+"lat": 30.645441,
+"lon": 76.822773,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Vision Eye Hospital",
+"lat": 30.666056,
+"lon": 76.825308,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Dhuper Hospital",
+"lat": 30.65212,
+"lon": 76.822365,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Life Line Hospital",
+"lat": 30.668666,
+"lon": 76.81348,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Santosh Hospital",
+"lat": 30.652166,
+"lon": 76.81857,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "fuel",
+"name": "",
+"lat": 30.688834,
+"lon": 76.664797,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "",
+"lat": 30.637125,
+"lon": 76.686967,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "",
+"lat": 30.623772,
+"lon": 76.691286,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "CNG Pump Zirakpur",
+"lat": 30.64012,
+"lon": 76.804981,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "police",
+"name": "Police Station phase 8",
+"lat": 30.694261,
+"lon": 76.727973,
+"opening_hours": null,
+"phone": "0172-5044672",
+"open_24_7": true
+},
+{
+"kind": "fuel",
+"name": "IOCL fuel station",
+"lat": 30.631433,
+"lon": 76.874086,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.706791,
+"lon": 76.865995,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.69154,
+"lon": 76.855476,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "HP",
+"lat": 30.712443,
+"lon": 76.848329,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.695151,
+"lon": 76.84022,
+"opening_hours": "PH,Mo-Su 06:00-22:00",
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.6822,
+"lon": 76.848074,
+"opening_hours": "PH,Mo-Su 06:00-22:00",
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Bharat Petroleum",
+"lat": 30.712764,
+"lon": 76.846399,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "HP",
+"lat": 30.715808,
+"lon": 76.850005,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Bharat Petroleum",
+"lat": 30.683193,
+"lon": 76.835885,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.687751,
+"lon": 76.825078,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "HP",
+"lat": 30.668058,
+"lon": 76.858542,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "HP",
+"lat": 30.754638,
+"lon": 76.905308,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.692757,
+"lon": 76.802294,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "",
+"lat": 30.730928,
+"lon": 76.852683,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "pharmacy",
+"name": "Yadav Medical Store",
+"lat": 30.667465,
+"lon": 76.887148,
+"opening_hours": null,
+"phone": "+91-9217255294",
+"open_24_7": false
+},
+{
+"kind": "hospital",
+"name": "Malik Multi-Speciality Hospital",
+"lat": 30.672909,
+"lon": 76.850997,
+"opening_hours": null,
+"phone": "0172-582524",
+"open_24_7": true
+},
+{
+"kind": "pharmacy",
+"name": "Jain Medical Hall",
+"lat": 30.670295,
+"lon": 76.886838,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "pharmacy",
+"name": "Ravi Medicose",
+"lat": 30.670275,
+"lon": 76.886723,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "pharmacy",
+"name": "Pooja Medicose",
+"lat": 30.670319,
+"lon": 76.886316,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "pharmacy",
+"name": "Apollo Pharmacy",
+"lat": 30.669777,
+"lon": 76.884397,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "pharmacy",
+"name": "Lyf Care Medicos",
+"lat": 30.669778,
+"lon": 76.884335,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "pharmacy",
+"name": "Lyfline Pharmacy",
+"lat": 30.667212,
+"lon": 76.886641,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "pharmacy",
+"name": "Anand Chemists",
+"lat": 30.686541,
+"lon": 76.853388,
+"opening_hours": null,
+"phone": "9041672314",
+"open_24_7": false
+},
+{
+"kind": "police",
+"name": "Police Station Sector 14",
+"lat": 30.680162,
+"lon": 76.847905,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Yukti Herbs",
+"lat": 30.653331,
+"lon": 76.734982,
+"opening_hours": null,
+"phone": "08283865637",
+"open_24_7": true
+},
+{
+"kind": "police",
+"name": "Government Railway Police Station",
+"lat": 30.703522,
+"lon": 76.819416,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "pharmacy",
+"name": "Rx One Pharmacy",
+"lat": 30.660952,
+"lon": 76.881294,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "pharmacy",
+"name": "Zeneex Pharma",
+"lat": 30.660952,
+"lon": 76.88143,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "pharmacy",
+"name": "Swati Medicare",
+"lat": 30.660952,
+"lon": 76.881462,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "pharmacy",
+"name": "Ess Pee Medical Hall",
+"lat": 30.694341,
+"lon": 76.845089,
+"opening_hours": null,
+"phone": "+91-172-2571016",
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Bharat Petroleum",
+"lat": 30.729046,
+"lon": 76.733416,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "",
+"lat": 30.781991,
+"lon": 76.911148,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "",
+"lat": 30.74498,
+"lon": 76.903405,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "",
+"lat": 30.751956,
+"lon": 76.905073,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "police",
+"name": "Police Station",
+"lat": 30.700846,
+"lon": 76.778901,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "pharmacy",
+"name": "Shree Ram Medical Hall",
+"lat": 30.720515,
+"lon": 76.782174,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "hospital",
+"name": "Air Force Hospital",
+"lat": 30.703395,
+"lon": 76.777515,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Mental Health Institute",
+"lat": 30.704232,
+"lon": 76.775198,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.742695,
+"lon": 76.754751,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "hospital",
+"name": "Akaal Medical Center (Akaal Clinic)",
+"lat": 30.691252,
+"lon": 76.698961,
+"opening_hours": "Mo-Su 08:00-20:00",
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Dental Diaries",
+"lat": 30.766659,
+"lon": 76.670008,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.736845,
+"lon": 76.776055,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "",
+"lat": 30.729476,
+"lon": 76.766513,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "hospital",
+"name": "Superintended Hospital Engineer Building",
+"lat": 30.765226,
+"lon": 76.775577,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Ivy Health and Life Sciences Pvt. Ltd",
+"lat": 30.706628,
+"lon": 76.708319,
+"opening_hours": null,
+"phone": "0172 717 0000",
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "GMCH SECTOR 32",
+"lat": 30.709111,
+"lon": 76.780695,
+"opening_hours": null,
+"phone": "0172-2601023",
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "",
+"lat": 30.708534,
+"lon": 76.777462,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "police",
+"name": "",
+"lat": 30.712102,
+"lon": 76.796364,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "police",
+"name": "",
+"lat": 30.738902,
+"lon": 76.778584,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "fuel",
+"name": "",
+"lat": 30.738117,
+"lon": 76.781082,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "",
+"lat": 30.739267,
+"lon": 76.780073,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "",
+"lat": 30.742202,
+"lon": 76.788811,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "hospital",
+"name": "GMSH Sector-16",
+"lat": 30.750814,
+"lon": 76.780947,
+"opening_hours": null,
+"phone": "1722768119",
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Civil Hospital Panchkula",
+"lat": 30.704849,
+"lon": 76.855683,
+"opening_hours": null,
+"phone": "0172-567540",
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Command Hospital",
+"lat": 30.71313,
+"lon": 76.853928,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Alchemist Hospital, Panchkula",
+"lat": 30.674544,
+"lon": 76.864769,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "police",
+"name": "Police Post Sector 25",
+"lat": 30.673172,
+"lon": 76.880409,
+"opening_hours": null,
+"phone": "+91-172-2550514",
+"open_24_7": true
+},
+{
+"kind": "fuel",
+"name": "Bharat Petroleum",
+"lat": 30.755161,
+"lon": 76.778126,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "hospital",
+"name": "Cancer Hospital",
+"lat": 30.763393,
+"lon": 76.781005,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "New OPD",
+"lat": 30.762896,
+"lon": 76.780862,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "fuel",
+"name": "Bharat Petroleum",
+"lat": 30.753205,
+"lon": 76.797749,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.694513,
+"lon": 76.857719,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.706721,
+"lon": 76.870635,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "hospital",
+"name": "Fortis Hospital",
+"lat": 30.694798,
+"lon": 76.73108,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "fuel",
+"name": "Reliance",
+"lat": 30.617268,
+"lon": 76.827832,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "HP",
+"lat": 30.654019,
+"lon": 76.821832,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "police",
+"name": "Sector 7 Police station",
+"lat": 30.710408,
+"lon": 76.845414,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Oscar Medical Center",
+"lat": 30.671106,
+"lon": 76.886636,
+"opening_hours": null,
+"phone": "+91-9053893331",
+"open_24_7": true
+},
+{
+"kind": "police",
+"name": "Police Station South",
+"lat": 30.720061,
+"lon": 76.764276,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Ojas Hospital",
+"lat": 30.660991,
+"lon": 76.882254,
+"opening_hours": null,
+"phone": "+91 172 4500000",
+"open_24_7": true
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.672585,
+"lon": 76.88946,
+"opening_hours": "24/7",
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Government Poly Clinic",
+"lat": 30.661489,
+"lon": 76.882431,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "police",
+"name": "Crime Branch",
+"lat": 30.657805,
+"lon": 76.885901,
+"opening_hours": null,
+"phone": "+91 172 2550013",
+"open_24_7": true
+},
+{
+"kind": "police",
+"name": "Women Police Station",
+"lat": 30.693742,
+"lon": 76.852167,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Om Hospital",
+"lat": 30.656832,
+"lon": 76.883796,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Paras Hospital",
+"lat": 30.693294,
+"lon": 76.883247,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "fuel",
+"name": "Bharat Petroleum",
+"lat": 30.655103,
+"lon": 76.886742,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "HP",
+"lat": 30.710019,
+"lon": 76.828805,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "police",
+"name": "Police Station Chandimandir",
+"lat": 30.691346,
+"lon": 76.883743,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "fuel",
+"name": "HP",
+"lat": 30.616728,
+"lon": 76.805735,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.617425,
+"lon": 76.805308,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "police",
+"name": "Haryana Emergency 112 Helpline Center",
+"lat": 30.693755,
+"lon": 76.870823,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "fuel",
+"name": "Indian Oil",
+"lat": 30.68904,
+"lon": 76.867161,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "hospital",
+"name": "RHTC Palsora",
+"lat": 30.734745,
+"lon": 76.717848,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Bright Kidney Care Hospital",
+"lat": 30.657746,
+"lon": 76.876994,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Prolife Hospital",
+"lat": 30.683561,
+"lon": 76.865882,
+"opening_hours": null,
+"phone": "+91-172-2930738;+91-9417277728",
+"open_24_7": true
+},
+{
+"kind": "police",
+"name": "Police Post Sector 21",
+"lat": 30.676549,
+"lon": 76.863479,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "police",
+"name": "Police Station Sector 1",
+"lat": 30.700882,
+"lon": 76.868268,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "hospital",
+"name": "Mental Health Institute",
+"lat": 30.704263,
+"lon": 76.775149,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "fuel",
+"name": "",
+"lat": 30.743073,
+"lon": 76.789226,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "",
+"lat": 30.624598,
+"lon": 76.849847,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "",
+"lat": 30.742703,
+"lon": 76.754768,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "hospital",
+"name": "Mother Teresa Saket Orthopaedic Hospital",
+"lat": 30.701193,
+"lon": 76.867065,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "fuel",
+"name": "",
+"lat": 30.738182,
+"lon": 76.675205,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "fuel",
+"name": "",
+"lat": 30.738654,
+"lon": 76.675213,
+"opening_hours": null,
+"phone": null,
+"open_24_7": false
+},
+{
+"kind": "hospital",
+"name": "Nehru Hospital",
+"lat": 30.760872,
+"lon": 76.776366,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+},
+{
+"kind": "police",
+"name": "Sector 3 Police Station",
+"lat": 30.756808,
+"lon": 76.796995,
+"opening_hours": null,
+"phone": null,
+"open_24_7": true
+}
+]
+}

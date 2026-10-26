@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Alert as RNAlert,
   Modal,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme';
@@ -17,6 +18,11 @@ import SettingsRow from '../components/settings/SettingsRow';
 import ThemeToggleModal from '../components/settings/ThemeToggleModal';
 import BottomNavigation, { TabKey } from '../components/common/BottomNavigation';
 import ContactService from '../services/contactService';
+import AuthService, { Session, authErrorMessage } from '../services/authService';
+import { ChangePinModal, ChangePasswordModal } from '../components/settings/SecurityModals';
+import PinPromptModal from '../components/common/PinPromptModal';
+import { DiscreetSettings, getDiscreetSettings, updateDiscreetSettings } from '../services/discreetSettings';
+import { getActiveSos, stopActiveSos } from '../services/sosSession';
 
 interface SettingsScreenProps {
   onNavigateToContacts?: () => void;
@@ -34,7 +40,13 @@ export default function SettingsScreen({
   const [themeModalVisible, setThemeModalVisible] = useState(false);
   const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
   const [aboutModalVisible, setAboutModalVisible] = useState(false);
-  const [contactCount, setContactCount] = useState(3);
+  const [contactCount, setContactCount] = useState(0);
+  const [session, setSession] = useState<Session | null>(null);
+  const [pinModalVisible, setPinModalVisible] = useState(false);
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [discreet, setDiscreet] = useState<DiscreetSettings>({ calculatorDisguise: false, shakeToSos: false });
+  const [sosRunning, setSosRunning] = useState(false);
+  const [stopPinVisible, setStopPinVisible] = useState(false);
 
   useEffect(() => {
     async function checkContacts() {
@@ -46,7 +58,44 @@ export default function SettingsScreen({
       } catch (_) {}
     }
     checkContacts();
+    AuthService.ensureSession().then(setSession);
+    getDiscreetSettings().then(setDiscreet);
+    getActiveSos().then((a) => setSosRunning(!!a));
   }, []);
+
+  const toggleDiscreet = async (key: keyof DiscreetSettings) => {
+    const next = await updateDiscreetSettings({ [key]: !discreet[key] });
+    setDiscreet(next);
+    if (key === 'calculatorDisguise' && next.calculatorDisguise) {
+      RNAlert.alert('Calculator disguise on', 'Next time SHIELD opens it looks like a calculator. Type your SOS PIN then "=" to open SHIELD. Typing your duress PIN then "=" sends a silent SOS.');
+    }
+  };
+
+  const confirmSignOut = (everywhere: boolean) => {
+    const run = async () => {
+      try {
+        if (everywhere) await AuthService.logoutEverywhere();
+        else await AuthService.logout();
+      } catch (e) {
+        RNAlert.alert('Sign out failed', authErrorMessage(e));
+      }
+    };
+    const title = everywhere ? 'Sign out of all devices?' : 'Sign out?';
+    const body = everywhere
+      ? 'Every phone and browser signed in to your account will need your password again.'
+      : 'You will need your email and password to sign in again. SOS will not work while signed out.';
+    // RN Web has no multi-button Alert, so confirm with the browser dialog there
+    if (Platform.OS === 'web') {
+      if ((window as any).confirm(`${title}\n\n${body}`)) run();
+      return;
+    }
+    RNAlert.alert(title, body, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign out', style: 'destructive', onPress: run },
+    ]);
+  };
+
+  const initial = (session?.name || '?').trim().charAt(0).toUpperCase();
 
   const getThemeDisplayLabel = () => {
     if (mode === 'system') return 'System default';
@@ -78,19 +127,19 @@ export default function SettingsScreen({
             },
           ]}
           onPress={() => {
-            RNAlert.alert('Profile', 'Account managed locally. Data stored securely on-device.');
+            RNAlert.alert('Account', `${session?.name ?? ''}\n${session?.email ?? ''}\n${session?.phone ?? ''}\n\nEmail and phone were verified when you signed up.`);
           }}
           accessibilityRole="button"
-          accessibilityLabel="Profile settings for Alex"
+          accessibilityLabel={`Account of ${session?.name ?? 'you'}`}
         >
           <View style={[styles.avatarCircle, { backgroundColor: colors.brandAccent }]}>
-            <Text style={styles.avatarText}>A</Text>
+            <Text style={styles.avatarText}>{initial}</Text>
           </View>
 
           <View style={styles.profileInfo}>
-            <Text style={[typography.h3, { color: colors.textPrimary }]}>Alex</Text>
+            <Text style={[typography.h3, { color: colors.textPrimary }]}>{session?.name ?? ''}</Text>
             <Text style={[typography.bodySmall, { color: colors.textSecondary }]}>
-              alex@example.com
+              {session?.email ?? ''}
             </Text>
           </View>
 
@@ -105,6 +154,43 @@ export default function SettingsScreen({
             onPress={() => {
               if (onNavigateToContacts) onNavigateToContacts();
             }}
+          />
+
+          {sosRunning && (
+            <SettingsRow
+              iconName="radio-outline"
+              title="Stop active SOS"
+              subtitle="An SOS is running. Your PIN is required."
+              onPress={() => setStopPinVisible(true)}
+            />
+          )}
+
+          <SettingsRow
+            iconName="calculator-outline"
+            title="Disguise as calculator"
+            subtitle={discreet.calculatorDisguise ? 'On: PIN + "=" opens SHIELD' : 'Off'}
+            onPress={() => toggleDiscreet('calculatorDisguise')}
+          />
+
+          <SettingsRow
+            iconName="phone-portrait-outline"
+            title="Shake to start SOS"
+            subtitle={discreet.shakeToSos ? 'On: shake 3 times to start the countdown' : 'Off'}
+            onPress={() => toggleDiscreet('shakeToSos')}
+          />
+
+          <SettingsRow
+            iconName="keypad-outline"
+            title="SOS PIN & duress PIN"
+            subtitle="Change with a code sent to your email"
+            onPress={() => setPinModalVisible(true)}
+          />
+
+          <SettingsRow
+            iconName="key-outline"
+            title="Password"
+            subtitle="Change your sign-in password"
+            onPress={() => setPasswordModalVisible(true)}
           />
 
           <SettingsRow
@@ -127,8 +213,50 @@ export default function SettingsScreen({
             subtitle="App version 1.0.0"
             onPress={() => setAboutModalVisible(true)}
           />
+
+          <SettingsRow
+            iconName="log-out-outline"
+            title="Sign out"
+            subtitle="Sign out on this device"
+            onPress={() => confirmSignOut(false)}
+          />
+
+          <SettingsRow
+            iconName="phone-portrait-outline"
+            title="Sign out of all devices"
+            subtitle="Use this if you lost a phone"
+            onPress={() => confirmSignOut(true)}
+          />
         </View>
       </ScrollView>
+
+      <PinPromptModal
+        visible={stopPinVisible}
+        title="Stop SOS"
+        message="Enter your SOS PIN to stand the alert down."
+        confirmLabel="Stop SOS"
+        dismissLabel="Keep SOS going"
+        onSubmit={async (pin) => {
+          const r = await stopActiveSos(pin);
+          if ('message' in r) return r.message;
+          setStopPinVisible(false);
+          setSosRunning(false);
+          RNAlert.alert('SOS stopped', 'Your alert has been stood down.');
+          return null;
+        }}
+        onDismiss={() => setStopPinVisible(false)}
+      />
+
+      <ChangePinModal
+        visible={pinModalVisible}
+        onClose={() => setPinModalVisible(false)}
+        onDone={(msg) => { setPinModalVisible(false); RNAlert.alert('Done', msg); }}
+      />
+      <ChangePasswordModal
+        visible={passwordModalVisible}
+        onClose={() => setPasswordModalVisible(false)}
+        onDone={(msg) => { setPasswordModalVisible(false); RNAlert.alert('Done', msg); }}
+      />
 
       <ThemeToggleModal
         visible={themeModalVisible}

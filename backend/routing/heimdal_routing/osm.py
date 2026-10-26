@@ -46,6 +46,8 @@ def _det_random(*parts) -> float:
 def build_from_osm(bbox=TRICITY_BBOX, network_type: str = "walk", seed: int = 2026) -> dict:
     import osmnx as ox
 
+    # OSMnx drops way tags outside this whitelist, and lit/sidewalk are not in its default.
+    ox.settings.useful_tags_way = list(dict.fromkeys([*ox.settings.useful_tags_way, "lit", "sidewalk"]))
     G = ox.graph_from_bbox(bbox, network_type=network_type, simplify=True)
     G = ox.convert.to_undirected(G)
     try:

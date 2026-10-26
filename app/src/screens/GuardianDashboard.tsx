@@ -15,6 +15,30 @@ interface IncidentAlert {
   state: string;
 }
 
+/** Shape of GET /api/v1/guardian/alerts items. */
+interface GuardedAlert {
+  id: string;
+  walker_name: string | null;
+  trigger_type: string;
+  priority: string;
+  state: string;
+  lat: number;
+  lon: number;
+}
+
+function toIncidentAlert(a: GuardedAlert): IncidentAlert {
+  return {
+    incident_id: a.id,
+    alert_id: a.id,
+    victim_name: a.walker_name || 'Your contact',
+    threat_level: (a.priority || 'HIGH').toLowerCase(),
+    explainable_reason: `Triggered by ${a.trigger_type.replace(/_/g, ' ').toLowerCase()}`,
+    lat: a.lat,
+    lon: a.lon,
+    state: a.state === 'ACKNOWLEDGED' ? 'verified' : a.state.toLowerCase(),
+  };
+}
+
 export default function GuardianDashboard() {
   const [activeAlerts, setActiveAlerts] = useState<IncidentAlert[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,10 +52,10 @@ export default function GuardianDashboard() {
     const loadAlerts = async () => {
       try {
         const client = await AuthService.getAuthenticatedClient();
-        const response = await client.get<{ incidents: IncidentAlert[] }>('/api/v1/incidents/active');
+        const response = await client.get<{ alerts: GuardedAlert[] }>('/api/v1/guardian/alerts');
         if (!mounted) return;
 
-        const incidents = response.data.incidents || [];
+        const incidents = (response.data.alerts || []).map(toIncidentAlert);
         setActiveAlerts(incidents);
 
         incidents.forEach((incident) => {
@@ -74,7 +98,7 @@ export default function GuardianDashboard() {
   const handleRespond = async (incidentId: string) => {
     try {
       const client = await AuthService.getAuthenticatedClient();
-      await client.put(`/api/v1/incidents/${incidentId}/state`, { state: 'verified' });
+      await client.post(`/api/v1/alerts/${incidentId}/ack`, { action: 'ACKNOWLEDGE' });
       setActiveAlerts((prev) =>
         prev.map((alert) =>
           alert.incident_id === incidentId ? { ...alert, state: 'verified' } : alert
@@ -89,7 +113,7 @@ export default function GuardianDashboard() {
   const escalatePolice = async (incidentId: string) => {
     try {
       const client = await AuthService.getAuthenticatedClient();
-      await client.put(`/api/v1/incidents/${incidentId}/state`, { state: 'active' });
+      await client.post(`/api/v1/alerts/${incidentId}/escalate`, { reason: 'Guardian requested police escalation' });
       RNAlert.alert('Escalated', 'The incident has been marked for urgent escalation.');
     } catch (error) {
       RNAlert.alert('Escalation Failed', 'Could not escalate this incident right now.');

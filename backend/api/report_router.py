@@ -2,6 +2,7 @@ import io
 import logging
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from access import alert_for_viewer
 from security import get_current_user
 from rate_limiter import limiter
 from db.storage import storage
@@ -30,16 +31,19 @@ async def generate_incident_pdf(
     - Guardian acknowledgement timeline
     - Legal disclaimer stating it is user-generated and assistive
     """
-    alert = await storage.get_alert_by_id(alert_id)
-    if not alert:
-        raise HTTPException(status_code=404, detail="Alert not found")
+    alert = await alert_for_viewer(current_user, alert_id)
+    alert_id = alert["id"]
+    await storage.log_audit(actor=f"{current_user['role']}:{current_user['user_id']}",
+                            action="EXPORT_INCIDENT_PDF", target=f"alert/{alert_id}")
 
     evidence_chunks = await storage.get_evidence_chunks(alert_id)
-    trail = []
     if alert.get("walk_id"):
         trail = await storage.get_walk_trail(alert["walk_id"])
+    else:
+        trail = await storage.get_alert_points(alert_id)
 
-    user = await storage.get_user_by_id(str(current_user["user_id"]))
+    # The report is about the walker who raised the alert, whoever downloads it
+    user = await storage.get_user_by_id(alert["user_id"])
     user_name = user.get("name", "Walker") if user else "Walker"
     user_phone = user.get("phone_number", "Registered User") if user else "Registered User"
 

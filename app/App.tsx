@@ -1,31 +1,67 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Platform, TouchableOpacity, Text } from 'react-native';
+import { View, StyleSheet, Platform, TouchableOpacity, Text, AppState } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemeProvider, useTheme } from './src/theme';
 
 import SplashScreen from './src/screens/SplashScreen';
+import AuthScreen from './src/screens/AuthScreen';
+import CalculatorScreen from './src/screens/CalculatorScreen';
+import { getDiscreetSettings } from './src/services/discreetSettings';
+import { sendSilentSos } from './src/services/sosSession';
+import AuthService, { Session } from './src/services/authService';
 import HomeScreen from './src/screens/HomeScreen';
 import LiveLocationScreen from './src/screens/LiveLocationScreen';
 import SafeRoutesScreen from './src/screens/SafeRoutesScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import ContactsScreen from './src/screens/ContactsScreen';
+import FakeCallScreen from './src/screens/FakeCallScreen';
 import DeviceStatusBar from './src/components/common/DeviceStatusBar';
 import { TabKey } from './src/components/common/BottomNavigation';
 
 import NotificationService from './src/services/notificationService';
 
-type ActiveView = 'Splash' | 'Home' | 'LiveLocation' | 'SafeRoutes' | 'Settings' | 'Contacts';
+type ActiveView = 'Splash' | 'Home' | 'LiveLocation' | 'SafeRoutes' | 'Settings' | 'Contacts' | 'FakeCall';
 
 function HeimdalMain() {
   const { colors, isDark, mode, setMode } = useTheme();
   const [currentView, setCurrentView] = useState<ActiveView>('Splash');
   const [activeTab, setActiveTab] = useState<TabKey>('Home');
+  // undefined while the stored session loads; null means signed out
+  const [session, setSession] = useState<Session | null | undefined>(undefined);
+  // Calculator disguise: shown at launch and whenever the app returns from the background
+  const [disguised, setDisguised] = useState(false);
 
   useEffect(() => {
+    const lockIfEnabled = () =>
+      getDiscreetSettings().then((d) => { if (d.calculatorDisguise) setDisguised(true); }).catch(() => undefined);
+    lockIfEnabled();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'background') lockIfEnabled();
+    });
+    return () => sub.remove();
+  }, []);
+
+  useEffect(() => {
+    AuthService.ensureSession().then(setSession).catch(() => setSession(null));
+    return AuthService.onSessionChange((s) => {
+      setSession(s);
+      if (s) {
+        setCurrentView('Home');
+        setActiveTab('Home');
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!session) return;
     try {
       NotificationService.registerForPushNotifications().catch(() => {});
     } catch (_) {}
-  }, []);
+  }, [session]);
+
+  // Every screen except the splash needs an account: SOS, guardians and routes all act for a signed-in user
+  const signedOut = currentView !== 'Splash' && session === null;
+  const hidden = disguised && !!session;
 
   const handleTabPress = (tab: TabKey) => {
     setActiveTab(tab);
@@ -52,6 +88,8 @@ function HeimdalMain() {
       setCurrentView('Home');
     } else if (view === 'Splash') {
       setCurrentView('Splash');
+    } else if (view === 'FakeCall') {
+      setCurrentView('FakeCall');
     }
   };
 
@@ -61,7 +99,8 @@ function HeimdalMain() {
 
   return (
     <View style={[styles.outerContainer, { backgroundColor: isDark ? '#050A12' : '#E2E8F0' }]}>
-      {/* Quick Preview & Theme Control Bar */}
+      {/* Screen-jump & theme bar: a development aid, never shipped in release builds */}
+      {__DEV__ && (
       <View style={[styles.topInspectionBar, { backgroundColor: isDark ? '#0B111E' : '#FFFFFF', borderColor: colors.border }]}>
         <View style={styles.screenSelector}>
           <TouchableOpacity
@@ -126,6 +165,7 @@ function HeimdalMain() {
           </Text>
         </TouchableOpacity>
       </View>
+      )}
 
       {/* Centered Mobile Viewport Frame */}
       <View
@@ -139,7 +179,16 @@ function HeimdalMain() {
       >
         <DeviceStatusBar />
 
-        {currentView === 'Splash' && (
+        {disguised && session && (
+          <CalculatorScreen
+            onUnlock={() => setDisguised(false)}
+            onDuress={() => { sendSilentSos('DURESS_PIN').catch(() => undefined); }}
+          />
+        )}
+
+        {signedOut && <AuthScreen />}
+
+        {!hidden && currentView === 'Splash' && (
           <SplashScreen
             onContinue={() => {
               setCurrentView('Home');
@@ -149,7 +198,7 @@ function HeimdalMain() {
           />
         )}
 
-        {currentView === 'Home' && (
+        {!hidden && !signedOut && session && currentView === 'Home' && (
           <HomeScreen
             onNavigate={handleNavigate}
             activeTab={activeTab}
@@ -157,7 +206,7 @@ function HeimdalMain() {
           />
         )}
 
-        {currentView === 'LiveLocation' && (
+        {!hidden && !signedOut && session && currentView === 'LiveLocation' && (
           <LiveLocationScreen
             onBack={() => {
               setCurrentView('Home');
@@ -170,7 +219,7 @@ function HeimdalMain() {
           />
         )}
 
-        {currentView === 'SafeRoutes' && (
+        {!hidden && !signedOut && session && currentView === 'SafeRoutes' && (
           <SafeRoutesScreen
             onBack={() => {
               setCurrentView('Home');
@@ -179,7 +228,7 @@ function HeimdalMain() {
           />
         )}
 
-        {currentView === 'Settings' && (
+        {!hidden && !signedOut && session && currentView === 'Settings' && (
           <SettingsScreen
             onNavigateToContacts={() => {
               setCurrentView('Contacts');
@@ -190,7 +239,16 @@ function HeimdalMain() {
           />
         )}
 
-        {currentView === 'Contacts' && (
+        {!hidden && !signedOut && session && currentView === 'FakeCall' && (
+          <FakeCallScreen
+            onBack={() => {
+              setCurrentView('Home');
+              setActiveTab('Home');
+            }}
+          />
+        )}
+
+        {!hidden && !signedOut && session && currentView === 'Contacts' && (
           <ContactsScreen
             onBack={() => {
               setCurrentView('Home');

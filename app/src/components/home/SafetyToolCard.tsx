@@ -9,6 +9,8 @@ interface SafetyToolCardProps {
   iconName: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
   accentColor?: string;
+  /** Small corner label, e.g. "Coming soon"; the card is shown muted. */
+  badge?: string;
 }
 
 export default function SafetyToolCard({
@@ -17,9 +19,10 @@ export default function SafetyToolCard({
   iconName,
   onPress,
   accentColor,
+  badge,
 }: SafetyToolCardProps) {
   const { colors, typography, radii } = useTheme();
-  const iconColor = accentColor || colors.brandAccent;
+  const iconColor = badge ? colors.textMuted : accentColor || colors.brandAccent;
 
   return (
     <TouchableOpacity
@@ -34,8 +37,13 @@ export default function SafetyToolCard({
         },
       ]}
       accessibilityRole="button"
-      accessibilityLabel={`${title}. ${description}`}
+      accessibilityLabel={`${title}${badge ? ` (${badge})` : ''}. ${description}`}
     >
+      {badge && (
+        <View style={[styles.badge, { backgroundColor: colors.statusWarningBg }]}>
+          <Text style={[styles.badgeText, { color: colors.statusWarning }]}>{badge}</Text>
+        </View>
+      )}
       <View
         style={[
           styles.iconContainer,
@@ -100,5 +108,18 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 11,
     lineHeight: 15,
+  },
+  badge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  badgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
 });

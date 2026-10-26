@@ -3,8 +3,9 @@ import io
 import logging
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from pydantic import BaseModel
-from security import get_current_user
+from pydantic import BaseModel, Field
+from alert_states import transition
+from security import require_roles, STAFF_ROLES
 from rate_limiter import limiter
 from db.storage import storage
 
@@ -13,35 +14,33 @@ logger = logging.getLogger("shield-dashboard")
 router = APIRouter(prefix="/api/v1/dashboard", tags=["Authority Dashboard"])
 
 class AssignAlertPayload(BaseModel):
-    responder_id: str
-    responder_name: str
-    notes: Optional[str] = None
+    responder_id: str = Field(max_length=100)
+    responder_name: str = Field(max_length=120)
+    notes: Optional[str] = Field(default=None, max_length=1000)
 
 class ResolveAlertPayload(BaseModel):
-    responder_name: str
-    resolution_notes: str
+    responder_name: str = Field(max_length=120)
+    resolution_notes: str = Field(max_length=2000)
 
 @router.get("/alerts/active")
 @limiter.limit("30/minute")
 async def get_active_alerts(
     request: Request,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_roles(*STAFF_ROLES))
 ):
     """
     DASH-1 & DASH-6:
     Responder view: live active alerts with walker details, coordinates, and trail.
     Logs access to audit log.
     """
-    actor = f"user_{current_user.get('user_id')}"
+    actor = f"{current_user['role']}:{current_user['user_id']}"
     await storage.log_audit(actor=actor, action="VIEW_ACTIVE_ALERTS", target="alerts/active")
 
     alerts = await storage.get_active_alerts()
     enriched = []
     for a in alerts:
         # Fetch trail if walk_id attached
-        trail = []
-        if a.get("walk_id"):
-            trail = await storage.get_walk_trail(a["walk_id"])
+        trail = await storage.get_walk_trail(a["walk_id"]) if a.get("walk_id") else await storage.get_alert_points(a["id"], limit=20)
         
         # Anonymize or format walker details
         enriched.append({
@@ -70,20 +69,21 @@ async def assign_responder(
     request: Request,
     alert_id: str,
     payload: AssignAlertPayload,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_roles(*STAFF_ROLES))
 ):
     """
     DASH-2 & DASH-6:
     Assigns responder unit or police vehicle to incident.
     """
-    actor = f"responder_{payload.responder_name}"
+    # The audit actor is the authenticated account, never a name from the request body
+    actor = f"{current_user['role']}:{current_user['user_id']}"
+    alert = await storage.get_alert_by_id(alert_id)
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
     await storage.log_audit(actor=actor, action="ASSIGN_ALERT", target=f"alert/{alert_id}")
 
     meta = {"assigned_to": payload.responder_name, "responder_id": payload.responder_id, "notes": payload.notes}
-    updated = await storage.update_alert_state(alert_id, "ACKNOWLEDGED", actor=actor, meta=meta)
-    if not updated:
-        raise HTTPException(status_code=404, detail="Alert not found")
-
+    updated = await transition(alert, "ACKNOWLEDGED", actor, meta)
     return {"status": "assigned", "alert": updated}
 
 @router.post("/alerts/{alert_id}/resolve")
@@ -92,27 +92,27 @@ async def resolve_alert(
     request: Request,
     alert_id: str,
     payload: ResolveAlertPayload,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_roles(*STAFF_ROLES))
 ):
     """
     DASH-2 & DASH-6:
     Resolves alert with formal incident notes.
     """
-    actor = f"responder_{payload.responder_name}"
+    actor = f"{current_user['role']}:{current_user['user_id']}"
+    alert = await storage.get_alert_by_id(alert_id)
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
     await storage.log_audit(actor=actor, action="RESOLVE_ALERT", target=f"alert/{alert_id}")
 
     meta = {"resolved_by": payload.responder_name, "resolution_notes": payload.resolution_notes}
-    updated = await storage.update_alert_state(alert_id, "RESOLVED", actor=actor, meta=meta)
-    if not updated:
-        raise HTTPException(status_code=404, detail="Alert not found")
-
+    updated = await transition(alert, "RESOLVED", actor, meta)
     return {"status": "resolved", "alert": updated}
 
 @router.get("/heatmap")
 @limiter.limit("30/minute")
 async def get_heatmap_data(
     request: Request,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_roles(*STAFF_ROLES))
 ):
     """
     DASH-3 & DASH-5:
@@ -164,7 +164,7 @@ async def get_heatmap_data(
 async def get_infrastructure_gaps(
     request: Request,
     format: Optional[str] = "json",
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_roles(*STAFF_ROLES))
 ):
     """
     DASH-4:
@@ -220,10 +220,10 @@ async def get_infrastructure_gaps(
 @limiter.limit("20/minute")
 async def get_audit_logs(
     request: Request,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_roles("admin"))
 ):
     """
-    DASH-6: View audit log of dashboard queries and actions.
+    DASH-6: View audit log of dashboard queries and actions (admins only).
     """
     logs = await storage.get_audit_logs(limit=50)
     return {"audit_logs": logs}

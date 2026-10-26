@@ -24,7 +24,7 @@ class ContactService {
     try {
       const client = await AuthService.getAuthenticatedClient();
       const response = await client.get<{ contacts: Array<{ id: string; name: string; phone_number: string }> }>(
-        '/api/v1/contacts/'
+        '/api/v1/contacts'
       );
 
       if (!response.data || !response.data.contacts) {
@@ -48,7 +48,7 @@ class ContactService {
     try {
       const client = await AuthService.getAuthenticatedClient();
       const response = await client.post<{ contact: { id: string; name: string; phone_number: string } }>(
-        '/api/v1/contacts/',
+        '/api/v1/contacts',
         {
           name: contact.name,
           phone_number: contact.phone

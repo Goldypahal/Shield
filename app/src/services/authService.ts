@@ -1,141 +1,233 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
+import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { BACKEND_URL } from '../config/env';
+import { getSecret, setSecret, deleteSecret } from './secureStorage';
+import { rememberPins, forgetPins } from './pinVault';
 
-type AuthResponse = {
-  user_id: string;
+type TokenPair = {
   access_token: string;
+  refresh_token: string;
   token_type: string;
-  duress_mode_active?: boolean;
 };
 
-type DemoSession = {
+type AuthResponse = TokenPair & { user_id: string };
+
+export type Session = {
   uid: string;
   phone: string;
   name: string;
+  email: string;
   isOffline: boolean;
 };
 
+/** Codes returned by a backend in demo mode (development only); real deployments send them by email/SMS. */
+export type DemoCodes = { demo_email_code?: string; demo_phone_code?: string };
+
+export type RegisterDetails = {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  emailCode: string;
+  phoneCode: string;
+  pin: string;
+  duressPin: string;
+};
+
+const REQUEST_TIMEOUT_MS = 8000;
+
+/** Turns an API error into a sentence for the user. */
+export function authErrorMessage(err: unknown, fallback = 'Something went wrong. Check your connection and try again.') {
+  const e = err as AxiosError<{ detail?: unknown }>;
+  const detail = e?.response?.data?.detail;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail) && detail[0]?.msg) return String(detail[0].msg).replace(/^Value error, /, '');
+  return fallback;
+}
+
 class AuthService {
-  private readonly API_URL = `${BACKEND_URL}/api/v1/auth`;
-  private readonly JWT_KEY = '@shield_jwt_token';
-  private readonly USER_ID_KEY = '@shield_user_id';
-  private readonly DEMO_PHONE = '+910000000000';
-  private readonly DEMO_PIN = '0000';
-  private readonly DEMO_DURESS_PIN = '9999';
-  private readonly DEMO_NAME = 'Shield Demo User';
+  private readonly API_URL = `${BACKEND_URL}/api/v1`;
+  // Tokens are secrets: OS keystore. Profile fields are not: plain storage.
+  private readonly ACCESS_KEY = 'access_token';
+  private readonly REFRESH_KEY = 'refresh_token';
+  private readonly PROFILE_KEY = '@shield_session_profile';
+  private refreshInFlight: Promise<string | null> | null = null;
+  private listeners = new Set<(session: Session | null) => void>();
 
-  async register(phoneNumber: string, pin: string, deviceId?: string) {
-    const response = await axios.post<AuthResponse>(`${this.API_URL}/register`, {
-      phone_number: phoneNumber,
-      pin,
-      duress_pin: this.DEMO_DURESS_PIN,
-      device_id: deviceId
-    });
+  /** App.tsx listens so it can return to the sign-in screen when the session ends. */
+  onSessionChange(listener: (session: Session | null) => void) {
+    this.listeners.add(listener);
+    return () => { this.listeners.delete(listener); };
+  }
 
-    await this.persistSession(response.data.user_id, response.data.access_token);
-    return response.data;
+  private emit(session: Session | null) {
+    this.listeners.forEach((l) => l(session));
+  }
+
+  async registerStart(email: string, phone: string): Promise<DemoCodes> {
+    const res = await axios.post(`${this.API_URL}/auth/register/start`, { email, phone_number: phone },
+      { timeout: REQUEST_TIMEOUT_MS });
+    return res.data;
+  }
+
+  async registerComplete(d: RegisterDetails): Promise<Session> {
+    const res = await axios.post<AuthResponse>(`${this.API_URL}/auth/register/complete`, {
+      email: d.email, email_code: d.emailCode, phone_number: d.phone, phone_code: d.phoneCode,
+      password: d.password, name: d.name, pin: d.pin, duress_pin: d.duressPin || undefined,
+    }, { timeout: REQUEST_TIMEOUT_MS });
+    await rememberPins(d.pin, d.duressPin);
+    return this.startSession(res.data);
+  }
+
+  async login(email: string, password: string): Promise<Session> {
+    const res = await axios.post<AuthResponse>(`${this.API_URL}/auth/login`, { email, password },
+      { timeout: REQUEST_TIMEOUT_MS });
+    return this.startSession(res.data);
+  }
+
+  async forgotPassword(email: string): Promise<DemoCodes> {
+    const res = await axios.post(`${this.API_URL}/auth/password/forgot`, { email }, { timeout: REQUEST_TIMEOUT_MS });
+    return res.data;
+  }
+
+  async resetPassword(email: string, code: string, newPassword: string): Promise<void> {
+    await axios.post(`${this.API_URL}/auth/password/reset`, { email, code, new_password: newPassword },
+      { timeout: REQUEST_TIMEOUT_MS });
+  }
+
+  async requestPinChangeCode(): Promise<DemoCodes> {
+    const client = await this.getAuthenticatedClient();
+    return (await client.post('/api/v1/me/pins/code')).data;
+  }
+
+  async changePins(emailCode: string, password: string, pin: string, duressPin: string): Promise<void> {
+    const client = await this.getAuthenticatedClient();
+    await client.post('/api/v1/me/pins', { email_code: emailCode, password, pin, duress_pin: duressPin });
+    await rememberPins(pin, duressPin);
+  }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const client = await this.getAuthenticatedClient();
+    const res = await client.post<TokenPair>('/api/v1/me/password',
+      { current_password: currentPassword, new_password: newPassword });
+    await this.storeTokens(res.data);
   }
 
   /**
-   * Completes the login process and securely stores the JWT for all future requests.
+   * Confirms the SOS PIN with the server. A duress PIN gets the same answer while the
+   * server silently opens an alert, so this device never learns which one was typed.
    */
-  async login(phoneNumber: string, pin: string, deviceId?: string) {
+  async checkPinOnline(pin: string, lat?: number, lon?: number): Promise<boolean> {
+    const client = await this.getAuthenticatedClient();
     try {
-      const response = await axios.post<AuthResponse>(`${this.API_URL}/login`, {
-        phone_number: phoneNumber,
-        pin,
-        device_id: deviceId
-      });
-
-      await this.persistSession(response.data.user_id, response.data.access_token);
-      return response.data;
-    } catch (error) {
-      console.error('Login Failed', error);
-      throw error;
+      await client.post('/api/v1/me/pin/check', { pin, lat, lon });
+      return true;
+    } catch (e) {
+      if ((e as AxiosError).response?.status === 403) return false;
+      throw e;
     }
   }
 
-  async quickHackathonLogin(): Promise<DemoSession> {
-    const cachedUid = await AsyncStorage.getItem(this.USER_ID_KEY);
-    const cachedToken = await this.getToken();
-    if (cachedUid && cachedToken) {
-      return {
-        uid: cachedUid,
-        phone: this.DEMO_PHONE,
-        name: this.DEMO_NAME,
-        isOffline: false
-      };
-    }
-
-    try {
-      const response = await this.login(this.DEMO_PHONE, this.DEMO_PIN, 'shield-demo-device');
-      return {
-        uid: response.user_id,
-        phone: this.DEMO_PHONE,
-        name: this.DEMO_NAME,
-        isOffline: false
-      };
-    } catch {
-      try {
-        const response = await this.register(this.DEMO_PHONE, this.DEMO_PIN, 'shield-demo-device');
-        return {
-          uid: response.user_id,
-          phone: this.DEMO_PHONE,
-          name: this.DEMO_NAME,
-          isOffline: false
-        };
-      } catch {
-        const offlineUid = cachedUid || 'local-demo-user';
-        await AsyncStorage.setItem(this.USER_ID_KEY, offlineUid);
-        return {
-          uid: offlineUid,
-          phone: this.DEMO_PHONE,
-          name: this.DEMO_NAME,
-          isOffline: true
-        };
-      }
-    }
+  /** Restores the stored session; null means the user must sign in. */
+  async ensureSession(): Promise<Session | null> {
+    const [token, profile] = await Promise.all([getSecret(this.REFRESH_KEY), AsyncStorage.getItem(this.PROFILE_KEY)]);
+    if (!token || !profile) return null;
+    return { ...JSON.parse(profile), isOffline: false };
   }
 
-  /**
-   * Use this to retrieve the token to attach to the Authorization Header
-   * for HTTP calls or the ?token= query parameter for WebSockets.
-   */
   async getToken(): Promise<string | null> {
-    return await AsyncStorage.getItem(this.JWT_KEY);
+    return getSecret(this.ACCESS_KEY);
   }
 
+  /** Ends this device's session. */
   async logout() {
-    await AsyncStorage.removeItem(this.JWT_KEY);
-    await AsyncStorage.removeItem(this.USER_ID_KEY);
+    const refresh = await getSecret(this.REFRESH_KEY);
+    if (refresh) {
+      axios.post(`${this.API_URL}/auth/logout`, { refresh_token: refresh }, { timeout: REQUEST_TIMEOUT_MS }).catch(() => undefined);
+    }
+    await this.clearLocal();
   }
 
-  /**
-   * Helper function for standard authenticated axios requests.
-   */
-  async getAuthenticatedClient() {
-    const token = await this.getToken();
-    return axios.create({
-      baseURL: BACKEND_URL,
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+  /** Ends every session of the account, on every device. */
+  async logoutEverywhere() {
+    const client = await this.getAuthenticatedClient();
+    await client.post('/api/v1/auth/logout-all');
+    await this.clearLocal();
+  }
+
+  private async clearLocal() {
+    await Promise.all([deleteSecret(this.ACCESS_KEY), deleteSecret(this.REFRESH_KEY), forgetPins(),
+      AsyncStorage.removeItem(this.PROFILE_KEY)]);
+    this.emit(null);
+  }
+
+  private async startSession(data: AuthResponse): Promise<Session> {
+    await this.storeTokens(data);
+    const me = (await axios.get(`${this.API_URL}/me`, {
+      headers: { Authorization: `Bearer ${data.access_token}` }, timeout: REQUEST_TIMEOUT_MS,
+    })).data;
+    const session: Session = { uid: me.id, phone: me.phone_number, name: me.name, email: me.email, isOffline: false };
+    await AsyncStorage.setItem(this.PROFILE_KEY, JSON.stringify({ uid: session.uid, phone: session.phone,
+      name: session.name, email: session.email }));
+    this.emit(session);
+    return session;
+  }
+
+  private async storeTokens(data: TokenPair) {
+    await Promise.all([setSecret(this.ACCESS_KEY, data.access_token), setSecret(this.REFRESH_KEY, data.refresh_token)]);
+  }
+
+  /** Exchanges the refresh token once, even when several requests hit 401 together. */
+  private async refreshAccessToken(): Promise<string | null> {
+    if (!this.refreshInFlight) {
+      this.refreshInFlight = (async () => {
+        const refreshToken = await getSecret(this.REFRESH_KEY);
+        if (!refreshToken) return null;
+        try {
+          const res = await axios.post<TokenPair>(`${this.API_URL}/auth/refresh`, { refresh_token: refreshToken },
+            { timeout: REQUEST_TIMEOUT_MS });
+          await this.storeTokens(res.data);
+          return res.data.access_token;
+        } catch (e) {
+          // Only a definite rejection ends the session; being offline must not sign the user out
+          if ((e as AxiosError).response?.status === 401) await this.clearLocal();
+          return null;
+        } finally {
+          setTimeout(() => { this.refreshInFlight = null; }, 0);
+        }
+      })();
+    }
+    return this.refreshInFlight;
+  }
+
+  /** Axios client that sends the access token and transparently refreshes it once on 401. */
+  async getAuthenticatedClient(): Promise<AxiosInstance> {
+    const client = axios.create({ baseURL: BACKEND_URL, timeout: REQUEST_TIMEOUT_MS });
+    client.interceptors.request.use(async (config) => {
+      const token = await this.getToken();
+      if (token) config.headers.Authorization = `Bearer ${token}`;
+      return config;
     });
+    client.interceptors.response.use(undefined, async (error: AxiosError) => {
+      const original = error.config as (InternalAxiosRequestConfig & { _retried?: boolean }) | undefined;
+      if (error.response?.status === 401 && original && !original._retried) {
+        original._retried = true;
+        const fresh = await this.refreshAccessToken();
+        if (fresh) {
+          original.headers.Authorization = `Bearer ${fresh}`;
+          return client.request(original);
+        }
+      }
+      throw error;
+    });
+    return client;
   }
 
   async getUserId(): Promise<string | null> {
-    return await AsyncStorage.getItem(this.USER_ID_KEY);
-  }
-
-  private async persistSession(userId: string, token: string) {
-    await AsyncStorage.setItem(this.JWT_KEY, token);
-    await AsyncStorage.setItem(this.USER_ID_KEY, userId);
+    return (await this.ensureSession())?.uid ?? null;
   }
 }
 
 const authService = new AuthService();
-
-export const quickHackathonLogin = () => authService.quickHackathonLogin();
 
 export default authService;

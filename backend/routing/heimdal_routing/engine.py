@@ -161,6 +161,19 @@ class SafetyGraph:
             d2 = np.where(self.drivable_node, d2, np.inf)
         return int(np.argmin(d2))
 
+    def edges_near(self, lat: float, lon: float, radius_m: float) -> list[int]:
+        """Edges passing within radius_m of a point (for community hazard reports)."""
+        if not hasattr(self, "_eu"):
+            self._eu = np.array([e["u"] for e in self.edges])
+            self._ev = np.array([e["v"] for e in self.edges])
+        ky, kx = 110950.0, 111320.0 * math.cos(math.radians(lat))  # local metres per degree
+        ax, ay = (self.lon[self._eu] - lon) * kx, (self.lat[self._eu] - lat) * ky
+        bx, by = (self.lon[self._ev] - lon) * kx, (self.lat[self._ev] - lat) * ky
+        dx, dy = bx - ax, by - ay
+        t = np.clip(-(ax * dx + ay * dy) / np.maximum(dx * dx + dy * dy, 1e-9), 0.0, 1.0)
+        d = np.hypot(ax + t * dx, ay + t * dy)  # distance from the point (origin) to each segment
+        return np.nonzero(d <= radius_m)[0].tolist()
+
     def find_place(self, name: str) -> tuple[float, float]:
         q = name.lower()
         for lm in self.landmarks:
@@ -171,8 +184,10 @@ class SafetyGraph:
 
 class RiskModel:
     def __init__(self, graph: SafetyGraph, mode: str = "walk", unknown_penalty: float = 0.15,
-                 isolation_penalty: float = 0.25, incident_scale: float = 1.2):
+                 isolation_penalty: float = 0.25, incident_scale: float = 1.2,
+                 edge_penalties: dict[int, float] | None = None):
         self.g = graph
+        self.extra = edge_penalties or {}  # added risk per edge, e.g. from recent community hazard reports
         self.mode = mode
         self.w = WEIGHTS[mode]
         self.mu = unknown_penalty
@@ -205,7 +220,7 @@ class RiskModel:
         w = self.w
         r = (w["light"] * d * (1 - L) + w["foot"] * (1 - F) + w["cctv"] * (1 - C)
              + w["police"] * (1 - P) + w["incident"] * I + w["sidewalk"] * (1 - S))
-        r = min(1.0, max(0.0, r))
+        r = min(1.0, max(0.0, r + self.extra.get(k, 0.0)))
         isolated = d > 0.5 and F < 0.15 and L < 0.4
         U = 1 - e["confidence"]
         eff = r + self.mu * U + (self.iso if isolated else 0.0)
@@ -322,8 +337,9 @@ class SafeRouter:
 
     # -- public API ----------------------------------------------------
     def plan(self, origin: tuple[float, float], destination: tuple[float, float], hour: float,
-             mode: str = "walk", max_detour: float = 1.5, lambdas=LAMBDAS) -> dict:
-        model = RiskModel(self.g, mode)
+             mode: str = "walk", max_detour: float = 1.5, lambdas=LAMBDAS,
+             edge_penalties: dict[int, float] | None = None) -> dict:
+        model = RiskModel(self.g, mode, edge_penalties=edge_penalties)
         src = self.g.nearest_node(*origin, mode)
         dst = self.g.nearest_node(*destination, mode)
         if src == dst:

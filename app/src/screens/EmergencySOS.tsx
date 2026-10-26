@@ -12,13 +12,11 @@ import {
 } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import * as Location from 'expo-location';
-import 'react-native-get-random-values'; // Required for uuid in React Native
-import { v4 as uuidv4 } from 'uuid';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import OfflineQueueService, { AlertData } from '../services/OfflineQueue';
-import LocationTracker from '../services/LocationTracker';
+import OfflineQueueService, { TriggerType } from '../services/OfflineQueue';
+import { checkPinOffline } from '../services/pinVault';
 import AuthService from '../services/authService';
 import ContactService from '../services/contactService';
+import { triggerEmergency } from '../services/sosService';
 
 export default function EmergencySOS() {
   const [isOnline, setIsOnline] = useState<boolean>(true);
@@ -43,7 +41,7 @@ export default function EmergencySOS() {
     import('../services/VoiceService').then(service => {
         service.default.startListening(() => {
             console.log('[SOS] Voice Keyword Triggered!');
-            dispatchAlert();
+            dispatchAlert('VOICE');
         });
     });
 
@@ -53,87 +51,52 @@ export default function EmergencySOS() {
     };
   }, []);
 
-  const dispatchAlert = async () => {
-    const deviceGeneratedAlertId = uuidv4();
-    
+  const dispatchAlert = async (trigger: TriggerType = 'SOS_BUTTON', silent = false) => {
     try {
-      // Ensure we have permissions every time we trigger
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setIsTriggering(false);
-        setCountdown(null);
-        RNAlert.alert("Permission Denied", "Location permissions are required for SOS. Please enable them in settings.");
-        return;
-      }
+      await Location.requestForegroundPermissionsAsync();
+      const session = await AuthService.ensureSession().catch(() => null);
+      const contacts = await ContactService.listContacts().catch(() => []);
+      const result = await triggerEmergency({
+        uid: session?.uid ?? 'signed-out',
+        name: session?.name ?? 'SHIELD user',
+        phone: session?.phone ?? '',
+        emergencyContacts: contacts,
+        sensitivityMode: 'NORMAL',
+      }, 90, 'HIGH', trigger);
 
-      let lat = 28.7041;
-      let lon = 77.1025;
-      
-      try {
-        const location = await Location.getCurrentPositionAsync({ 
-          accuracy: Location.Accuracy.Balanced,
-          });
-        if (location && location.coords) {
-          lat = location.coords.latitude;
-          lon = location.coords.longitude;
-        }
-      } catch (locErr) {
-        console.warn("GPS pick-up failed, using last known position fallback.", locErr);
-        const lastLoc = await Location.getLastKnownPositionAsync();
-        if (lastLoc && lastLoc.coords) {
-          lat = lastLoc.coords.latitude;
-          lon = lastLoc.coords.longitude;
-        }
-      }
-      
-      // Get contacts with safety fallback
-      const contactList = await ContactService.listContacts();
-      const contactPhones = (contactList || []).map((contact) => contact.phone).filter(p => !!p);
-
-      const payload: AlertData = {
-        id: deviceGeneratedAlertId,
-        type: 'SOS_BUTTON_PRESS',
-        lat: lat,
-        lon: lon,
-        message: "EMERGENCY: I need help immediately. My location is being recorded. Link: https://shield-app.com/track/" + deviceGeneratedAlertId,
-        contacts: contactPhones,
-      };
-
-      // Queue for offline sync (handles SMS internally)
-      await OfflineQueueService.queueAlert(payload);
-
-      // Start real-time broadcasting if possible
-      const userId = await AuthService.getUserId();
-      if (userId) {
-        try {
-          await LocationTracker.startBroadcastingSOS(deviceGeneratedAlertId, userId);
-        } catch (trackErr) {
-          console.warn("Real-time broadcast failed, relying on offline queue.", trackErr);
-        }
-      }
-      
-      setActiveAlertId(deviceGeneratedAlertId);
+      if (silent) return; // duress: the screen must keep looking cancelled
+      setActiveAlertId(result.alertId);
       setAlertActive(true);
       setIsTriggering(false);
       setCountdown(null);
-      
       RNAlert.alert(
-        "SOS Active",
-        isOnline 
-          ? "SOS signals sent! Your emergency contacts and local authorities are being notified." 
-          : "Offline: SMS alerts sent via cellular. Data will sync when you are back online."
+        result.delivery === 'server' ? "SOS Active" : "SOS Queued",
+        result.delivery === 'server'
+          ? "Your guardians are being alerted and can follow your live location."
+          : "No connection. The alert is saved on this phone and will send automatically. Call 112 if you are in danger."
       );
     } catch (error: any) {
       console.error("SOS Trigger failure:", error);
       setIsTriggering(false);
       setCountdown(null);
-      
-      const errorStr = String(error);
-      const errorMessage = errorStr.includes('AsyncStorage') 
-        ? "App Storage Error: Please restart the app." 
-        : "Critical Failure: " + (error.message || "Please check GPS and connection.");
-        
-      RNAlert.alert("SOS System Error", errorMessage);
+      if (!silent) RNAlert.alert("SOS could not be saved", "Call 112 now.");
+    }
+  };
+
+  /**
+   * Stands down an active alert on the server, which checks the PIN. A duress
+   * PIN gets the same "cancelled" answer while the server keeps the alert open,
+   * so this screen behaves identically either way. Live location stops by
+   * itself when the server reports the alert closed (HTTP 409).
+   */
+  const standDownOnServer = async (pin: string): Promise<'ok' | 'wrong_pin' | 'offline'> => {
+    if (!activeAlertId) return 'ok';
+    try {
+      const client = await AuthService.getAuthenticatedClient();
+      await client.put(`/api/v1/alerts/${activeAlertId}/state`, { state: 'CANCELLED', pin });
+      return 'ok';
+    } catch (error: any) {
+      return error?.response?.status === 403 ? 'wrong_pin' : 'offline';
     }
   };
 
@@ -155,99 +118,77 @@ export default function EmergencySOS() {
     setTimeoutId(interval);
   };
 
-  const cancelAlert = async () => {
-    const savedPin = await AsyncStorage.getItem('@shield_pin');
-    const duressPin = await AsyncStorage.getItem('@shield_duress_pin');
+  /** What the user sees after any successful cancel, normal or duress: identical on purpose (DUR-3). */
+  const showCancelled = () => {
+    if (timeoutId) {
+      clearInterval(timeoutId);
+      setTimeoutId(null);
+    }
+    setCountdown(null);
+    setIsTriggering(false);
+    setAlertActive(false);
+    setActiveAlertId(null);
+    RNAlert.alert("Alert Cancelled", "SOS has been deactivated.");
+  };
 
-    const executeCancel = () => {
-      if (timeoutId) {
-        clearInterval(timeoutId);
-        setTimeoutId(null);
-        setCountdown(null);
-        setIsTriggering(false);
-        RNAlert.alert("Alert Cancelled", "Pre-alert was cancelled safely.");
-        return;
-      }
-      setAlertActive(false);
-      setActiveAlertId(null);
-      LocationTracker.stopBroadcastingSOS();
-      RNAlert.alert("Alert Disabled", "SOS has been deactivated.");
-    };
+  const handlePinCancel = async (input: string) => {
+    // Salted hashes in the OS keystore; the PIN itself is never stored
+    const local = await checkPinOffline(input);
+    const isDuress = local === 'duress';
+    const isNormal = local === 'normal';
 
-    if (savedPin || duressPin) {
-      if (Platform.OS === 'ios') {
-        RNAlert.prompt(
-          "Enter PIN",
-          "Secure PIN required to deactivate SOS.",
-          [
-            { text: "Back", style: "cancel" },
-            {
-              text: "Cancel Alert",
-              onPress: async (input) => {
-                if (input === duressPin) {
-                  // ALERT-3, DUR-3: Silent high-priority alert dispatched
-                  dispatchAlert();
-                  executeCancel();
-                } else if (input === savedPin) {
-                  executeCancel();
-                } else {
-                  RNAlert.alert("Incorrect PIN", "Alert remains active.");
-                }
-              }
-            }
-          ],
-          "secure-text"
-        );
+    // Pre-alert countdown: nothing has been sent yet, so the PIN is checked on the device
+    if (timeoutId) {
+      if (isDuress) {
+        showCancelled();
+        dispatchAlert('DURESS_PIN', true); // silent: no state change or popup on screen
+      } else if (isNormal) {
+        showCancelled();
       } else {
-        setPinInput('');
-        setPinModalVisible(true);
+        RNAlert.alert("Incorrect PIN", "Alert remains active.");
       }
+      return;
+    }
+
+    // Active alert: the server decides, and handles a duress PIN without telling the phone
+    const outcome = await standDownOnServer(input);
+    if (outcome === 'ok') return showCancelled();
+    if (outcome === 'wrong_pin') return RNAlert.alert("Incorrect PIN", "Alert remains active.");
+
+    // Offline: fall back to the on-device check
+    if (isDuress) {
+      showCancelled();
+      dispatchAlert('DURESS_PIN', true);
+    } else if (isNormal) {
+      showCancelled();
     } else {
-      executeCancel();
+      RNAlert.alert("Incorrect PIN", "Alert remains active.");
+    }
+  };
+
+  const cancelAlert = async () => {
+    // Only the SOS PIN stops an alert, even during the countdown
+    if (Platform.OS === 'ios') {
+      RNAlert.prompt(
+        "Enter PIN",
+        "Secure PIN required to deactivate SOS.",
+        [
+          { text: "Back", style: "cancel" },
+          { text: "Cancel Alert", onPress: (input) => { handlePinCancel(input ?? ''); } }
+        ],
+        "secure-text"
+      );
+    } else {
+      setPinInput('');
+      setPinModalVisible(true);
     }
   };
 
   const confirmAndroidPinCancel = async () => {
-    const savedPin = await AsyncStorage.getItem('@shield_pin');
-    const duressPin = await AsyncStorage.getItem('@shield_duress_pin');
-
-    // DUR-1 to DUR-3: Check normal PIN vs duress PIN locally
-    if (duressPin && pinInput === duressPin) {
-      // Duress PIN entered: appear to cancel normally while silently dispatching high-priority alert
-      setPinModalVisible(false);
-      setPinInput('');
-      dispatchAlert(); // Silently dispatches alert in background
-      if (timeoutId) {
-        clearInterval(timeoutId);
-        setTimeoutId(null);
-        setCountdown(null);
-        setIsTriggering(false);
-      }
-      setAlertActive(false);
-      setActiveAlertId(null);
-      RNAlert.alert("Alert Cancelled", "Pre-alert was cancelled safely.");
-      return;
-    }
-
-    if (pinInput === savedPin) {
-      setPinModalVisible(false);
-      setPinInput('');
-      if (timeoutId) {
-        clearInterval(timeoutId);
-        setTimeoutId(null);
-        setCountdown(null);
-        setIsTriggering(false);
-        RNAlert.alert("Alert Cancelled", "Pre-alert was cancelled safely.");
-        return;
-      }
-      setAlertActive(false);
-      setActiveAlertId(null);
-      LocationTracker.stopBroadcastingSOS();
-      RNAlert.alert("Alert Disabled", "SOS has been safely deactivated.");
-      return;
-    }
-
-    RNAlert.alert("Incorrect PIN", "Alert remains active.");
+    const input = pinInput;
+    setPinModalVisible(false);
+    setPinInput('');
+    await handlePinCancel(input);
   };
 
   return (

@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 from typing import Optional, Dict, Any
 from fastapi import APIRouter, Depends, Request, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from security import get_current_user
 from rate_limiter import limiter
@@ -15,9 +15,10 @@ logger = logging.getLogger("shield-scream-detection")
 router = APIRouter(prefix="/api/v1/ml/audio", tags=["Audio Scream Detection"])
 
 # Locate the scream detection model directory
-MODEL_DIR = Path(__file__).resolve().parent.parent / "ml" / "models" / "scream_detection"
-if not MODEL_DIR.exists():
-    MODEL_DIR = Path("D:/Desktop/Shield-Realtime-Test/model")
+MODEL_DIR = Path(os.environ.get(
+    "SHIELD_SCREAM_MODEL_DIR",
+    Path(__file__).resolve().parent.parent / "ml" / "models" / "scream_detection",
+))
 
 # Attempt to load the predictor
 predictor = None
@@ -31,9 +32,9 @@ except Exception as e:
 
 
 class AudioInferenceRequest(BaseModel):
-    audio_base64: str
-    sample_rate: Optional[int] = 16000
-    walk_id: Optional[str] = None
+    audio_base64: str = Field(max_length=4 * 1024 * 1024)
+    sample_rate: Optional[int] = Field(default=16000, ge=8000, le=48000)
+    walk_id: Optional[str] = Field(default=None, max_length=64)
 
 
 class AudioInferenceResponse(BaseModel):
@@ -66,16 +67,13 @@ async def classify_scream_audio(
         )
 
     if predictor is None:
-        return AudioInferenceResponse(
-            status="fallback",
-            label="non_scream",
-            probability=0.04,
-            threshold=0.5,
-            is_distress=False,
-            model_name="Shield Scream Detection CNN (Fallback)",
-            engine="fallback_heuristics",
-            notes="Model predictor not initialized; baseline acoustic check applied."
+        # Never answer "no scream" without a model: the client must fall back to on-device detection
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Scream model unavailable on this server; use on-device detection."
         )
+    if len(payload.audio_base64) > 4 * 1024 * 1024:
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Audio clip too large.")
 
     try:
         result = predictor.predict_base64(payload.audio_base64)
@@ -90,11 +88,11 @@ async def classify_scream_audio(
             engine=result.get("engine", "pytorch_local"),
             notes=result.get("note", None)
         )
-    except Exception as e:
-        logger.error("Error evaluating audio scream inference: %s", e)
+    except Exception:
+        logger.exception("Error evaluating audio scream inference")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Inference error: {str(e)}"
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Audio could not be decoded or classified."
         )
 
 
@@ -114,8 +112,9 @@ async def get_model_information(
         try:
             with open(config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
-        except Exception as e:
-            config = {"error": str(e)}
+        except Exception:
+            logger.exception("Could not read model config")
+            config = {}
 
     best_pt_exists = (MODEL_DIR / "best.pt").exists()
     checkpoint_size = (MODEL_DIR / "best.pt").stat().st_size if best_pt_exists else 0

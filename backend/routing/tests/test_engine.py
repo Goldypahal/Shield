@@ -90,10 +90,13 @@ def test_osm_adapter_with_fake_osmnx(monkeypatch):
         graph_from_bbox=lambda bbox, network_type, simplify: G,
         convert=types.SimpleNamespace(to_undirected=lambda g: g.to_undirected()),
         features_from_bbox=lambda *a, **k: (_ for _ in ()).throw(RuntimeError("offline")),
+        settings=types.SimpleNamespace(useful_tags_way=["highway", "name"]),
     )
     monkeypatch.setitem(sys.modules, "osmnx", fake)
     from heimdal_routing.osm import build_from_osm
     doc = build_from_osm()
+    # real OSMnx strips way tags not in this whitelist, so lit/sidewalk must be requested
+    assert {"lit", "sidewalk"} <= set(fake.settings.useful_tags_way)
     g = SafetyGraph(doc)
     assert len(g.edges) == 4
     by_name = {e["name"]: e for e in g.edges}

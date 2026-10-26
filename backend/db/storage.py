@@ -3,10 +3,14 @@ import json
 import time
 import math
 import uuid
+import hashlib
+import hmac
+import secrets
 import aiosqlite
 import logging
+from contextlib import asynccontextmanager
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger("shield-storage")
 
@@ -42,9 +46,24 @@ def point_to_segment_distance(plat: float, plon: float, s_lat1: float, s_lon1: f
 class ShieldStorage:
     def __init__(self, db_path: Optional[str] = None):
         if db_path is None:
-            db_path = os.path.join(os.path.dirname(__file__), "shield.db")
+            db_path = os.environ.get("SHIELD_DB_PATH") or os.path.join(os.path.dirname(__file__), "shield.db")
         self.db_path = os.path.abspath(db_path)
         self._initialized = False
+
+    @asynccontextmanager
+    async def _connect(self):
+        """Opens a connection with foreign keys enforced (SQLite leaves them off by default)."""
+        async with aiosqlite.connect(self.db_path) as db:
+            await db.execute("PRAGMA foreign_keys=ON;")
+            yield db
+
+    async def ping(self) -> bool:
+        try:
+            async with self._connect() as db:
+                await db.execute("SELECT 1")
+            return True
+        except Exception:
+            return False
 
     async def ensure_initialized(self):
         if not self._initialized:
@@ -55,7 +74,7 @@ class ShieldStorage:
         if self._initialized:
             return
 
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             await db.execute("PRAGMA journal_mode=WAL;")
             
             # Users
@@ -273,42 +292,284 @@ class ShieldStorage:
                 );
             """)
 
+            # Live location during an SOS that is not tied to a planned walk
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS alert_points (
+                    id TEXT PRIMARY KEY,
+                    alert_id TEXT NOT NULL,
+                    lat REAL NOT NULL,
+                    lon REAL NOT NULL,
+                    accuracy REAL,
+                    speed REAL,
+                    heading REAL,
+                    ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(alert_id) REFERENCES alerts(id) ON DELETE CASCADE
+                );
+            """)
+            await db.execute("CREATE INDEX IF NOT EXISTS idx_alert_points_alert ON alert_points(alert_id, ts);")
+            await db.execute("CREATE INDEX IF NOT EXISTS idx_walk_points_walk ON walk_points(walk_id, ts);")
+            await db.execute("CREATE INDEX IF NOT EXISTS idx_alerts_user ON alerts(user_id);")
+            await db.execute("CREATE INDEX IF NOT EXISTS idx_guardians_phone ON guardians(phone);")
+
+            # One-time codes sent by email or SMS, keyed "<channel>:<purpose>:<address>"; only hashes are stored
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS verification_codes (
+                    code_key TEXT PRIMARY KEY,
+                    code_hash TEXT NOT NULL,
+                    created_at REAL NOT NULL,
+                    expires_at REAL NOT NULL,
+                    attempts INTEGER DEFAULT 0
+                );
+            """)
+
+            # Refresh tokens by id, so a session can be revoked and a replayed (stolen) token detected
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS refresh_tokens (
+                    jti TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    expires_at REAL NOT NULL,
+                    revoked INTEGER NOT NULL DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+            """)
+            await db.execute("CREATE INDEX IF NOT EXISTS idx_refresh_user ON refresh_tokens(user_id);")
+
+            # "I should be safe by HH:MM" timers; the server alerts guardians if one runs out
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS checkin_timers (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    label TEXT,
+                    due_at REAL NOT NULL,
+                    state TEXT NOT NULL DEFAULT 'ACTIVE',
+                    lat REAL,
+                    lon REAL,
+                    alert_id TEXT,
+                    created_at REAL NOT NULL,
+                    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+            """)
+            await db.execute("CREATE INDEX IF NOT EXISTS idx_checkin_due ON checkin_timers(state, due_at);")
+
+            # Read-only tracking links sent to guardians by SMS (no app needed); only token hashes are stored
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS share_links (
+                    token_hash TEXT PRIMARY KEY,
+                    kind TEXT NOT NULL,
+                    target_id TEXT NOT NULL,
+                    expires_at REAL NOT NULL,
+                    created_at REAL NOT NULL
+                );
+            """)
+
+            # Additive migrations for databases created before these columns existed
+            await self._ensure_column(db, "users", "role", "TEXT NOT NULL DEFAULT 'walker'")
+            await self._ensure_column(db, "users", "failed_logins", "INTEGER NOT NULL DEFAULT 0")
+            await self._ensure_column(db, "users", "locked_until", "REAL NOT NULL DEFAULT 0")
+            await self._ensure_column(db, "users", "email", "TEXT")
+            await self._ensure_column(db, "users", "email_verified", "INTEGER NOT NULL DEFAULT 0")
+            await self._ensure_column(db, "users", "phone_verified", "INTEGER NOT NULL DEFAULT 0")
+            await self._ensure_column(db, "users", "password_hash", "TEXT")
+            # Bumped on password reset / "sign out everywhere"; access tokens carry it and die with it
+            await self._ensure_column(db, "users", "token_version", "INTEGER NOT NULL DEFAULT 0")
+            # SOS PIN brute-force protection, separate from login failures
+            await self._ensure_column(db, "users", "pin_failures", "INTEGER NOT NULL DEFAULT 0")
+            await self._ensure_column(db, "users", "pin_locked_until", "REAL NOT NULL DEFAULT 0")
+            await db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE email IS NOT NULL;")
+            await self._ensure_column(db, "walks", "mode", "TEXT NOT NULL DEFAULT 'walk'")  # walk | ride
+            await self._ensure_column(db, "walks", "vehicle_plate", "TEXT")
+
             await db.commit()
 
         self._initialized = True
         logger.info(f"Storage initialized at {self.db_path}")
         await self.seed_pilot_area()
 
-    # User Management
-    async def create_user(self, phone_number: str, hashed_pin: str, duress_pin: Optional[str] = None, name: str = "Walker", public_key: Optional[str] = None, device_id: Optional[str] = None) -> Dict[str, Any]:
-        user_id = str(uuid.uuid4())
-        async with aiosqlite.connect(self.db_path) as db:
+    @staticmethod
+    async def _ensure_column(db, table: str, column: str, ddl: str) -> None:
+        cursor = await db.execute(f"PRAGMA table_info({table})")
+        if column not in {row[1] for row in await cursor.fetchall()}:
+            await db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
+
+    async def record_login_result(self, user_id: str, success: bool, max_failures: int = 5,
+                                  lock_seconds: int = 900) -> None:
+        """Per-account brute-force protection: lock after `max_failures` wrong PINs."""
+        async with self._connect() as db:
+            if success:
+                await db.execute("UPDATE users SET failed_logins = 0, locked_until = 0 WHERE id = ?", (user_id,))
+            else:
+                await db.execute(
+                    """
+                    UPDATE users SET failed_logins = failed_logins + 1,
+                        locked_until = CASE WHEN failed_logins + 1 >= ? THEN ? ELSE locked_until END
+                    WHERE id = ?
+                    """,
+                    (max_failures, time.time() + lock_seconds, user_id),
+                )
+            await db.commit()
+
+    async def set_push_token(self, user_id: str, token: str) -> None:
+        async with self._connect() as db:
+            await db.execute("UPDATE users SET expo_push_token = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", (token, user_id))
+            await db.commit()
+
+    async def set_user_role(self, user_id: str, role: str) -> None:
+        async with self._connect() as db:
+            await db.execute("UPDATE users SET role = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", (role, user_id))
+            await db.commit()
+
+    # One-time codes (AUTH-1): email and SMS verification
+    @staticmethod
+    def _hash_code(code_key: str, code: str) -> str:
+        return hashlib.sha256(f"{code_key}:{code}".encode()).hexdigest()
+
+    async def store_code(self, code_key: str, code: str, ttl_seconds: int, resend_after_seconds: int = 30) -> bool:
+        """Stores a fresh code, replacing any earlier one. False if one was issued less than `resend_after_seconds` ago."""
+        now = time.time()
+        async with self._connect() as db:
+            cursor = await db.execute("SELECT created_at FROM verification_codes WHERE code_key = ?", (code_key,))
+            row = await cursor.fetchone()
+            if row and now - row[0] < resend_after_seconds:
+                return False
             await db.execute(
                 """
-                INSERT INTO users (id, phone_number, name, hashed_pin, duress_pin, public_key, device_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO verification_codes (code_key, code_hash, created_at, expires_at, attempts) VALUES (?, ?, ?, ?, 0)
+                ON CONFLICT(code_key) DO UPDATE SET
+                    code_hash = excluded.code_hash, created_at = excluded.created_at,
+                    expires_at = excluded.expires_at, attempts = 0
                 """,
-                (user_id, phone_number, name, hashed_pin, duress_pin, public_key, device_id)
+                (code_key, self._hash_code(code_key, code), now, now + ttl_seconds),
+            )
+            await db.commit()
+        return True
+
+    async def check_code(self, code_key: str, code: str, max_attempts: int) -> bool:
+        """Constant-time check; the code is burned on success and after too many failures."""
+        async with self._connect() as db:
+            cursor = await db.execute(
+                "SELECT code_hash, expires_at, attempts FROM verification_codes WHERE code_key = ?", (code_key,)
+            )
+            row = await cursor.fetchone()
+            if not row:
+                return False
+            code_hash, expires_at, attempts = row
+            ok = (
+                expires_at > time.time()
+                and attempts < max_attempts
+                and hmac.compare_digest(code_hash, self._hash_code(code_key, code))
+            )
+            if ok or attempts + 1 >= max_attempts:
+                await db.execute("DELETE FROM verification_codes WHERE code_key = ?", (code_key,))
+            else:
+                await db.execute("UPDATE verification_codes SET attempts = attempts + 1 WHERE code_key = ?", (code_key,))
+            await db.commit()
+            return ok
+
+    # Refresh-token sessions
+    async def add_refresh_token(self, jti: str, user_id: str, expires_at: float) -> None:
+        async with self._connect() as db:
+            await db.execute("INSERT INTO refresh_tokens (jti, user_id, expires_at) VALUES (?, ?, ?)",
+                             (jti, user_id, expires_at))
+            await db.commit()
+
+    async def consume_refresh_token(self, jti: str, user_id: str) -> str:
+        """Marks a refresh token used. Returns "ok", "reused" (already revoked: likely stolen) or "unknown"."""
+        async with self._connect() as db:
+            cursor = await db.execute("SELECT revoked, expires_at FROM refresh_tokens WHERE jti = ? AND user_id = ?",
+                                      (jti, user_id))
+            row = await cursor.fetchone()
+            if not row or row[1] < time.time():
+                return "unknown"
+            if row[0]:
+                return "reused"
+            await db.execute("UPDATE refresh_tokens SET revoked = 1 WHERE jti = ?", (jti,))
+            await db.commit()
+            return "ok"
+
+    async def revoke_refresh_token(self, jti: str, user_id: str) -> None:
+        async with self._connect() as db:
+            await db.execute("UPDATE refresh_tokens SET revoked = 1 WHERE jti = ? AND user_id = ?", (jti, user_id))
+            await db.commit()
+
+    async def revoke_all_sessions(self, user_id: str) -> None:
+        """Signs the account out everywhere: every refresh token and every outstanding access token."""
+        async with self._connect() as db:
+            await db.execute("UPDATE refresh_tokens SET revoked = 1 WHERE user_id = ?", (user_id,))
+            await db.execute("UPDATE users SET token_version = token_version + 1 WHERE id = ?", (user_id,))
+            await db.execute("DELETE FROM refresh_tokens WHERE expires_at < ?", (time.time(),))
+            await db.commit()
+
+    async def record_pin_result(self, user_id: str, success: bool, lock_after: int, lock_seconds: int) -> int:
+        """SOS PIN attempts; returns consecutive failures so far (0 after a success)."""
+        async with self._connect() as db:
+            if success:
+                await db.execute("UPDATE users SET pin_failures = 0, pin_locked_until = 0 WHERE id = ?", (user_id,))
+                await db.commit()
+                return 0
+            await db.execute(
+                """
+                UPDATE users SET pin_failures = pin_failures + 1,
+                    pin_locked_until = CASE WHEN pin_failures + 1 >= ? THEN ? ELSE pin_locked_until END
+                WHERE id = ?
+                """,
+                (lock_after, time.time() + lock_seconds, user_id),
+            )
+            await db.commit()
+            cursor = await db.execute("SELECT pin_failures FROM users WHERE id = ?", (user_id,))
+            return (await cursor.fetchone())[0]
+
+    async def set_password(self, user_id: str, password_hash: str) -> None:
+        async with self._connect() as db:
+            await db.execute(
+                "UPDATE users SET password_hash = ?, failed_logins = 0, locked_until = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (password_hash, user_id),
+            )
+            await db.commit()
+
+    # User Management
+    async def create_user(self, phone_number: str, hashed_pin: str, duress_pin: Optional[str] = None, name: str = "Walker",
+                          public_key: Optional[str] = None, device_id: Optional[str] = None,
+                          email: Optional[str] = None, password_hash: Optional[str] = None,
+                          verified: bool = False) -> Dict[str, Any]:
+        """`verified`: the email and phone were both proven with one-time codes before this call."""
+        user_id = str(uuid.uuid4())
+        async with self._connect() as db:
+            await db.execute(
+                """
+                INSERT INTO users (id, phone_number, name, hashed_pin, duress_pin, public_key, device_id,
+                                   email, password_hash, email_verified, phone_verified)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (user_id, phone_number, name, hashed_pin, duress_pin, public_key, device_id,
+                 email, password_hash, int(verified), int(verified))
             )
             await db.commit()
         return await self.get_user_by_id(user_id)
 
+    async def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+        async with self._connect() as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute("SELECT * FROM users WHERE email = ?", (email,))
+            row = await cursor.fetchone()
+            return dict(row) if row else None
+
     async def get_user_by_phone(self, phone_number: str) -> Optional[Dict[str, Any]]:
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("SELECT * FROM users WHERE phone_number = ?", (phone_number,))
             row = await cursor.fetchone()
             return dict(row) if row else None
 
     async def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("SELECT * FROM users WHERE id = ?", (user_id,))
             row = await cursor.fetchone()
             return dict(row) if row else None
 
     async def update_user_pins(self, user_id: str, hashed_pin: Optional[str], duress_pin: Optional[str]) -> bool:
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             updates = []
             vals = []
             if hashed_pin:
@@ -327,11 +588,17 @@ class ShieldStorage:
 
     async def delete_user_account(self, user_id: str) -> bool:
         """AUTH-7: Complete account and personal data deletion."""
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             await db.execute("DELETE FROM walk_points WHERE walk_id IN (SELECT id FROM walks WHERE user_id = ?)", (user_id,))
             await db.execute("DELETE FROM walks WHERE user_id = ?", (user_id,))
             await db.execute("DELETE FROM alert_events WHERE alert_id IN (SELECT id FROM alerts WHERE user_id = ?)", (user_id,))
+            await db.execute("DELETE FROM alert_points WHERE alert_id IN (SELECT id FROM alerts WHERE user_id = ?)", (user_id,))
+            await db.execute("DELETE FROM false_alarm_feedback WHERE alert_id IN (SELECT id FROM alerts WHERE user_id = ?)", (user_id,))
             await db.execute("DELETE FROM evidence_chunks WHERE alert_id IN (SELECT id FROM alerts WHERE user_id = ?)", (user_id,))
+            await db.execute("DELETE FROM ws_tickets WHERE user_id = ?", (user_id,))
+            await db.execute("DELETE FROM refresh_tokens WHERE user_id = ?", (user_id,))
+            await db.execute("DELETE FROM checkin_timers WHERE user_id = ?", (user_id,))
+            await db.execute("DELETE FROM share_links WHERE target_id IN (SELECT id FROM alerts WHERE user_id = ?) OR target_id IN (SELECT id FROM walks WHERE user_id = ?)", (user_id, user_id))
             await db.execute("DELETE FROM alerts WHERE user_id = ?", (user_id,))
             await db.execute("DELETE FROM guardians WHERE user_id = ?", (user_id,))
             await db.execute("DELETE FROM users WHERE id = ?", (user_id,))
@@ -340,7 +607,7 @@ class ShieldStorage:
 
     # Guardian Management
     async def get_guardians(self, user_id: str) -> List[Dict[str, Any]]:
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute(
                 "SELECT * FROM guardians WHERE user_id = ? ORDER BY priority ASC, created_at ASC",
@@ -352,7 +619,7 @@ class ShieldStorage:
     async def add_or_update_guardian(self, user_id: str, name: str, phone: str, priority: int = 1, public_key: Optional[str] = None) -> Dict[str, Any]:
         # Generate fingerprint (GRD-3)
         fingerprint = uuid.uuid5(uuid.NAMESPACE_DNS, f"{phone}:{public_key or 'default'}").hex[:16].upper()
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             # Check existing count limit (max 5 guardians - GRD-1)
             cursor = await db.execute("SELECT COUNT(*) FROM guardians WHERE user_id = ?", (user_id,))
             (count,) = await cursor.fetchone()
@@ -390,36 +657,54 @@ class ShieldStorage:
             "key_fingerprint": fingerprint
         }
 
-    async def verify_guardian(self, guardian_id: str) -> bool:
-        async with aiosqlite.connect(self.db_path) as db:
-            await db.execute("UPDATE guardians SET verified = 1 WHERE id = ?", (guardian_id,))
+    async def verify_guardian(self, guardian_id: str, guardian_phone: str) -> bool:
+        """GRD-2: only the invited phone number can accept the invitation."""
+        async with self._connect() as db:
+            cursor = await db.execute(
+                "UPDATE guardians SET verified = 1 WHERE id = ? AND phone = ?", (guardian_id, guardian_phone)
+            )
             await db.commit()
-            return True
+            return cursor.rowcount > 0
+
+    async def get_guardianships(self, guardian_phone: str) -> List[Dict[str, Any]]:
+        """Verified guardian links where this phone number protects some walker."""
+        async with self._connect() as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT * FROM guardians WHERE phone = ? AND verified = 1", (guardian_phone,)
+            )
+            return [dict(r) for r in await cursor.fetchall()]
+
+    async def get_user_alert_ids(self, user_id: str) -> List[str]:
+        async with self._connect() as db:
+            cursor = await db.execute("SELECT id FROM alerts WHERE user_id = ?", (user_id,))
+            return [r[0] for r in await cursor.fetchall()]
 
     async def delete_guardian(self, guardian_id: str, user_id: str) -> bool:
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             cursor = await db.execute("DELETE FROM guardians WHERE id = ? AND user_id = ?", (guardian_id, user_id))
             await db.commit()
             return cursor.rowcount > 0
 
     # Walks & Live Tracking
-    async def create_walk(self, user_id: str, origin_name: str, destination_name: str, chosen_route_id: str, route_coords: List[Dict[str, float]], safety_score: float, fastest_time_seconds: int, shared_with: List[str]) -> Dict[str, Any]:
+    async def create_walk(self, user_id: str, origin_name: str, destination_name: str, chosen_route_id: str, route_coords: List[Dict[str, float]], safety_score: float, fastest_time_seconds: int, shared_with: List[str],
+                          mode: str = "walk", vehicle_plate: Optional[str] = None) -> Dict[str, Any]:
         walk_id = str(uuid.uuid4())
         route_json = json.dumps(route_coords)
         shared_json = json.dumps(shared_with)
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             await db.execute(
                 """
-                INSERT INTO walks (id, user_id, origin_name, destination_name, route_json, chosen_route_id, safety_score, fastest_time_seconds, shared_with, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE')
+                INSERT INTO walks (id, user_id, origin_name, destination_name, route_json, chosen_route_id, safety_score, fastest_time_seconds, shared_with, status, mode, vehicle_plate)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?, ?)
                 """,
-                (walk_id, user_id, origin_name, destination_name, route_json, chosen_route_id, safety_score, fastest_time_seconds, shared_json)
+                (walk_id, user_id, origin_name, destination_name, route_json, chosen_route_id, safety_score, fastest_time_seconds, shared_json, mode, vehicle_plate)
             )
             await db.commit()
         return await self.get_walk(walk_id)
 
     async def get_walk(self, walk_id: str) -> Optional[Dict[str, Any]]:
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("SELECT * FROM walks WHERE id = ?", (walk_id,))
             row = await cursor.fetchone()
@@ -431,7 +716,7 @@ class ShieldStorage:
             return data
 
     async def add_walk_points(self, walk_id: str, points: List[Dict[str, Any]]) -> int:
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             for p in points:
                 pid = str(uuid.uuid4())
                 await db.execute(
@@ -445,14 +730,14 @@ class ShieldStorage:
         return len(points)
 
     async def get_walk_trail(self, walk_id: str) -> List[Dict[str, Any]]:
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("SELECT * FROM walk_points WHERE walk_id = ? ORDER BY ts ASC", (walk_id,))
             rows = await cursor.fetchall()
             return [dict(r) for r in rows]
 
     async def end_walk(self, walk_id: str, user_id: str) -> Optional[Dict[str, Any]]:
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             await db.execute(
                 """
                 UPDATE walks
@@ -468,7 +753,7 @@ class ShieldStorage:
     async def create_ws_ticket(self, walk_id: str, user_id: str, ttl_seconds: int = 60) -> str:
         ticket = f"wstk_{uuid.uuid4().hex}"
         expires_at = time.time() + ttl_seconds
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             await db.execute(
                 "INSERT INTO ws_tickets (ticket, walk_id, user_id, expires_at, used) VALUES (?, ?, ?, ?, 0)",
                 (ticket, walk_id, user_id, expires_at)
@@ -478,7 +763,7 @@ class ShieldStorage:
 
     async def consume_ws_ticket(self, ticket: str, walk_id: str) -> Optional[Dict[str, Any]]:
         now = time.time()
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute(
                 "SELECT * FROM ws_tickets WHERE ticket = ? AND walk_id = ? AND used = 0 AND expires_at > ?",
@@ -495,7 +780,7 @@ class ShieldStorage:
     # Alert Management & Escalation
     async def sync_alert(self, alert_id: str, user_id: str, trigger_type: str, lat: float, lon: float, priority: str = "HIGH", walk_id: Optional[str] = None, initial_state: str = "ACTIVE") -> Dict[str, Any]:
         """Idempotent sync for offline and online alerts (ALERT-4, ALERT-7)."""
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("SELECT * FROM alerts WHERE id = ?", (alert_id,))
             existing = await cursor.fetchone()
@@ -543,7 +828,7 @@ class ShieldStorage:
 
         resolved_at = datetime.utcnow().isoformat() if new_state in ["RESOLVED", "FALSE_ALARM", "CANCELLED"] else None
 
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             await db.execute(
                 """
                 UPDATE alerts
@@ -566,7 +851,7 @@ class ShieldStorage:
         return await self.get_alert_by_id(alert_id)
 
     async def get_alert_by_id(self, alert_id: str) -> Optional[Dict[str, Any]]:
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("SELECT * FROM alerts WHERE id = ?", (alert_id,))
             row = await cursor.fetchone()
@@ -581,22 +866,65 @@ class ShieldStorage:
             return data
 
     async def get_active_alerts(self) -> List[Dict[str, Any]]:
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute(
                 """
                 SELECT a.*, u.name as walker_name, u.phone_number as walker_phone
                 FROM alerts a
                 LEFT JOIN users u ON u.id = a.user_id
-                WHERE a.state IN ('ACTIVE', 'PRE_ALERT', 'ESCALATED')
+                WHERE a.state IN ('ACTIVE', 'PRE_ALERT', 'ESCALATED', 'ACKNOWLEDGED')
                 ORDER BY a.started_at DESC
                 """
             )
             rows = await cursor.fetchall()
             return [dict(r) for r in rows]
 
+    async def get_unacknowledged_alerts(self, older_than_seconds: int) -> List[Dict[str, Any]]:
+        """ACTIVE alerts nobody has acknowledged within the window (ALERT-8 escalation input)."""
+        # started_at is stored as naive UTC ISO text, so compare against the same format
+        cutoff = datetime.fromtimestamp(time.time() - older_than_seconds, timezone.utc).replace(tzinfo=None).isoformat()
+        async with self._connect() as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT * FROM alerts WHERE state = 'ACTIVE' AND started_at <= ? ORDER BY started_at ASC",
+                (cutoff,),
+            )
+            return [dict(r) for r in await cursor.fetchall()]
+
+    async def add_alert_point(self, alert_id: str, lat: float, lon: float, accuracy: Optional[float] = None,
+                              speed: Optional[float] = None, heading: Optional[float] = None) -> Dict[str, Any]:
+        point = {"id": str(uuid.uuid4()), "alert_id": alert_id, "lat": lat, "lon": lon, "accuracy": accuracy,
+                 "speed": speed, "heading": heading, "ts": datetime.utcnow().isoformat()}
+        async with self._connect() as db:
+            await db.execute(
+                "INSERT INTO alert_points (id, alert_id, lat, lon, accuracy, speed, heading, ts) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (point["id"], alert_id, lat, lon, accuracy, speed, heading, point["ts"]),
+            )
+            await db.execute("UPDATE alerts SET lat = ?, lon = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", (lat, lon, alert_id))
+            await db.commit()
+        return point
+
+    async def get_alert_points(self, alert_id: str, limit: int = 500) -> List[Dict[str, Any]]:
+        async with self._connect() as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT * FROM (SELECT * FROM alert_points WHERE alert_id = ? ORDER BY ts DESC LIMIT ?) ORDER BY ts ASC",
+                (alert_id, limit),
+            )
+            return [dict(r) for r in await cursor.fetchall()]
+
+    async def get_last_evidence_chunk(self, alert_id: str) -> Optional[Dict[str, Any]]:
+        async with self._connect() as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT seq, sha256 FROM evidence_chunks WHERE alert_id = ? ORDER BY seq DESC LIMIT 1", (alert_id,)
+            )
+            row = await cursor.fetchone()
+            return dict(row) if row else None
+
     async def record_false_alarm(self, alert_id: str, reason: str) -> bool:
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             fid = str(uuid.uuid4())
             await db.execute("INSERT INTO false_alarm_feedback (id, alert_id, reason) VALUES (?, ?, ?)", (fid, alert_id, reason))
             await self.update_alert_state(alert_id, "FALSE_ALARM", actor="walker", meta={"reason": reason})
@@ -607,7 +935,7 @@ class ShieldStorage:
     async def add_evidence_chunk(self, alert_id: str, seq: int, sha256: str, prev_sha256: str, storage_key: str, wrapped_keys: Dict[str, str]) -> Dict[str, Any]:
         chunk_id = str(uuid.uuid4())
         wrapped_json = json.dumps(wrapped_keys)
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             await db.execute(
                 """
                 INSERT INTO evidence_chunks (id, alert_id, seq, sha256, prev_sha256, storage_key, wrapped_keys)
@@ -627,7 +955,7 @@ class ShieldStorage:
         }
 
     async def get_evidence_chunks(self, alert_id: str) -> List[Dict[str, Any]]:
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("SELECT * FROM evidence_chunks WHERE alert_id = ? ORDER BY seq ASC", (alert_id,))
             rows = await cursor.fetchall()
@@ -640,7 +968,7 @@ class ShieldStorage:
 
     # Segments & Route Scoring Support
     async def get_all_segments(self) -> List[Dict[str, Any]]:
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("SELECT * FROM segments")
             rows = await cursor.fetchall()
@@ -652,7 +980,7 @@ class ShieldStorage:
             return res
 
     async def get_safe_stops(self) -> List[Dict[str, Any]]:
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("SELECT * FROM safe_stops WHERE verified = 1")
             rows = await cursor.fetchall()
@@ -660,7 +988,7 @@ class ShieldStorage:
 
     async def add_rating(self, segment_id: str, user_hash: str, lit: bool, busy: bool, felt_safe: bool, walk_id: Optional[str] = None, note: Optional[str] = None) -> Dict[str, Any]:
         # Check daily limit (max 20 ratings per day - RATE-3)
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             cursor = await db.execute(
                 "SELECT COUNT(*) FROM ratings WHERE user_hash = ? AND ts >= datetime('now', '-1 day')",
                 (user_hash,)
@@ -668,6 +996,10 @@ class ShieldStorage:
             (daily_count,) = await cursor.fetchone()
             if daily_count >= 20:
                 raise ValueError("Daily rating limit of 20 reached (RATE-3).")
+
+            cursor = await db.execute("SELECT 1 FROM segments WHERE id = ?", (segment_id,))
+            if not await cursor.fetchone():
+                raise LookupError(f"Unknown segment '{segment_id}'.")
 
             # Check 1 rating per segment per walk (RATE-3)
             if walk_id:
@@ -710,7 +1042,7 @@ class ShieldStorage:
     # Hazards (RATE-4)
     async def add_hazard(self, lat: float, lon: float, category: str, description: Optional[str] = None, user_hash: Optional[str] = None, photo_key: Optional[str] = None) -> Dict[str, Any]:
         hid = str(uuid.uuid4())
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             await db.execute(
                 """
                 INSERT INTO hazards (id, user_hash, lat, lon, category, description, photo_key, status)
@@ -728,8 +1060,84 @@ class ShieldStorage:
             "status": "ACTIVE"
         }
 
+    async def get_recent_hazards(self, days: int) -> List[Dict[str, Any]]:
+        """Active hazard reports from the last `days` days (older reports stop affecting routes)."""
+        async with self._connect() as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT * FROM hazards WHERE status = 'ACTIVE' AND ts >= datetime('now', ?) ORDER BY ts DESC",
+                (f"-{int(days)} days",),
+            )
+            return [dict(r) for r in await cursor.fetchall()]
+
+    # Check-in timers
+    async def create_checkin(self, user_id: str, label: Optional[str], due_at: float,
+                             lat: Optional[float], lon: Optional[float]) -> Dict[str, Any]:
+        timer_id = str(uuid.uuid4())
+        async with self._connect() as db:
+            # One running timer per person: a new one replaces the old
+            await db.execute("UPDATE checkin_timers SET state = 'REPLACED' WHERE user_id = ? AND state = 'ACTIVE'", (user_id,))
+            await db.execute(
+                "INSERT INTO checkin_timers (id, user_id, label, due_at, lat, lon, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (timer_id, user_id, label, due_at, lat, lon, time.time()),
+            )
+            await db.commit()
+        return await self.get_checkin(timer_id)
+
+    async def get_checkin(self, timer_id: str) -> Optional[Dict[str, Any]]:
+        async with self._connect() as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute("SELECT * FROM checkin_timers WHERE id = ?", (timer_id,))
+            row = await cursor.fetchone()
+            return dict(row) if row else None
+
+    async def get_active_checkin(self, user_id: str) -> Optional[Dict[str, Any]]:
+        async with self._connect() as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT * FROM checkin_timers WHERE user_id = ? AND state = 'ACTIVE' ORDER BY created_at DESC LIMIT 1",
+                (user_id,))
+            row = await cursor.fetchone()
+            return dict(row) if row else None
+
+    async def update_checkin(self, timer_id: str, **fields: Any) -> Optional[Dict[str, Any]]:
+        allowed = {"state", "due_at", "lat", "lon", "alert_id"}
+        cols = [k for k in fields if k in allowed]
+        if cols:
+            async with self._connect() as db:
+                await db.execute(f"UPDATE checkin_timers SET {', '.join(f'{c} = ?' for c in cols)} WHERE id = ?",
+                                 (*[fields[c] for c in cols], timer_id))
+                await db.commit()
+        return await self.get_checkin(timer_id)
+
+    async def get_overdue_checkins(self) -> List[Dict[str, Any]]:
+        async with self._connect() as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute("SELECT * FROM checkin_timers WHERE state = 'ACTIVE' AND due_at <= ?", (time.time(),))
+            return [dict(r) for r in await cursor.fetchall()]
+
+    # Guardian tracking links
+    async def create_share_link(self, kind: str, target_id: str, ttl_seconds: int) -> str:
+        token = secrets.token_urlsafe(24)
+        async with self._connect() as db:
+            await db.execute("DELETE FROM share_links WHERE expires_at < ?", (time.time(),))
+            await db.execute(
+                "INSERT INTO share_links (token_hash, kind, target_id, expires_at, created_at) VALUES (?, ?, ?, ?, ?)",
+                (hashlib.sha256(token.encode()).hexdigest(), kind, target_id, time.time() + ttl_seconds, time.time()),
+            )
+            await db.commit()
+        return token
+
+    async def resolve_share_link(self, token: str) -> Optional[Dict[str, Any]]:
+        async with self._connect() as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute("SELECT * FROM share_links WHERE token_hash = ? AND expires_at > ?",
+                                      (hashlib.sha256(token.encode()).hexdigest(), time.time()))
+            row = await cursor.fetchone()
+            return dict(row) if row else None
+
     async def get_active_hazards(self) -> List[Dict[str, Any]]:
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("SELECT * FROM hazards WHERE status = 'ACTIVE' ORDER BY ts DESC")
             rows = await cursor.fetchall()
@@ -737,7 +1145,7 @@ class ShieldStorage:
 
     # Audit Log (DASH-6)
     async def log_audit(self, actor: str, action: str, target: str) -> None:
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             aid = str(uuid.uuid4())
             await db.execute(
                 "INSERT INTO audit_log (id, actor, action, target) VALUES (?, ?, ?, ?)",
@@ -746,7 +1154,7 @@ class ShieldStorage:
             await db.commit()
 
     async def get_audit_logs(self, limit: int = 100) -> List[Dict[str, Any]]:
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("SELECT * FROM audit_log ORDER BY ts DESC LIMIT ?", (limit,))
             rows = await cursor.fetchall()
@@ -755,7 +1163,7 @@ class ShieldStorage:
     # Seed data helper
     async def seed_pilot_area(self):
         """Seeds realistic pilot area segments, safe stops, and ratings."""
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self._connect() as db:
             cursor = await db.execute("SELECT COUNT(*) FROM segments")
             (count,) = await cursor.fetchone()
             if count > 0:

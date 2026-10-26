@@ -1,4 +1,3 @@
-import { BACKEND_URL } from '../config/env';
 import AuthService from './authService';
 
 export type ReportedIssue = {
@@ -12,40 +11,52 @@ export type ReportedIssue = {
   timestamp: number;
 };
 
-class IssueReportingService {
-  private readonly API_URL = `${BACKEND_URL}/api/v1/issues`;
+type Hazard = {
+  id: string;
+  lat: number;
+  lon: number;
+  category: string;
+  description?: string | null;
+  ts?: string;
+};
 
+const CATEGORY_MAP: Record<string, { type: ReportedIssue['type']; severity: ReportedIssue['severity'] }> = {
+  harassment_spot: { type: 'HARASSMENT', severity: 'HIGH' },
+  dark_alley: { type: 'UNSAFE_ZONE', severity: 'MEDIUM' },
+  unsafe_zone: { type: 'UNSAFE_ZONE', severity: 'MEDIUM' },
+  broken_light: { type: 'UNSAFE_ZONE', severity: 'LOW' },
+  blocked_path: { type: 'UNSAFE_ZONE', severity: 'LOW' },
+  other: { type: 'UNSAFE_ZONE', severity: 'LOW' }
+};
+
+class IssueReportingService {
+  /**
+   * Community hazard reports near a point, from GET /api/v1/hazards.
+   * On failure this returns an empty list: a safety app must never show
+   * invented incidents as if they were real reports.
+   */
   async getNearbyIssues(lat: number, lon: number): Promise<ReportedIssue[]> {
     try {
       const client = await AuthService.getAuthenticatedClient();
-      const response = await client.get(this.API_URL, {
+      const response = await client.get<{ hazards: Hazard[] }>('/api/v1/hazards', {
         params: { lat, lon, radius_km: 5 }
       });
-      return response.data.issues;
-    } catch {
-      // Mock data for demo/fallback
-      return [
-        {
-          id: '1',
-          type: 'UNSAFE_ZONE',
-          lat: lat + 0.005,
-          lon: lon + 0.005,
-          description: 'Recurring mobile snatching reported at this junction.',
-          preventionTip: 'Keep your phone inside your bag and avoid wearing expensive jewelry here.',
-          severity: 'HIGH',
-          timestamp: Date.now() - 3600000
-        },
-        {
-          id: '2',
-          type: 'HARASSMENT',
-          lat: lat - 0.003,
-          lon: lon + 0.008,
-          description: 'High number of harassment cases after 9 PM.',
-          preventionTip: 'Try to walk in groups or stay on the main lit road.',
-          severity: 'MEDIUM',
-          timestamp: Date.now() - 86400000
-        }
-      ];
+      return (response.data.hazards || []).map((h) => {
+        const mapped = CATEGORY_MAP[h.category] ?? CATEGORY_MAP.other;
+        return {
+          id: h.id,
+          type: mapped.type,
+          severity: mapped.severity,
+          lat: h.lat,
+          lon: h.lon,
+          description: h.description || h.category.replace(/_/g, ' '),
+          preventionTip: this.getPreventionTipForType(mapped.type),
+          timestamp: h.ts ? Date.parse(h.ts) : Date.now()
+        };
+      });
+    } catch (error) {
+      console.warn('Hazard reports unavailable', error);
+      return [];
     }
   }
 
@@ -55,7 +66,7 @@ class IssueReportingService {
       'HARASSMENT': 'Ignore provocations, move to a crowded place, and activate SOS if followed.',
       'THEFT': 'Keep belongings secure and be wary of crowded public transport.',
       'UNSAFE_ZONE': 'Avoid this area after sunset and keep the SHIELD app active in the foreground.',
-      'ROBBERY': 'Keep a dummy wallet and never resist armed confrontatons; focus on safety and alert authorities later.'
+      'ROBBERY': 'Keep a dummy wallet and never resist armed confrontations; focus on safety and alert authorities later.'
     };
     return tips[type] || 'Stay alert and notify your guardians of your location.';
   }
