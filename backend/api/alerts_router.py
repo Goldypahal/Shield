@@ -6,9 +6,10 @@ from typing import List, Literal, Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from access import alert_for_owner, alert_for_viewer, guardian_link, walk_for_owner
+from access import alert_for_owner, alert_for_viewer, guardian_link, staff_can_see, walk_for_owner
 from alert_states import OPEN, transition
 from live import broker
+import police
 from notifier import notify_guardians_of_alert
 from pins import ESCALATE_AFTER_FAILURES, PIN_PATTERN, check_sos_pin
 from security import get_current_user, is_staff
@@ -215,7 +216,12 @@ async def mark_false_alarm(request: Request, alert_id: str, payload: FalseAlarmP
 async def get_alert(request: Request, alert_id: str, current_user: dict = Depends(get_current_user)):
     """Alert details, event log and recent live trail, for the walker, their guardians and responders."""
     alert = await alert_for_viewer(current_user, alert_id)
-    return {"alert": alert, "trail": await storage.get_alert_points(alert_id, limit=200)}
+    trail = [] if alert.get("location_withheld") else await storage.get_alert_points(alert_id, limit=200)
+    station = await storage.get_station(alert["station_id"]) if alert.get("station_id") else None
+    return {"alert": alert, "trail": trail,
+            "police": {"status": alert.get("police_status"), "text": police.status_text(alert, station["name"] if station else None),
+                       "station": {"name": station["name"], "phone": station.get("phone")} if station else None,
+                       "incident_112": alert.get("erss_incident_id")}}
 
 
 guardian_router = APIRouter(prefix="/api/v1/guardian", tags=["Alerts & Escalation"])
@@ -226,7 +232,8 @@ guardian_router = APIRouter(prefix="/api/v1/guardian", tags=["Alerts & Escalatio
 async def list_guarded_alerts(request: Request, current_user: dict = Depends(get_current_user)):
     """GRD-4: open alerts of every walker who added this account as a verified guardian."""
     walkers = {link["user_id"] for link in await storage.get_guardianships(current_user["phone_number"])}
-    alerts = [a for a in await storage.get_active_alerts() if a["user_id"] in walkers or is_staff(current_user)]
+    alerts = [a for a in await storage.get_active_alerts()
+              if a["user_id"] in walkers or await staff_can_see(current_user, a)]
     return {"alerts": [
         {k: a.get(k) for k in ("id", "user_id", "walker_name", "trigger_type", "priority", "state",
                                "lat", "lon", "started_at", "walk_id")}

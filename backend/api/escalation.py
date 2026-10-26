@@ -6,9 +6,11 @@ unnoticed just because nobody pressed a button.
 """
 import asyncio
 import logging
+import time
 
 from alert_states import transition
 from checkin_router import expire_overdue_checkins
+import police
 from notifier import notify_guardians_of_alert
 from db.storage import storage
 
@@ -33,11 +35,20 @@ async def escalate_overdue_alerts(ack_window_seconds: int = ACK_WINDOW_SECONDS) 
     return escalated
 
 
+RETENTION_INTERVAL_SECONDS = 3600
+
+
 async def run_escalation_loop(stop: asyncio.Event) -> None:
+    last_retention = 0.0
     while not stop.is_set():
         try:
             await escalate_overdue_alerts()
             await expire_overdue_checkins()
+            await police.process_erss_outbox()
+            await police.escalate_to_control_room()
+            if time.time() - last_retention > RETENTION_INTERVAL_SECONDS:
+                await police.apply_retention()
+                last_retention = time.time()
         except Exception:
             logger.exception("Escalation sweep failed")
         try:

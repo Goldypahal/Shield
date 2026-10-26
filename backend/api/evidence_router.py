@@ -81,6 +81,8 @@ async def upload_evidence_chunk(request: Request, payload: UploadChunkPayload,
 async def list_evidence_chunks(request: Request, alert_id: str, current_user: dict = Depends(get_current_user)):
     """Evidence chain metadata for the walker, their guardians and responders, with a chain check."""
     alert = await alert_for_viewer(current_user, alert_id)
+    if alert.get("location_withheld"):
+        raise HTTPException(status_code=403, detail="This alert is closed and the walker has not consented to share it for an FIR.")
     chunks = await storage.get_evidence_chunks(alert["id"])
     prev, intact = GENESIS_HASH, True
     for i, c in enumerate(chunks):

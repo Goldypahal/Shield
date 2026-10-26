@@ -32,6 +32,8 @@ async def generate_incident_pdf(
     - Legal disclaimer stating it is user-generated and assistive
     """
     alert = await alert_for_viewer(current_user, alert_id)
+    if alert.get("location_withheld"):
+        raise HTTPException(status_code=403, detail="This alert is closed and the walker has not consented to share it for an FIR.")
     alert_id = alert["id"]
     await storage.log_audit(actor=f"{current_user['role']}:{current_user['user_id']}",
                             action="EXPORT_INCIDENT_PDF", target=f"alert/{alert_id}")

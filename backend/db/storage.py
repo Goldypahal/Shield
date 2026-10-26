@@ -352,6 +352,55 @@ class ShieldStorage:
             """)
             await db.execute("CREATE INDEX IF NOT EXISTS idx_checkin_due ON checkin_timers(state, due_at);")
 
+            # Police integration: stations (alerts are routed to the nearest), patrol units,
+            # police-supplied hotspots (feed route scoring) and the 112/ERSS outbox
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS police_stations (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    lat REAL NOT NULL,
+                    lon REAL NOT NULL,
+                    phone TEXT,
+                    district TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS patrol_units (
+                    call_sign TEXT PRIMARY KEY,
+                    station_id TEXT,
+                    lat REAL,
+                    lon REAL,
+                    available INTEGER NOT NULL DEFAULT 1,
+                    updated_at REAL
+                );
+            """)
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS police_hotspots (
+                    id TEXT PRIMARY KEY,
+                    lat REAL NOT NULL,
+                    lon REAL NOT NULL,
+                    radius_m REAL NOT NULL,
+                    weight REAL NOT NULL,
+                    period TEXT NOT NULL DEFAULT 'any',
+                    source TEXT,
+                    expires_at REAL NOT NULL,
+                    created_at REAL NOT NULL
+                );
+            """)
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS erss_outbox (
+                    id TEXT PRIMARY KEY,
+                    alert_id TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    state TEXT NOT NULL DEFAULT 'PENDING',
+                    attempts INTEGER NOT NULL DEFAULT 0,
+                    next_attempt_at REAL NOT NULL,
+                    last_error TEXT,
+                    created_at REAL NOT NULL
+                );
+            """)
+
             # Read-only tracking links sent to guardians by SMS (no app needed); only token hashes are stored
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS share_links (
@@ -378,6 +427,19 @@ class ShieldStorage:
             await self._ensure_column(db, "users", "pin_locked_until", "REAL NOT NULL DEFAULT 0")
             await db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE email IS NOT NULL;")
             await self._ensure_column(db, "walks", "mode", "TEXT NOT NULL DEFAULT 'walk'")  # walk | ride
+            # Staff: home station and TOTP second factor (secret, and the last used time step to block replays)
+            await self._ensure_column(db, "users", "station_id", "TEXT")
+            await self._ensure_column(db, "users", "totp_secret", "TEXT")
+            await self._ensure_column(db, "users", "totp_last_step", "INTEGER NOT NULL DEFAULT 0")
+            # Walker consent to share SOS alerts with police (DPDP Act: explicit, revocable, timestamped)
+            await self._ensure_column(db, "users", "police_sharing", "INTEGER NOT NULL DEFAULT 0")
+            await self._ensure_column(db, "users", "police_sharing_at", "TEXT")
+            # Police handling of an alert
+            for col, ddl in (("station_id", "TEXT"), ("routed_at", "REAL"), ("police_status", "TEXT"),
+                             ("police_unit", "TEXT"), ("police_eta_min", "INTEGER"), ("police_note", "TEXT"),
+                             ("police_updated_at", "TEXT"), ("erss_incident_id", "TEXT"),
+                             ("control_escalated", "INTEGER NOT NULL DEFAULT 0"), ("fir_consent_at", "TEXT")):
+                await self._ensure_column(db, "alerts", col, ddl)
             await self._ensure_column(db, "walks", "vehicle_plate", "TEXT")
 
             await db.commit()
@@ -598,6 +660,7 @@ class ShieldStorage:
             await db.execute("DELETE FROM ws_tickets WHERE user_id = ?", (user_id,))
             await db.execute("DELETE FROM refresh_tokens WHERE user_id = ?", (user_id,))
             await db.execute("DELETE FROM checkin_timers WHERE user_id = ?", (user_id,))
+            await db.execute("DELETE FROM erss_outbox WHERE alert_id IN (SELECT id FROM alerts WHERE user_id = ?)", (user_id,))
             await db.execute("DELETE FROM share_links WHERE target_id IN (SELECT id FROM alerts WHERE user_id = ?) OR target_id IN (SELECT id FROM walks WHERE user_id = ?)", (user_id, user_id))
             await db.execute("DELETE FROM alerts WHERE user_id = ?", (user_id,))
             await db.execute("DELETE FROM guardians WHERE user_id = ?", (user_id,))
@@ -870,7 +933,7 @@ class ShieldStorage:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute(
                 """
-                SELECT a.*, u.name as walker_name, u.phone_number as walker_phone
+                SELECT a.*, u.name as walker_name, u.phone_number as walker_phone, u.police_sharing as police_sharing
                 FROM alerts a
                 LEFT JOIN users u ON u.id = a.user_id
                 WHERE a.state IN ('ACTIVE', 'PRE_ALERT', 'ESCALATED', 'ACKNOWLEDGED')
@@ -1115,6 +1178,177 @@ class ShieldStorage:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute("SELECT * FROM checkin_timers WHERE state = 'ACTIVE' AND due_at <= ?", (time.time(),))
             return [dict(r) for r in await cursor.fetchall()]
+
+    # Generic, allow-listed field updates
+    _USER_FIELDS = {"station_id", "totp_secret", "totp_last_step", "police_sharing", "police_sharing_at"}
+    _ALERT_FIELDS = {"station_id", "routed_at", "police_status", "police_unit", "police_eta_min", "police_note",
+                     "police_updated_at", "erss_incident_id", "control_escalated", "fir_consent_at"}
+
+    async def _update_fields(self, table: str, allowed: set, row_id: str, fields: Dict[str, Any]) -> None:
+        cols = [k for k in fields if k in allowed]  # column names come from the allow-list, never from input
+        if not cols:
+            return
+        async with self._connect() as db:
+            await db.execute(f"UPDATE {table} SET {', '.join(f'{c} = ?' for c in cols)} WHERE id = ?",
+                             (*[fields[c] for c in cols], row_id))
+            await db.commit()
+
+    async def update_user_fields(self, user_id: str, **fields: Any) -> None:
+        await self._update_fields("users", self._USER_FIELDS, user_id, fields)
+
+    async def update_alert_fields(self, alert_id: str, **fields: Any) -> None:
+        await self._update_fields("alerts", self._ALERT_FIELDS, alert_id, fields)
+
+    async def add_alert_event(self, alert_id: str, event_type: str, actor: str, meta: Optional[Dict[str, Any]] = None) -> None:
+        async with self._connect() as db:
+            await db.execute("INSERT INTO alert_events (id, alert_id, event_type, actor, meta) VALUES (?, ?, ?, ?, ?)",
+                             (str(uuid.uuid4()), alert_id, event_type, actor, json.dumps(meta or {})))
+            await db.commit()
+
+    async def get_user_alerts(self, user_id: str, limit: int = 20) -> List[Dict[str, Any]]:
+        async with self._connect() as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT id, trigger_type, state, started_at, resolved_at, police_status, fir_consent_at, station_id "
+                "FROM alerts WHERE user_id = ? ORDER BY started_at DESC LIMIT ?", (user_id, limit))
+            return [dict(r) for r in await cursor.fetchall()]
+
+    async def get_alerts_awaiting_police(self, older_than_seconds: int) -> List[Dict[str, Any]]:
+        """Open alerts routed to a station that no officer has acknowledged in time (control-room escalation input)."""
+        async with self._connect() as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                """SELECT * FROM alerts WHERE state IN ('ACTIVE','ESCALATED','ACKNOWLEDGED') AND routed_at IS NOT NULL
+                   AND routed_at <= ? AND control_escalated = 0 AND (police_status IS NULL OR police_status = 'ROUTED')""",
+                (time.time() - older_than_seconds,))
+            return [dict(r) for r in await cursor.fetchall()]
+
+    # Police stations and patrol units
+    async def add_station(self, name: str, lat: float, lon: float, phone: Optional[str] = None,
+                          district: Optional[str] = None, station_id: Optional[str] = None) -> Dict[str, Any]:
+        sid = station_id or str(uuid.uuid4())
+        async with self._connect() as db:
+            await db.execute(
+                "INSERT OR REPLACE INTO police_stations (id, name, lat, lon, phone, district) VALUES (?, ?, ?, ?, ?, ?)",
+                (sid, name, lat, lon, phone, district))
+            await db.commit()
+        return {"id": sid, "name": name, "lat": lat, "lon": lon, "phone": phone, "district": district}
+
+    async def list_stations(self) -> List[Dict[str, Any]]:
+        async with self._connect() as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute("SELECT * FROM police_stations ORDER BY name")
+            return [dict(r) for r in await cursor.fetchall()]
+
+    async def get_station(self, station_id: str) -> Optional[Dict[str, Any]]:
+        async with self._connect() as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute("SELECT * FROM police_stations WHERE id = ?", (station_id,))
+            row = await cursor.fetchone()
+            return dict(row) if row else None
+
+    async def upsert_patrol_unit(self, call_sign: str, station_id: Optional[str], lat: float, lon: float, available: bool) -> None:
+        async with self._connect() as db:
+            await db.execute(
+                """INSERT INTO patrol_units (call_sign, station_id, lat, lon, available, updated_at) VALUES (?, ?, ?, ?, ?, ?)
+                   ON CONFLICT(call_sign) DO UPDATE SET station_id = excluded.station_id, lat = excluded.lat,
+                   lon = excluded.lon, available = excluded.available, updated_at = excluded.updated_at""",
+                (call_sign, station_id, lat, lon, int(available), time.time()))
+            await db.commit()
+
+    async def get_patrol_unit(self, call_sign: str) -> Optional[Dict[str, Any]]:
+        async with self._connect() as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute("SELECT * FROM patrol_units WHERE call_sign = ?", (call_sign,))
+            row = await cursor.fetchone()
+            return dict(row) if row else None
+
+    async def list_fresh_patrol_units(self, max_age_seconds: int) -> List[Dict[str, Any]]:
+        async with self._connect() as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute("SELECT * FROM patrol_units WHERE available = 1 AND updated_at >= ?",
+                                      (time.time() - max_age_seconds,))
+            return [dict(r) for r in await cursor.fetchall()]
+
+    # Police hotspots
+    async def add_hotspots(self, spots: List[Dict[str, Any]], source: str, ttl_seconds: int) -> int:
+        now = time.time()
+        async with self._connect() as db:
+            await db.execute("DELETE FROM police_hotspots WHERE expires_at < ?", (now,))
+            await db.executemany(
+                "INSERT INTO police_hotspots (id, lat, lon, radius_m, weight, period, source, expires_at, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                [(str(uuid.uuid4()), h["lat"], h["lon"], h["radius_m"], h["weight"], h["period"], source, now + ttl_seconds, now)
+                 for h in spots])
+            await db.commit()
+        return len(spots)
+
+    async def get_active_hotspots(self) -> List[Dict[str, Any]]:
+        async with self._connect() as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute("SELECT * FROM police_hotspots WHERE expires_at >= ?", (time.time(),))
+            return [dict(r) for r in await cursor.fetchall()]
+
+    # 112 / ERSS outbox
+    async def enqueue_erss(self, alert_id: str, payload: Dict[str, Any]) -> None:
+        async with self._connect() as db:
+            cursor = await db.execute("SELECT 1 FROM erss_outbox WHERE alert_id = ?", (alert_id,))
+            if await cursor.fetchone():
+                return  # one 112 hand-off per alert
+            await db.execute("INSERT INTO erss_outbox (id, alert_id, payload, next_attempt_at, created_at) VALUES (?, ?, ?, ?, ?)",
+                             (str(uuid.uuid4()), alert_id, json.dumps(payload), time.time(), time.time()))
+            await db.commit()
+
+    async def due_erss(self, limit: int = 20) -> List[Dict[str, Any]]:
+        async with self._connect() as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT * FROM erss_outbox WHERE state = 'PENDING' AND next_attempt_at <= ? ORDER BY created_at LIMIT ?",
+                (time.time(), limit))
+            return [dict(r) for r in await cursor.fetchall()]
+
+    async def mark_erss(self, outbox_id: str, state: str, error: Optional[str] = None, retry_in: float = 0) -> None:
+        async with self._connect() as db:
+            await db.execute(
+                "UPDATE erss_outbox SET state = ?, attempts = attempts + 1, last_error = ?, next_attempt_at = ? WHERE id = ?",
+                (state, error, time.time() + retry_in, outbox_id))
+            await db.commit()
+
+    async def get_erss_for_alert(self, alert_id: str) -> Optional[Dict[str, Any]]:
+        async with self._connect() as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute("SELECT id, state, attempts, last_error FROM erss_outbox WHERE alert_id = ?", (alert_id,))
+            row = await cursor.fetchone()
+            return dict(row) if row else None
+
+    async def find_alert_by_erss_incident(self, incident_id: str) -> Optional[Dict[str, Any]]:
+        async with self._connect() as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute("SELECT id FROM alerts WHERE erss_incident_id = ?", (incident_id,))
+            row = await cursor.fetchone()
+        return await self.get_alert_by_id(row["id"]) if row else None
+
+    # Retention (LEG-2): location trails and evidence are kept only as long as needed
+    async def purge_expired(self, days: int, audit_days: int = 365) -> Dict[str, Any]:
+        """
+        Deletes location points of alerts/walks closed more than `days` ago, and evidence of such
+        alerts unless the walker consented to share it for an FIR (then it is on legal hold).
+        Returns counts and the alert ids whose evidence files must be removed from disk.
+        """
+        cutoff = datetime.fromtimestamp(time.time() - days * 86400, timezone.utc).replace(tzinfo=None).isoformat()
+        async with self._connect() as db:
+            closed = "SELECT id FROM alerts WHERE resolved_at IS NOT NULL AND resolved_at <= ?"
+            cursor = await db.execute(f"SELECT id FROM alerts WHERE resolved_at IS NOT NULL AND resolved_at <= ? AND fir_consent_at IS NULL", (cutoff,))
+            evidence_alerts = [r[0] for r in await cursor.fetchall()]
+            c1 = await db.execute(f"DELETE FROM alert_points WHERE alert_id IN ({closed})", (cutoff,))
+            c2 = await db.execute("DELETE FROM walk_points WHERE walk_id IN (SELECT id FROM walks WHERE end_time IS NOT NULL AND end_time <= ?)", (cutoff,))
+            c3 = await db.execute(
+                "DELETE FROM evidence_chunks WHERE alert_id IN "
+                "(SELECT id FROM alerts WHERE resolved_at IS NOT NULL AND resolved_at <= ? AND fir_consent_at IS NULL)", (cutoff,))
+            c4 = await db.execute("DELETE FROM audit_log WHERE ts < datetime('now', ?)", (f"-{int(audit_days)} days",))
+            await db.commit()
+        return {"alert_points": c1.rowcount, "walk_points": c2.rowcount, "evidence_chunks": c3.rowcount,
+                "audit_log": c4.rowcount, "evidence_alert_ids": evidence_alerts}
 
     # Guardian tracking links
     async def create_share_link(self, kind: str, target_id: str, ttl_seconds: int) -> str:

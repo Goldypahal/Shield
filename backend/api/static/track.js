@@ -53,6 +53,12 @@
       ? ` ${String(data.trigger || "SOS").replace(/_/g, " ").toLowerCase()}${last ? ` · last update ${timeAgo(last.ts)}` : ""}`
       : ` to ${data.destination || "destination"}${data.vehicle_plate ? ` · vehicle ${data.vehicle_plate}` : ""}${last ? ` · ${timeAgo(last.ts)}` : ""}`;
     setStatus(isAlert ? "SOS" : "Live", !isAlert, detail);
+    if (data.police) {
+      const p = document.createElement("div");
+      p.style.cssText = "margin-top:6px;font-weight:600;color:#1D4ED8";
+      p.textContent = "Police: " + data.police;
+      statusEl.appendChild(p);
+    }
 
     layer.clearLayers();
     const pts = [];

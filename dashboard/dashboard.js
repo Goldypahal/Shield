@@ -72,6 +72,9 @@ function showLogin(message) {
         <label style="font-size:12px">Password</label>
         <input id="login-password" required type="password" autocomplete="current-password"
           style="width:100%;margin:4px 0 12px;padding:9px;border-radius:6px;border:1px solid #334460;background:#182232;color:white">
+        <label style="font-size:12px">Authenticator code</label>
+        <input id="login-totp" required inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="6 digits"
+          style="width:100%;margin:4px 0 12px;padding:9px;border-radius:6px;border:1px solid #334460;background:#182232;color:white">
         <p id="login-error" style="color:#F87171;font-size:12px;min-height:16px;margin:0 0 10px"></p>
         <button class="btn-primary" type="submit" style="width:100%">Sign in</button>
         <p style="margin:14px 0 0;font-size:11px;color:#64748B">Exploring without a backend? Open <a href="?demo=1" style="color:#FBBF24">demo mode</a>.</p>
@@ -93,13 +96,15 @@ async function submitLogin(event) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         email: document.getElementById("login-email").value.trim(),
-        password: document.getElementById("login-password").value
+        password: document.getElementById("login-password").value,
+        totp_code: document.getElementById("login-totp").value.trim()
       })
     });
     if (!res.ok) {
       errorEl.textContent = res.status === 429 ? "Too many attempts. Try again later."
-        : res.status === 422 ? "Enter a valid email address and your password."
-        : "Incorrect email or password.";
+        : res.status === 422 ? "Enter a valid email, your password and the 6-digit code."
+        : res.status === 403 ? "Two-factor sign-in is not set up for this account. Ask an administrator."
+        : "Incorrect email, password or code.";
       return;
     }
     const data = await res.json();
@@ -287,6 +292,9 @@ function renderIncidents(incidents) {
         </div>
         <h4>${esc(inc.walker_name || "Unnamed walker")}</h4>
         <p>Location: ${num(inc.lat, 4)}, ${num(inc.lon, 4)} &bull; State: <strong>${esc(inc.state)}</strong></p>
+        <p style="font-size:12px;color:#94A3B8">${inc.control_room ? '<strong style="color:#F97316">CONTROL ROOM</strong>' : esc(inc.station || "")}
+          &bull; Police: <strong>${esc(POLICE_LABELS[inc.police_status] || inc.police_status || "not routed")}</strong>${inc.police_unit ? " (" + esc(inc.police_unit) + ")" : ""}
+          ${inc.incident_112 ? "&bull; 112 #" + esc(inc.incident_112) : ""}</p>
         <div class="card-actions">
           <button class="btn-card-action" data-action="review" data-id="${esc(inc.id)}">Review & Assign</button>
           <button class="btn-card-action" data-action="ack" data-id="${esc(inc.id)}">Acknowledge</button>
@@ -352,6 +360,21 @@ function openIncidentModal(alertId) {
       <p><strong>GPS Coordinates:</strong> ${num(inc.lat, 6)}, ${num(inc.lon, 6)}${inc.lat === 0 && inc.lon === 0 ? " (location unavailable at trigger)" : ""}</p>
       <p><strong>Escalation State:</strong> <span style="color:#10B981;font-weight:bold">${esc(inc.state)}</span></p>
       <p><strong>Trail points:</strong> ${esc(inc.trail_count ?? 0)}</p>
+      <p><strong>Station:</strong> ${inc.control_room ? "Control room" : esc(inc.station || "-")} &bull;
+         <strong>Police:</strong> ${esc(POLICE_LABELS[inc.police_status] || inc.police_status || "not routed")}
+         ${inc.incident_112 ? "&bull; <strong>112 incident:</strong> " + esc(inc.incident_112) : ""}</p>
+    </div>
+    <div style="display:flex;gap:8px">
+      <input id="modal-unit" maxlength="40" placeholder="Unit call sign (e.g. PCR-12)" value="${esc(inc.police_unit || "")}"
+        style="flex:2;background:#182232;border:1px solid #334460;border-radius:6px;padding:8px;color:white">
+      <input id="modal-eta" type="number" min="0" max="180" placeholder="ETA min"
+        style="flex:1;background:#182232;border:1px solid #334460;border-radius:6px;padding:8px;color:white">
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn-card-action" data-status="UNIT_ASSIGNED">Unit assigned</button>
+      <button class="btn-card-action" data-status="EN_ROUTE">En route</button>
+      <button class="btn-card-action" data-status="ON_SCENE">On scene</button>
+      <button class="btn-card-action" data-status="CLOSED_SAFE">Closed (safe)</button>
     </div>
     <div>
       <label style="display:block;font-size:11px;font-weight:bold;margin-bottom:4px">DISPATCH / RESOLUTION NOTES:</label>
@@ -361,8 +384,12 @@ function openIncidentModal(alertId) {
   const footer = document.getElementById("modal-footer");
   footer.innerHTML = `
     <button class="btn-secondary" id="modal-pdf"><i data-lucide="file-text"></i> Download Incident PDF (REP-1)</button>
+    <button class="btn-secondary" id="modal-fir"><i data-lucide="folder-down"></i> FIR evidence bundle</button>
     <button class="btn-primary" id="modal-resolve"><i data-lucide="check-circle"></i> Resolve Incident</button>`;
   footer.querySelector("#modal-pdf").addEventListener("click", () => downloadIncidentPDF(inc.id));
+  footer.querySelector("#modal-fir").addEventListener("click", () => downloadFirBundle(inc.id));
+  document.getElementById("modal-body").querySelectorAll("[data-status]").forEach((b) =>
+    b.addEventListener("click", () => sendPoliceStatus(inc.id, b.getAttribute("data-status"))));
   footer.querySelector("#modal-resolve").addEventListener("click", () => resolveIncident(inc.id));
 
   document.getElementById("incident-modal").classList.add("open");
@@ -373,13 +400,42 @@ function closeIncidentModal() {
   document.getElementById("incident-modal").classList.remove("open");
 }
 
+const POLICE_LABELS = {
+  ROUTED: "awaiting station", ACKNOWLEDGED: "acknowledged", UNIT_ASSIGNED: "unit assigned",
+  EN_ROUTE: "en route", ON_SCENE: "on scene", CLOSED_SAFE: "closed (safe)",
+};
+
 async function acknowledgeAlert(alertId) {
+  await sendPoliceStatus(alertId, "ACKNOWLEDGED");
+}
+
+/** Dispatcher progress; the walker and their guardians see it in the app and on the tracking link. */
+async function sendPoliceStatus(alertId, status) {
   if (DEMO_MODE) { alert("Demo mode: nothing was sent."); return; }
-  const res = await api(`/alerts/${encodeURIComponent(alertId)}/ack`, {
-    method: "POST", body: JSON.stringify({ action: "ACKNOWLEDGE" })
-  });
-  alert(res.ok ? "Alert acknowledged." : `Acknowledge failed (${res.status}).`);
+  const unit = document.getElementById("modal-unit")?.value.trim() || undefined;
+  const etaRaw = document.getElementById("modal-eta")?.value.trim();
+  const body = { status, unit, eta_minutes: etaRaw ? Number(etaRaw) : undefined,
+                 note: document.getElementById("modal-notes")?.value.trim() || undefined };
+  if ((status === "UNIT_ASSIGNED" || status === "EN_ROUTE") && !unit) { alert("Enter the unit call sign first."); return; }
+  const res = await api(`/dashboard/alerts/${encodeURIComponent(alertId)}/police-status`, { method: "POST", body: JSON.stringify(body) });
+  if (!res.ok) { alert(`Update failed (${res.status}).`); return; }
+  if (status === "CLOSED_SAFE") closeIncidentModal();
   loadDashboardData();
+}
+
+async function downloadFirBundle(alertId) {
+  if (DEMO_MODE) { alert("Demo mode: needs the backend."); return; }
+  const res = await api(`/dashboard/alerts/${encodeURIComponent(alertId)}/fir-bundle`);
+  if (res.status === 403) { alert("The walker has not consented to share this incident for an FIR."); return; }
+  if (!res.ok) { alert(`Export failed (${res.status}).`); return; }
+  const blob = new Blob([JSON.stringify(await res.json(), null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `shield_fir_${String(alertId).substring(0, 8)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(a.href);
 }
 
 async function resolveIncident(alertId) {

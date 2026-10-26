@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse
 from rate_limiter import limiter
 from db.storage import storage
 from alert_states import OPEN
+import police
 
 router = APIRouter(tags=["Guardian tracking link"])
 
@@ -65,6 +66,8 @@ async def tracking_data(request: Request, token: str):
             "open": is_open,
             "state": alert["state"],
             "trigger": alert["trigger_type"],
+            # Dispatcher progress, e.g. "Police unit PCR-12 is on the way, about 6 min away"
+            "police": police.status_text(alert) if is_open else None,
             "started_at": alert.get("started_at"),
             "start": {"lat": alert["lat"], "lon": alert["lon"]} if is_open and (alert["lat"] or alert["lon"]) else None,
             "trail": [{"lat": p["lat"], "lon": p["lon"], "ts": p.get("ts")} for p in trail],

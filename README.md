@@ -56,7 +56,7 @@ Docker: `cd SHIELD/backend && cp .env.example .env && docker compose up --build`
 ## Tests
 
 ```powershell
-npm run test:api        # 65 API tests: SRS acceptance criteria, security regressions, features
+npm run test:api        # 79 API tests: SRS acceptance criteria, security, features, police integration
 npm run test:routing    # 54 routing-engine tests
 npm run typecheck       # app TypeScript
 ```
@@ -93,6 +93,13 @@ CI (`.github/workflows/ci.yml`) runs all of these plus a Docker build on every p
   weak bcrypt cost, or without SMTP for email verification.
 * **Guardian links**: SMS tracking links (`/track/<token>`) are random, hashed,
   read-only and expire after 24 h; location stops showing once the alert closes.
+
+* **Police**: only for users who opted in at sign-up (changeable in Settings).
+  Alerts go to the nearest police station (and the 112 system once approved);
+  officers see only their station's alerts (or the control room's), sign in with
+  an authenticator-app code, and lose access to the location when the alert
+  closes unless the user shares that incident for an FIR. Details and the draft
+  data-sharing agreement: [`docs/POLICE_DATA_SHARING.md`](docs/POLICE_DATA_SHARING.md).
 
 Security testing (bandit, pip-audit, npm audit, OWASP ZAP) and what was fixed:
 [`docs/SECURITY_AUDIT.md`](docs/SECURITY_AUDIT.md).

@@ -98,6 +98,28 @@ MAIL_FROM = os.environ.get("MAIL_FROM", "") or SMTP_USERNAME
 if IS_PROD and not (SMTP_HOST and MAIL_FROM):
     raise RuntimeError("SMTP_HOST and MAIL_FROM must be set in production: accounts are verified by email")
 
+# Police integration.
+# ERSS_MODE: off | mock | http. "http" posts alerts to the state's 112 ERSS endpoint once the
+# integration is approved; "mock" records a fake incident id so the whole flow can be tested.
+ERSS_MODE = os.environ.get("ERSS_MODE", "mock" if not IS_PROD else "off").lower()
+ERSS_ENDPOINT = os.environ.get("ERSS_ENDPOINT", "")
+ERSS_API_KEY = os.environ.get("ERSS_API_KEY", "")
+ERSS_WEBHOOK_SECRET = os.environ.get("ERSS_WEBHOOK_SECRET", "")  # HMAC key for status callbacks from ERSS
+if ERSS_MODE not in ("off", "mock", "http"):
+    raise RuntimeError("ERSS_MODE must be off, mock or http")
+if IS_PROD and ERSS_MODE == "mock":
+    raise RuntimeError("ERSS_MODE=mock is for development only")
+if ERSS_MODE == "http" and not (ERSS_ENDPOINT.startswith("https://") and ERSS_API_KEY and len(ERSS_WEBHOOK_SECRET) >= 32):
+    raise RuntimeError("ERSS_MODE=http needs an https ERSS_ENDPOINT, ERSS_API_KEY and a 32+ char ERSS_WEBHOOK_SECRET")
+# Alerts no station officer acknowledges within this window go to the control room
+POLICE_ACK_SECONDS = int(os.environ.get("POLICE_ACK_SECONDS", "180"))
+# Staff must use a TOTP second factor; can be relaxed only outside production
+STAFF_TOTP_REQUIRED = _flag("STAFF_TOTP_REQUIRED", default=True)
+if IS_PROD and not STAFF_TOTP_REQUIRED:
+    raise RuntimeError("STAFF_TOTP_REQUIRED cannot be disabled in production")
+# Location trails and unconsented evidence of closed alerts are deleted after this many days
+RETENTION_DAYS = int(os.environ.get("RETENTION_DAYS", "90"))
+
 # Secret for pseudonymising user ids in community data (ratings, hazards); derived from the JWT secret if unset.
 PSEUDONYM_SECRET = os.environ.get("PSEUDONYM_SECRET", "") or JWT_SECRET
 

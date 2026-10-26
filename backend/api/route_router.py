@@ -43,10 +43,26 @@ HAZARD_PENALTY = {"blocked_path": 0.35, "harassment_spot": 0.25, "unsafe_zone": 
 MAX_HAZARD_PENALTY = 0.45
 
 
-async def hazard_penalties() -> tuple[dict[int, float], list[dict]]:
-    """Per-edge added risk from recent reports, and the reports that were used."""
+POLICE_HOTSPOT_SCALE = 0.4  # a weight-1 police hotspot adds up to 0.4 risk
+
+
+def _period(hour: float) -> str:
+    h = hour % 24
+    return "day" if 6 <= h < 18 else "evening" if 18 <= h < 22 else "night"
+
+
+async def hazard_penalties(hour: float | None = None) -> tuple[dict[int, float], list[dict]]:
+    """
+    Per-edge added risk from recent community reports and from police hotspots active at
+    this hour; returns the community reports that were used (hotspot locations stay private).
+    """
     penalties: dict[int, float] = {}
     used = []
+    for spot in await storage.get_active_hotspots():
+        if spot["period"] != "any" and (hour is None or spot["period"] != _period(hour)):
+            continue
+        for k in TRICITY_ROUTER.g.edges_near(spot["lat"], spot["lon"], spot["radius_m"]):
+            penalties[k] = min(MAX_HAZARD_PENALTY, penalties.get(k, 0.0) + POLICE_HOTSPOT_SCALE * spot["weight"])
     for h in await storage.get_recent_hazards(HAZARD_DAYS):
         edges = TRICITY_ROUTER.g.edges_near(h["lat"], h["lon"], HAZARD_RADIUS_M)
         if not edges:
@@ -133,7 +149,7 @@ async def plan_tricity_route(
     pt_orig = _resolve_point(origin)
     pt_dest = _resolve_point(destination)
 
-    penalties, reports = await hazard_penalties()
+    penalties, reports = await hazard_penalties(hour)
     try:
         plan = TRICITY_ROUTER.plan(pt_orig, pt_dest, hour=hour, mode=mode, max_detour=max_detour,
                                    edge_penalties=penalties)
@@ -197,7 +213,7 @@ async def safety_heatmap(
         return hit[1]
 
     g = TRICITY_ROUTER.g
-    penalties, _ = await hazard_penalties()
+    penalties, _ = await hazard_penalties(hour)
     model = RiskModel(g, mode, edge_penalties=penalties)
     cells: dict[tuple[int, int], list[float]] = {}
     for k, e in enumerate(g.edges):

@@ -1,5 +1,8 @@
 import base64
 import hashlib
+import hmac
+import os
+import struct
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -56,6 +59,35 @@ def verify_account_password(password: str, hashed: str | None) -> bool:
 
 
 DUMMY_HASH = get_password_hash("shield-dummy-password-for-timing")
+
+
+# --- TOTP second factor for staff (RFC 6238: 30 s steps, 6 digits, HMAC-SHA1; works with any authenticator app)
+TOTP_STEP = 30
+
+
+def new_totp_secret() -> str:
+    return base64.b32encode(os.urandom(20)).decode("ascii").rstrip("=")
+
+
+def totp_uri(secret: str, account: str, issuer: str = "SHIELD Command") -> str:
+    from urllib.parse import quote
+    return f"otpauth://totp/{quote(issuer)}:{quote(account)}?secret={secret}&issuer={quote(issuer)}&period={TOTP_STEP}&digits=6"
+
+
+def totp_code(secret: str, step: int) -> str:
+    key = base64.b32decode(secret + "=" * (-len(secret) % 8))
+    digest = hmac.new(key, struct.pack(">Q", step), hashlib.sha1).digest()
+    offset = digest[-1] & 0x0F
+    return f"{(struct.unpack('>I', digest[offset:offset + 4])[0] & 0x7FFFFFFF) % 1_000_000:06d}"
+
+
+def match_totp(secret: str, code: str, last_step: int, now: float | None = None) -> int | None:
+    """The matching time step (current one, or one either side for clock drift), never one already used."""
+    current = int((now if now is not None else time.time()) // TOTP_STEP)
+    for step in (current - 1, current, current + 1):
+        if step > last_step and hmac.compare_digest(totp_code(secret, step), code):
+            return step
+    return None
 
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
@@ -116,7 +148,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     if not user or payload.get("ver", 0) != (user.get("token_version") or 0):
         raise HTTPException(status_code=401, detail="Session is no longer valid.", headers={"WWW-Authenticate": "Bearer"})
     return {"user_id": user["id"], "phone_number": user["phone_number"], "role": user.get("role") or "walker",
-            "phone_verified": bool(user.get("phone_verified"))}
+            "phone_verified": bool(user.get("phone_verified")), "station_id": user.get("station_id")}
 
 
 def require_roles(*roles: str):

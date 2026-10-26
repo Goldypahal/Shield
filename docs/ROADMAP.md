@@ -79,7 +79,16 @@ campus, and make `/routes/compare` use the Tricity engine there.
 * **DPDP Act compliance**: recorded consent, data export, scheduled retention, grievance contact.
 * **Dashboard**: safe-stops endpoint and layer, assignment queue, SSO for police and campus security.
 
-## Police integration (proposal)
+## Police integration
+
+Built (October 2026): consent at sign-up and in Settings, nearest-station routing,
+112/ERSS outbox with retries (mock mode until approved), 3-minute control-room
+escalation, station-scoped staff accounts with TOTP and full audit logging,
+dispatcher status shown to walker and guardians, FIR consent and evidence bundle,
+police hotspots in route scoring, k-anonymous hazard and dark-street exports,
+helplines and nearest police in the app, retention job, and a draft agreement
+(`docs/POLICE_DATA_SHARING.md`). Still needed from the police side: ERSS API
+approval and schema, the official station list with boundaries, and a signed agreement.
 
 Goal: an alert reaches the nearest police unit with verified, actionable data, and
 police get nothing they should not (no bulk tracking of citizens).

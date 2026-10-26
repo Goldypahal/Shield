@@ -57,7 +57,15 @@ async def _send_sms(to: str, body: str) -> bool:
 
 
 async def notify_guardians_of_alert(alert: dict) -> List[str]:
-    """Messages every guardian of the alert's owner; returns the masked numbers attempted."""
+    """
+    Messages every guardian of the alert's owner; returns the masked numbers attempted.
+    Also hands the alert to the police (nearest station, 112) when the walker consented.
+    """
+    import police  # local import: police imports live/alert_states, which must not load before the app
+    try:
+        await police.dispatch(alert)
+    except Exception:
+        logger.exception("Police dispatch failed for alert %s", alert.get("id"))
     walker = await storage.get_user_by_id(alert["user_id"])
     guardians = await storage.get_guardians(alert["user_id"])
     if not walker or not guardians:

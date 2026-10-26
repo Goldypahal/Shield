@@ -23,6 +23,8 @@ import { ChangePinModal, ChangePasswordModal } from '../components/settings/Secu
 import PinPromptModal from '../components/common/PinPromptModal';
 import { DiscreetSettings, getDiscreetSettings, updateDiscreetSettings } from '../services/discreetSettings';
 import { getActiveSos, stopActiveSos } from '../services/sosSession';
+import { getPoliceSharing, setPoliceSharing } from '../services/policeService';
+import IncidentHistoryModal from '../components/settings/IncidentHistoryModal';
 
 interface SettingsScreenProps {
   onNavigateToContacts?: () => void;
@@ -47,6 +49,8 @@ export default function SettingsScreen({
   const [discreet, setDiscreet] = useState<DiscreetSettings>({ calculatorDisguise: false, shakeToSos: false });
   const [sosRunning, setSosRunning] = useState(false);
   const [stopPinVisible, setStopPinVisible] = useState(false);
+  const [policeSharing, setPoliceSharingState] = useState<boolean | null>(null);
+  const [historyVisible, setHistoryVisible] = useState(false);
 
   useEffect(() => {
     async function checkContacts() {
@@ -61,7 +65,16 @@ export default function SettingsScreen({
     AuthService.ensureSession().then(setSession);
     getDiscreetSettings().then(setDiscreet);
     getActiveSos().then((a) => setSosRunning(!!a));
+    getPoliceSharing().then(setPoliceSharingState).catch(() => undefined);
   }, []);
+
+  const togglePoliceSharing = async () => {
+    try {
+      setPoliceSharingState(await setPoliceSharing(!policeSharing));
+    } catch (e) {
+      RNAlert.alert('Not changed', authErrorMessage(e));
+    }
+  };
 
   const toggleDiscreet = async (key: keyof DiscreetSettings) => {
     const next = await updateDiscreetSettings({ [key]: !discreet[key] });
@@ -166,6 +179,22 @@ export default function SettingsScreen({
           )}
 
           <SettingsRow
+            iconName="shield-outline"
+            title="Alert the police on SOS"
+            subtitle={policeSharing === null ? 'Loading…' : policeSharing
+              ? 'On: nearest station and 112 get your SOS while it is open'
+              : 'Off: only your guardians are alerted'}
+            onPress={togglePoliceSharing}
+          />
+
+          <SettingsRow
+            iconName="document-text-outline"
+            title="Incident history"
+            subtitle="Past alerts; share one with police for an FIR"
+            onPress={() => setHistoryVisible(true)}
+          />
+
+          <SettingsRow
             iconName="calculator-outline"
             title="Disguise as calculator"
             subtitle={discreet.calculatorDisguise ? 'On: PIN + "=" opens SHIELD' : 'Off'}
@@ -246,6 +275,8 @@ export default function SettingsScreen({
         }}
         onDismiss={() => setStopPinVisible(false)}
       />
+
+      <IncidentHistoryModal visible={historyVisible} onClose={() => setHistoryVisible(false)} />
 
       <ChangePinModal
         visible={pinModalVisible}

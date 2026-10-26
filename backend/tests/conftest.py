@@ -40,7 +40,8 @@ def new_email() -> str:
     return f"walker{os.getpid()}.{next(_phones)}@example.com"
 
 
-def register(client, email, phone, pin="1234", duress_pin="9999", name="Test Walker", password=PASSWORD):
+def register(client, email, phone, pin="1234", duress_pin="9999", name="Test Walker", password=PASSWORD,
+             police_sharing=True):
     """Full sign-up through the API: codes for email and phone, then the account with password and PINs."""
     codes = client.post("/api/v1/auth/register/start", json={"email": email, "phone_number": phone})
     assert codes.status_code == 200, codes.text
@@ -48,7 +49,7 @@ def register(client, email, phone, pin="1234", duress_pin="9999", name="Test Wal
     return client.post("/api/v1/auth/register/complete", json={
         "email": email, "email_code": body["demo_email_code"], "phone_number": phone,
         "phone_code": body["demo_phone_code"], "password": password, "name": name,
-        "pin": pin, "duress_pin": duress_pin})
+        "pin": pin, "duress_pin": duress_pin, "police_sharing": police_sharing})
 
 
 @pytest.fixture(scope="session")
@@ -58,23 +59,37 @@ def client():
 
 
 class Account:
-    def __init__(self, client, pin="1234", duress_pin="9999", name="Test Walker", role=None):
+    def __init__(self, client, pin="1234", duress_pin="9999", name="Test Walker", role=None,
+                 station_id=None, police_sharing=True):
         self.client = client
         self.phone = new_phone()
         self.email = new_email()
         self.password = PASSWORD
         self.pin = pin
         self.duress_pin = duress_pin
-        res = register(client, self.email, self.phone, pin, duress_pin, name)
+        res = register(client, self.email, self.phone, pin, duress_pin, name, police_sharing=police_sharing)
         assert res.status_code == 201, res.text
         self.user_id = res.json()["user_id"]
         self.refresh_token = res.json()["refresh_token"]
+        self.totp_secret = None
         if role:
+            from security import new_totp_secret
+            self.totp_secret = new_totp_secret()
             client.portal.call(storage.set_user_role, self.user_id, role)
+            client.portal.call(lambda: storage.update_user_fields(self.user_id, totp_secret=self.totp_secret,
+                                                                  station_id=station_id))
         self.token = self._login()
 
+    def totp(self, offset_steps=0):
+        import time
+        from security import TOTP_STEP, totp_code
+        return totp_code(self.totp_secret, int(time.time() // TOTP_STEP) + offset_steps)
+
     def _login(self):
-        res = self.client.post("/api/v1/auth/login", json={"email": self.email, "password": self.password})
+        body = {"email": self.email, "password": self.password}
+        if self.totp_secret:
+            body["totp_code"] = self.totp()
+        res = self.client.post("/api/v1/auth/login", json=body)
         assert res.status_code == 200, res.text
         return res.json()["access_token"]
 

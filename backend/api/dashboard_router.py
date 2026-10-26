@@ -5,6 +5,7 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from alert_states import transition
+from access import alert_for_viewer, staff_can_see
 from security import require_roles, STAFF_ROLES
 from rate_limiter import limiter
 from db.storage import storage
@@ -36,7 +37,8 @@ async def get_active_alerts(
     actor = f"{current_user['role']}:{current_user['user_id']}"
     await storage.log_audit(actor=actor, action="VIEW_ACTIVE_ALERTS", target="alerts/active")
 
-    alerts = await storage.get_active_alerts()
+    alerts = [a for a in await storage.get_active_alerts() if await staff_can_see(current_user, a)]
+    stations = {s["id"]: s for s in await storage.list_stations()}
     enriched = []
     for a in alerts:
         # Fetch trail if walk_id attached
@@ -54,7 +56,12 @@ async def get_active_alerts(
             "lon": a["lon"],
             "started_at": a["started_at"],
             "trail": trail[-20:], # Last 20 GPS points
-            "trail_count": len(trail)
+            "trail_count": len(trail),
+            "station": stations.get(a.get("station_id"), {}).get("name"),
+            "police_status": a.get("police_status"),
+            "police_unit": a.get("police_unit"),
+            "incident_112": a.get("erss_incident_id"),
+            "control_room": bool(a.get("control_escalated")) or not a.get("station_id"),
         })
 
     return {
@@ -77,9 +84,7 @@ async def assign_responder(
     """
     # The audit actor is the authenticated account, never a name from the request body
     actor = f"{current_user['role']}:{current_user['user_id']}"
-    alert = await storage.get_alert_by_id(alert_id)
-    if not alert:
-        raise HTTPException(status_code=404, detail="Alert not found")
+    alert = await alert_for_viewer(current_user, alert_id)  # station scoping and consent, same as every view
     await storage.log_audit(actor=actor, action="ASSIGN_ALERT", target=f"alert/{alert_id}")
 
     meta = {"assigned_to": payload.responder_name, "responder_id": payload.responder_id, "notes": payload.notes}
@@ -99,9 +104,7 @@ async def resolve_alert(
     Resolves alert with formal incident notes.
     """
     actor = f"{current_user['role']}:{current_user['user_id']}"
-    alert = await storage.get_alert_by_id(alert_id)
-    if not alert:
-        raise HTTPException(status_code=404, detail="Alert not found")
+    alert = await alert_for_viewer(current_user, alert_id)  # station scoping and consent, same as every view
     await storage.log_audit(actor=actor, action="RESOLVE_ALERT", target=f"alert/{alert_id}")
 
     meta = {"resolved_by": payload.responder_name, "resolution_notes": payload.resolution_notes}

@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "SHIELD",
+    "slug": "shield",
+    "version": "1.1.0",
+    "orientation": "portrait",
+    "scheme": "shield",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "ios": {
+      "bundleIdentifier": "com.heimdal.shield",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "SHIELD uses your location to plan safer routes, share your walk with guardians and send it with an SOS.",
+        "NSMicrophoneUsageDescription": "SHIELD can record audio evidence during an SOS.",
+        "NSMotionUsageDescription": "SHIELD can start an SOS when you shake your phone, if you turn that on."
+      }
+    },
+    "android": {
+      "package": "com.heimdal.shield",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "VIBRATE",
+        "RECORD_AUDIO"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "SHIELD uses your location to plan safer routes, share your walk with guardians and send it with an SOS."
+        }
+      ],
+      "expo-secure-store",
+      "expo-font"
+    ]
+  }
+}

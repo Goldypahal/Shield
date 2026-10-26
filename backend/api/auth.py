@@ -1,5 +1,6 @@
 import os
 import re
+from datetime import datetime, timezone
 import secrets
 import time
 import uuid
@@ -19,7 +20,9 @@ from security import (
     get_current_user,
     get_password_hash,
     hash_account_password,
+    is_staff,
     issue_token_pair,
+    match_totp,
     verify_account_password,
 )
 from rate_limiter import limiter
@@ -79,11 +82,14 @@ class RegisterCompletePayload(EmailField):
     pin: str = Field(pattern=PIN_PATTERN)
     duress_pin: Optional[str] = Field(default=None, pattern=PIN_PATTERN)
     device_id: Optional[str] = Field(default=None, max_length=128)
+    # Explicit choice (DPDP Act): send SOS alerts to the police (nearest station, 112) or only to guardians
+    police_sharing: bool
 
 
 class LoginPayload(EmailField):
     password: str = Field(min_length=1, max_length=128)
     device_id: Optional[str] = Field(default=None, max_length=128)
+    totp_code: Optional[str] = Field(default=None, pattern=r"^\d{6}$")  # staff second factor
 
 
 class RefreshTokenPayload(BaseModel):
@@ -198,6 +204,9 @@ async def register_complete(request: Request, payload: RegisterCompletePayload):
         device_id=payload.device_id, email=payload.email,
         password_hash=hash_account_password(payload.password), verified=True,
     )
+    if payload.police_sharing:
+        await storage.update_user_fields(user["id"], police_sharing=1,
+                                         police_sharing_at=datetime.now(timezone.utc).isoformat())
     return await _session_response(user)
 
 
@@ -213,6 +222,16 @@ async def login(request: Request, credentials: LoginPayload, background: Backgro
         raise HTTPException(status_code=429, detail="Too many failed attempts. Try again later or reset your password.")
 
     ok = verify_account_password(credentials.password, user.get("password_hash"))
+    totp_needed = ok and is_staff(user) and settings.STAFF_TOTP_REQUIRED
+    if totp_needed:
+        if not user.get("totp_secret"):
+            raise HTTPException(status_code=403, detail="Two-factor sign-in is not set up for this staff account. Ask an administrator.")
+        # The dashboard sends the code together with the password, so a missing or wrong code gets the
+        # same answer as a wrong password and counts toward the lockout: no "password was right" oracle
+        step = match_totp(user["totp_secret"], credentials.totp_code, user.get("totp_last_step") or 0)             if credentials.totp_code else None
+        ok = step is not None
+        if ok:
+            await storage.update_user_fields(user["id"], totp_last_step=step)
     await storage.record_login_result(user["id"], success=ok, max_failures=MAX_FAILED_LOGINS, lock_seconds=LOCK_SECONDS)
     if not ok:
         if (user.get("failed_logins") or 0) + 1 == MAX_FAILED_LOGINS:
@@ -295,7 +314,7 @@ async def reset_password(request: Request, payload: ResetPasswordPayload, backgr
 async def get_my_profile(request: Request, current_user: dict = Depends(get_current_user)):
     user = await storage.get_user_by_id(current_user["user_id"])
     hidden = ("hashed_pin", "duress_pin", "password_hash", "failed_logins", "locked_until",
-              "token_version", "pin_failures", "pin_locked_until")
+              "token_version", "pin_failures", "pin_locked_until", "totp_secret", "totp_last_step")
     profile = {k: v for k, v in user.items() if k not in hidden}
     profile["has_duress_pin"] = bool(user.get("duress_pin"))
     return profile

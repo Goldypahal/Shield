@@ -27,6 +27,8 @@ import { getActiveSos, setActiveSos, stopActiveSos, sendSilentSos } from '../ser
 import { getDiscreetSettings, onDiscreetSettingsChange } from '../services/discreetSettings';
 import { useShakeTrigger } from '../hooks/useShakeTrigger';
 import CheckinCard from '../components/home/CheckinCard';
+import HelplinesCard from '../components/home/HelplinesCard';
+import { alertPolice } from '../services/policeService';
 import AuthService from '../services/authService';
 import ContactService from '../services/contactService';
 import OfflineQueue from '../services/OfflineQueue';
@@ -57,6 +59,16 @@ export default function HomeScreen({
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [shakeEnabled, setShakeEnabled] = useState(false);
   const [silentHint, setSilentHint] = useState(false);
+  const [policeText, setPoliceText] = useState<string | null>(null);
+
+  // While an SOS is active, show what the police are doing (sent to station, unit on the way, ...)
+  useEffect(() => {
+    if (!activeSosId) return setPoliceText(null);
+    const refresh = () => alertPolice(activeSosId).then((p) => setPoliceText(p?.text ?? null)).catch(() => undefined);
+    refresh();
+    const t = setInterval(refresh, 15000);
+    return () => clearInterval(t);
+  }, [activeSosId]);
 
   const [toolModalVisible, setToolModalVisible] = useState(false);
   const [toolModalContent, setToolModalContent] = useState<{
@@ -244,6 +256,11 @@ export default function HomeScreen({
               <Text style={[typography.bodySmall, { color: colors.textPrimary }]}>
                 Guardians are alerted and following your location. Only your SOS PIN can stop this.
               </Text>
+              {policeText && (
+                <Text style={[typography.bodySmall, { color: colors.brandAccent, fontWeight: '700', marginTop: 4 }]}>
+                  Police: {policeText}
+                </Text>
+              )}
             </View>
             <TouchableOpacity
               style={[styles.activeSosStop, { backgroundColor: colors.sosPrimary }]}
@@ -270,6 +287,8 @@ export default function HomeScreen({
             </TouchableOpacity>
           </>
         )}
+
+        <HelplinesCard />
 
         <CheckinCard />
 

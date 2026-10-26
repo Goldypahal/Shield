@@ -49,6 +49,8 @@ export default function AuthScreen() {
   const [duressPin, setDuressPin] = useState('');
   const [resetCode, setResetCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
+  // Must be an explicit choice (no pre-selected answer): consent under India's DPDP Act
+  const [policeSharing, setPoliceSharing] = useState<boolean | null>(null);
 
   const switchMode = (m: Mode) => {
     setMode(m);
@@ -109,11 +111,12 @@ export default function AuthScreen() {
     if (pin !== pin2) return setError('The SOS PINs do not match.');
     if (!PIN_RE.test(duressPin)) return setError('Your duress PIN must be 4-6 digits.');
     if (duressPin === pin) return setError('The duress PIN must be different from your SOS PIN.');
+    if (policeSharing === null) return setError('Choose whether your SOS alerts should also go to the police.');
     run(async () => {
       try {
         await AuthService.registerComplete({
           name: name.trim(), email: normEmail, phone: phone.trim(), password,
-          emailCode, phoneCode, pin, duressPin,
+          emailCode, phoneCode, pin, duressPin, policeSharing,
         });
       } catch (e) {
         // Codes are single use: a rejected attempt means asking for new ones
@@ -255,6 +258,32 @@ export default function AuthScreen() {
                 {field('Duress PIN (different, 4-6 digits)', duressPin, (v) => setDuressPin(v.replace(/\D/g, '')), {
                   secure: true, keyboard: 'number-pad', max: 6, auto: 'off',
                   hint: 'You can change both later in Settings after confirming a code sent to your email.' })}
+                <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 4, marginBottom: 6 }]}>
+                  When you raise an SOS, should SHIELD also alert the police?
+                </Text>
+                {([true, false] as const).map((v) => (
+                  <TouchableOpacity
+                    key={String(v)}
+                    onPress={() => setPoliceSharing(v)}
+                    style={[styles.choice, { borderColor: policeSharing === v ? colors.brandAccent : colors.border, borderRadius: radii.lg }]}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: policeSharing === v }}
+                    accessibilityLabel={v ? 'Yes, alert the police too' : 'No, only my guardians'}
+                  >
+                    <Ionicons name={policeSharing === v ? 'radio-button-on' : 'radio-button-off'} size={18}
+                      color={policeSharing === v ? colors.brandAccent : colors.textMuted} />
+                    <View style={{ flex: 1, marginLeft: 8 }}>
+                      <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '600' }]}>
+                        {v ? 'Yes, alert the police too (recommended)' : 'No, only my guardians'}
+                      </Text>
+                      <Text style={[typography.caption, { color: colors.textSecondary }]}>
+                        {v
+                          ? 'Your name, phone and live location go to the nearest police station and 112 only while an SOS is open. Change any time in Settings.'
+                          : 'Only your guardians are alerted. You can turn police alerts on later in Settings.'}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
                 {primary('Create account', createAccount)}
                 {link('Back', () => setStep('codes'))}
               </>
@@ -310,4 +339,5 @@ const styles = StyleSheet.create({
   link: { alignItems: 'center', paddingVertical: 10 },
   explain: { flexDirection: 'row', padding: 12, marginBottom: 14 },
   notice: { flexDirection: 'row', alignItems: 'center', padding: 10, borderRadius: 10, marginTop: 12 },
+  choice: { flexDirection: 'row', alignItems: 'flex-start', borderWidth: 1.5, padding: 10, marginBottom: 8 },
 });

@@ -35,7 +35,8 @@ def test_signup_codes_are_random_single_use_and_required(client):
     from conftest import PASSWORD, new_email, new_phone
     email, phone = new_email(), new_phone()
     codes = client.post("/api/v1/auth/register/start", json={"email": email, "phone_number": phone}).json()
-    body = {"email": email, "phone_number": phone, "password": PASSWORD, "name": "N", "pin": "2468"}
+    body = {"email": email, "phone_number": phone, "password": PASSWORD, "name": "N", "pin": "2468",
+            "police_sharing": False}
     wrong = f"{(int(codes['demo_email_code']) + 1) % 10**6:06d}"
     assert client.post("/api/v1/auth/register/complete", json={
         **body, "email_code": wrong, "phone_code": codes["demo_phone_code"]}).status_code == 400

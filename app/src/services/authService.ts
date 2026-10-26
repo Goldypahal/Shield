@@ -32,6 +32,8 @@ export type RegisterDetails = {
   phoneCode: string;
   pin: string;
   duressPin: string;
+  /** Explicit consent to send SOS alerts to the police as well as guardians. */
+  policeSharing: boolean;
 };
 
 const REQUEST_TIMEOUT_MS = 8000;
@@ -74,6 +76,7 @@ class AuthService {
     const res = await axios.post<AuthResponse>(`${this.API_URL}/auth/register/complete`, {
       email: d.email, email_code: d.emailCode, phone_number: d.phone, phone_code: d.phoneCode,
       password: d.password, name: d.name, pin: d.pin, duress_pin: d.duressPin || undefined,
+      police_sharing: d.policeSharing,
     }, { timeout: REQUEST_TIMEOUT_MS });
     await rememberPins(d.pin, d.duressPin);
     return this.startSession(res.data);
