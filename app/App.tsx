@@ -11,7 +11,7 @@ import { sendSilentSos } from './src/services/sosSession';
 import AuthService, { Session } from './src/services/authService';
 import HomeScreen from './src/screens/HomeScreen';
 import LiveLocationScreen from './src/screens/LiveLocationScreen';
-import SafeRoutesScreen from './src/screens/SafeRoutesScreen';
+import NavigationScreen from './src/screens/NavigationScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import ContactsScreen from './src/screens/ContactsScreen';
 import FakeCallScreen from './src/screens/FakeCallScreen';
@@ -302,12 +302,7 @@ function HeimdalMain() {
         )}
 
         {!hidden && !signedOut && session && currentView === 'SafeRoutes' && (
-          <SafeRoutesScreen
-            onBack={() => {
-              setCurrentView('Home');
-              setActiveTab('Home');
-            }}
-          />
+          <NavigationScreen />
         )}
 
         {!hidden && !signedOut && session && currentView === 'Settings' && (
