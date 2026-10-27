@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme';
 import {
   requestWebMicrophonePermission,
+  stopWebMicrophone,
   onVoiceListeningChange,
   onHeardPhrase,
   isVoiceListening,
@@ -26,6 +27,7 @@ export default function VoiceEmergencyBanner() {
   const [isMatch, setIsMatch] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
+  const [micError, setMicError] = useState<string | null>(null);
 
   // Pulse animation for the listening radar dot
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -50,6 +52,9 @@ export default function VoiceEmergencyBanner() {
   useEffect(() => {
     const unsubStatus = onVoiceListeningChange((active) => {
       setListening(active);
+      if (!active) {
+        setAudioLevel(0);
+      }
     });
 
     const unsubPhrase = onHeardPhrase((phrase, matched) => {
@@ -66,32 +71,66 @@ export default function VoiceEmergencyBanner() {
     };
   }, []);
 
-  // Web Audio decibel level meter if stream is active
+  // Web Audio decibel level meter & 90% Shouting Trigger
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
     let animId: number;
     const stream = getActiveMediaStream();
-    if (!stream) return;
+    if (!stream || !listening) {
+      setAudioLevel(0);
+      return;
+    }
 
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioCtx) return;
 
     try {
       const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => undefined);
+      }
       const source = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.3;
       source.connect(analyser);
       const data = new Uint8Array(analyser.frequencyBinCount);
 
+      // Time-based, not frame-based: a shout must stay at 90%+ for SHOUT_MS (brief dips allowed).
+      // 2 frames (~33 ms) let a clap, cough or slammed door start a PIN-locked SOS with siren.
+      const SHOUT_MS = 1500;
+      const DIP_MS = 300;
+      let loudSince: number | null = null;
+      let lastLoud = 0;
       const loop = () => {
         analyser.getByteFrequencyData(data);
         let sum = 0;
+        let peak = 0;
         for (let i = 0; i < data.length; i++) {
           sum += data[i];
+          if (data[i] > peak) peak = data[i];
         }
         const avg = sum / data.length;
-        setAudioLevel(Math.min(100, Math.round((avg / 128) * 100)));
+        // Combines voice frequency energy and volume peak for snappy, realistic meter response
+        const level = Math.min(100, Math.round(((avg * 1.2 + peak * 0.8) / 180) * 100));
+        setAudioLevel(level);
+
+        // DIRECT TRIGGER: When shouting reaches 90% or more on the meter
+        const now = Date.now();
+        if (level >= 90) {
+          lastLoud = now;
+          if (loudSince === null) loudSince = now;
+          if (now - loudSince >= SHOUT_MS) {
+            console.log(`[VoiceEmergencyBanner] Shouting at ${level}% for ${SHOUT_MS} ms -> TRIGGERING SOS`);
+            setIsMatch(true);
+            setHeardText(`🚨 Loud Shout (${level}%) Detected!`);
+            triggerVoiceSos('shouting_meter_90_percent');
+            loudSince = null;
+          }
+        } else if (loudSince !== null && now - lastLoud > DIP_MS) {
+          loudSince = null;
+        }
+
         animId = requestAnimationFrame(loop);
       };
       loop();
@@ -105,30 +144,31 @@ export default function VoiceEmergencyBanner() {
     } catch (_) {}
   }, [listening]);
 
-  const [micError, setMicError] = useState<string | null>(null);
-
-  const handleActivateMic = async () => {
-    setRequesting(true);
-    setMicError(null);
-    try {
-      const res = await requestWebMicrophonePermission();
-      if (res.granted) {
-        setListening(true);
-        setMicError(null);
-      } else {
-        setMicError(res.error || 'Permission was denied. Please allow microphone in your browser settings.');
+  const handleToggleMic = async () => {
+    if (listening) {
+      // User tapped to turn OFF
+      stopWebMicrophone();
+      setListening(false);
+      setAudioLevel(0);
+      setMicError(null);
+    } else {
+      // User tapped to turn ON
+      setRequesting(true);
+      setMicError(null);
+      try {
+        const res = await requestWebMicrophonePermission();
+        if (res.granted) {
+          setListening(true);
+          setMicError(null);
+        } else {
+          setMicError(res.error || 'Permission was denied. Please allow microphone access.');
+        }
+      } catch (err: any) {
+        setMicError(err?.message || 'Failed to start microphone.');
+      } finally {
+        setRequesting(false);
       }
-    } catch (err: any) {
-      setMicError(err?.message || 'Failed to request microphone.');
-    } finally {
-      setRequesting(false);
     }
-  };
-
-  const handleTestVoiceSos = () => {
-    setHeardText('help me');
-    setIsMatch(true);
-    triggerVoiceSos('voice_banner_test');
   };
 
   return (
@@ -141,49 +181,62 @@ export default function VoiceEmergencyBanner() {
               ? '#064E3B'
               : '#ECFDF5'
             : isDark
-            ? '#450A0A'
-            : '#FEF2F2',
+            ? '#1E293B'
+            : '#F8FAFC',
           borderColor: listening
             ? isDark
               ? '#059669'
               : '#10B981'
             : isDark
-            ? '#DC2626'
-            : '#F87171',
+            ? '#334155'
+            : '#CBD5E1',
           borderRadius: radii.lg,
         },
       ]}
     >
-      {/* Top Header Row */}
+      {/* Top Header Row with ON / OFF Toggle */}
       <View style={styles.topRow}>
         <View style={styles.statusBadge}>
           <Animated.View
             style={[
               styles.indicatorDot,
               {
-                backgroundColor: listening ? '#10B981' : '#EF4444',
-                transform: [{ scale: pulseAnim }],
+                backgroundColor: listening ? '#10B981' : '#94A3B8',
+                transform: [{ scale: listening ? pulseAnim : 1 }],
               },
             ]}
           />
           <Text
             style={[
               styles.statusTitle,
-              { color: listening ? '#059669' : '#DC2626' },
+              { color: listening ? '#059669' : '#64748B' },
             ]}
           >
-            {listening ? 'VOICE SOS IS ACTIVE' : 'VOICE SOS NEEDS PERMISSION'}
+            {listening ? 'VOICE & SCREAM DETECTOR (RECORDING)' : 'VOICE LISTENER (OFF)'}
           </Text>
         </View>
 
+        {/* Dedicated ON / OFF Toggle Button */}
         <TouchableOpacity
-          onPress={handleTestVoiceSos}
-          style={styles.testBtn}
+          onPress={handleToggleMic}
+          disabled={requesting}
+          style={[
+            styles.toggleSwitchBtn,
+            {
+              backgroundColor: listening ? '#10B981' : '#64748B',
+            },
+          ]}
           accessibilityRole="button"
-          accessibilityLabel="Test Voice SOS"
+          accessibilityLabel={`Voice listening is ${listening ? 'ON' : 'OFF'}. Tap to toggle.`}
         >
-          <Ionicons name="flash" size={13} color="#FFFFFF" />
-          <Text style={styles.testBtnText}>Test Voice</Text>
+          <Ionicons
+            name={listening ? 'mic' : 'mic-off'}
+            size={14}
+            color="#FFFFFF"
+          />
+          <Text style={styles.toggleSwitchText}>
+            {requesting ? 'CONNECTING...' : listening ? 'ON (LISTENING)' : 'OFF (PAUSED)'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -193,37 +246,36 @@ export default function VoiceEmergencyBanner() {
           <Text
             style={[
               styles.promptText,
-              { color: isDark ? '#FCA5A5' : '#991B1B' },
+              { color: isDark ? '#CBD5E1' : '#475569' },
             ]}
           >
-            Saying <Text style={styles.boldWord}>"HELP"</Text> or{' '}
-            <Text style={styles.boldWord}>"SAVE ME"</Text> triggers automatic
-            emergency SOS. Tap below to allow microphone access on your browser.
+            Voice listener is currently <Text style={{ fontWeight: '800' }}>OFF</Text>. Turn it ON to continuously listen for{' '}
+            <Text style={{ fontWeight: '800', color: '#DC2626' }}>"Help"</Text>,{' '}
+            <Text style={{ fontWeight: '800', color: '#DC2626' }}>"Save Me"</Text>,{' '}
+            <Text style={{ fontWeight: '800', color: '#DC2626' }}>"Bachao"</Text>, or{' '}
+            <Text style={{ fontWeight: '800', color: '#DC2626' }}>Shouting (≥90%)</Text>.
           </Text>
 
           <TouchableOpacity
-            onPress={handleActivateMic}
+            onPress={handleToggleMic}
             disabled={requesting}
-            style={[
-              styles.activateButton,
-              { backgroundColor: requesting ? '#9CA3AF' : '#DC2626' },
-            ]}
+            style={styles.bigTurnOnBtn}
             accessibilityRole="button"
-            accessibilityLabel="Tap to Enable Microphone"
+            accessibilityLabel="Start Voice Recording"
           >
-            <Ionicons name="mic" size={20} color="#FFFFFF" />
-            <Text style={styles.activateButtonText}>
-              {requesting ? 'Requesting Permission...' : '🎙️ Tap to Enable Voice Listening'}
+            <Ionicons name="radio-button-on" size={20} color="#FFFFFF" />
+            <Text style={styles.bigTurnOnText}>
+              {requesting ? 'Starting Microphone...' : '▶️ Tap to START Voice Listening'}
             </Text>
           </TouchableOpacity>
 
           {micError && (
-            <View style={{ backgroundColor: '#FEE2E2', borderColor: '#EF4444', borderWidth: 1, padding: 8, borderRadius: 8, marginTop: 4 }}>
-              <Text style={{ color: '#DC2626', fontSize: 12, fontWeight: '600' }}>
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>
                 ⚠️ {micError}
               </Text>
-              <Text style={{ color: '#7F1D1D', fontSize: 11, marginTop: 2 }}>
-                Check if your browser's site settings have microphone blocked (tap the tune/lock icon next to the URL).
+              <Text style={styles.errorSubtext}>
+                Check if your browser's site settings have microphone blocked (tap the lock icon in the URL bar).
               </Text>
             </View>
           )}
@@ -236,7 +288,7 @@ export default function VoiceEmergencyBanner() {
               { color: isDark ? '#A7F3D0' : '#065F46' },
             ]}
           >
-            Listening continuously for distress commands.
+            Listening actively. Say distress words or shout into phone:
           </Text>
 
           {/* Real-time transcript box */}
@@ -261,7 +313,7 @@ export default function VoiceEmergencyBanner() {
             <View style={{ flex: 1 }}>
               <Text style={styles.transcriptLabel}>
                 {isMatch
-                  ? 'EMERGENCY PHRASE DETECTED!'
+                  ? 'EMERGENCY TRIGGER DETECTED!'
                   : 'Live Microphone Hearing:'}
               </Text>
               <Text
@@ -279,50 +331,50 @@ export default function VoiceEmergencyBanner() {
               >
                 {heardText
                   ? `"${heardText}"`
-                  : 'Speak now: "Help", "Save me", "Emergency", or shout...'}
+                  : 'Say "Help", "Save me", "Bachao", or shout loudly...'}
               </Text>
             </View>
           </View>
 
-          {/* Volume meter bar */}
+          {/* Volume meter bar with 90% threshold line */}
           <View style={styles.meterContainer}>
-            <Text
-              style={[
-                styles.meterLabel,
-                { color: isDark ? '#6EE7B7' : '#047857' },
-              ]}
-            >
-              Mic Level:
-            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 }}>
+              <Text
+                style={[
+                  styles.meterLabel,
+                  { color: isDark ? '#6EE7B7' : '#047857' },
+                ]}
+              >
+                Audio Meter: {audioLevel}%
+              </Text>
+              <Text style={[styles.thresholdLabel, { color: audioLevel >= 90 ? '#DC2626' : '#D97706' }]}>
+                {audioLevel >= 90 ? '🚨 SHOUT TRIGGERED (≥90%)' : 'Shout Trigger: 90%'}
+              </Text>
+            </View>
+
             <View style={styles.meterTrack}>
               <View
                 style={[
                   styles.meterFill,
                   {
-                    width: `${Math.max(5, audioLevel)}%`,
+                    width: `${Math.max(2, audioLevel)}%`,
                     backgroundColor:
-                      audioLevel > 50
-                        ? '#EF4444'
-                        : audioLevel > 25
+                      audioLevel >= 90
+                        ? '#DC2626'
+                        : audioLevel >= 60
                         ? '#F59E0B'
                         : '#10B981',
                   },
                 ]}
               />
+              {/* 90% threshold notch */}
+              <View style={styles.thresholdNotch} />
             </View>
-            <Text
-              style={[
-                styles.meterPercent,
-                { color: isDark ? '#6EE7B7' : '#047857' },
-              ]}
-            >
-              {audioLevel}%
-            </Text>
           </View>
 
-          {/* Keyword tags */}
+          {/* Trigger Tags */}
           <View style={styles.tagsRow}>
-            {['"Help"', '"Save me"', '"Emergency"', '"Bachao"', 'Shouting'].map(
+            {['"Help me"', '"Save me"', '"Bachao"', '"Emergency"', 'Shout (≥90%)'].map(
               (tag) => (
                 <View key={tag} style={styles.tagPill}>
                   <Text style={styles.tagText}>{tag}</Text>
@@ -330,6 +382,19 @@ export default function VoiceEmergencyBanner() {
               )
             )}
           </View>
+
+          {/* Turn Off Button */}
+          <TouchableOpacity
+            onPress={handleToggleMic}
+            style={styles.stopRecordingBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Stop Voice Recording"
+          >
+            <Ionicons name="stop-circle" size={16} color="#DC2626" />
+            <Text style={styles.stopRecordingText}>
+              Turn OFF Microphone
+            </Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -358,6 +423,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flex: 1,
   },
   indicatorDot: {
     width: 10,
@@ -367,21 +433,21 @@ const styles = StyleSheet.create({
   statusTitle: {
     fontSize: 11,
     fontWeight: '800',
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
   },
-  testBtn: {
+  toggleSwitchBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#DC2626',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    gap: 5,
   },
-  testBtnText: {
+  toggleSwitchText: {
     color: '#FFFFFF',
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   unauthorizedBox: {
     marginTop: 4,
@@ -392,24 +458,39 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontWeight: '500',
   },
-  boldWord: {
-    fontWeight: '800',
-    color: '#DC2626',
-  },
-  activateButton: {
+  bigTurnOnBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#059669',
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
     gap: 8,
     elevation: 2,
   },
-  activateButtonText: {
+  bigTurnOnText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
+  },
+  errorBox: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#EF4444',
+    borderWidth: 1,
+    padding: 8,
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  errorText: {
+    color: '#DC2626',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  errorSubtext: {
+    color: '#7F1D1D',
+    fontSize: 11,
+    marginTop: 2,
   },
   activeBox: {
     marginTop: 2,
@@ -441,31 +522,34 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   meterContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 2,
+    marginTop: 4,
   },
   meterLabel: {
     fontSize: 11,
     fontWeight: '700',
   },
+  thresholdLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
   meterTrack: {
-    flex: 1,
-    height: 6,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 3,
+    height: 10,
+    backgroundColor: 'rgba(0,0,0,0.12)',
+    borderRadius: 5,
     overflow: 'hidden',
+    position: 'relative',
   },
   meterFill: {
     height: '100%',
-    borderRadius: 3,
+    borderRadius: 5,
   },
-  meterPercent: {
-    fontSize: 11,
-    fontWeight: '700',
-    width: 32,
-    textAlign: 'right',
+  thresholdNotch: {
+    position: 'absolute',
+    left: '90%',
+    top: 0,
+    bottom: 0,
+    width: 2,
+    backgroundColor: '#DC2626',
   },
   tagsRow: {
     flexDirection: 'row',
@@ -476,12 +560,29 @@ const styles = StyleSheet.create({
   tagPill: {
     backgroundColor: 'rgba(16, 185, 129, 0.15)',
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 3,
     borderRadius: 8,
   },
   tagText: {
     fontSize: 11,
     fontWeight: '700',
     color: '#059669',
+  },
+  stopRecordingBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FEE2E2',
+    borderColor: '#FCA5A5',
+    borderWidth: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+    marginTop: 4,
+  },
+  stopRecordingText: {
+    color: '#DC2626',
+    fontSize: 12,
+    fontWeight: '700',
   },
 });
