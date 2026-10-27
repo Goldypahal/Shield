@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Modal, Pressable, Image } fro
 import { Ionicons } from '@expo/vector-icons';
 import { TOKENS } from '../../theme/tokens';
 import { useJourneyStore } from '../../store/useJourneyStore';
-import { triggerVoiceSos, getVoiceSupportInfo } from '../../services/voiceTriggerHelper';
+import { triggerVoiceSos, getVoiceSupportInfo, requestWebMicrophonePermission } from '../../services/voiceTriggerHelper';
 
 interface HeimdalHeaderProps {
   onProfilePress?: () => void;
@@ -13,7 +13,17 @@ export default function HeimdalHeader({ onProfilePress }: HeimdalHeaderProps) {
   const { unreadNotifications, markNotificationsRead } = useJourneyStore();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const [micState, setMicState] = useState<'idle' | 'granted' | 'denied'>('idle');
   const voiceInfo = getVoiceSupportInfo();
+
+  const handleRequestMic = async () => {
+    const res = await requestWebMicrophonePermission();
+    if (res.granted) {
+      setMicState('granted');
+    } else {
+      setMicState('denied');
+    }
+  };
 
   const notifications = [
     {
@@ -119,12 +129,30 @@ export default function HeimdalHeader({ onProfilePress }: HeimdalHeaderProps) {
               <Text style={styles.instructionTitle}>How Voice Trigger Works:</Text>
               <Text style={styles.instructionLine}>• 🗣️ <Text style={{ fontWeight: '700' }}>Keyword Trigger:</Text> Say <Text style={{ color: '#EF4444', fontWeight: '700' }}>"Help Me"</Text> or <Text style={{ color: '#EF4444', fontWeight: '700' }}>"Emergency"</Text>.</Text>
               <Text style={styles.instructionLine}>• 🔊 <Text style={{ fontWeight: '700' }}>Scream Classifier:</Text> Sustained loud audio / scream for 2-3 seconds.</Text>
-              {!voiceInfo.isSecureContext && (
-                <Text style={[styles.instructionLine, { color: '#B45309', marginTop: 4 }]}>
-                  ⚠️ Mobile browsers disable microphone on plain HTTP. Use HTTPS, localhost, or the instant test button below.
-                </Text>
-              )}
             </View>
+
+            {/* Direct User-Gesture Microphone Permission Request Button */}
+            {micState !== 'granted' && (
+              <TouchableOpacity
+                style={styles.enableMicBtn}
+                onPress={handleRequestMic}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="mic" size={18} color="#FFFFFF" />
+                <Text style={styles.enableMicBtnText}>
+                  {micState === 'denied'
+                    ? '⚠️ Tap to Retry Microphone Permission'
+                    : '🎙️ Tap to Allow Microphone Access'}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {micState === 'granted' && (
+              <View style={styles.micGrantedBox}>
+                <Ionicons name="checkmark-circle" size={18} color="#10B981" />
+                <Text style={styles.micGrantedText}>Microphone is Live & Listening!</Text>
+              </View>
+            )}
 
             <TouchableOpacity
               style={styles.testVoiceBtn}
@@ -402,10 +430,43 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     gap: 8,
+    marginTop: 8,
   },
   testVoiceBtnText: {
     color: '#FFFFFF',
     fontSize: 14,
+    fontWeight: '700',
+  },
+  enableMicBtn: {
+    backgroundColor: '#2563EB',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+    marginBottom: 6,
+  },
+  enableMicBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  micGrantedBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#ECFDF5',
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  micGrantedText: {
+    color: '#065F46',
+    fontSize: 13,
     fontWeight: '700',
   },
 });

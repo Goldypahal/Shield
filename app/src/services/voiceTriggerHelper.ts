@@ -85,3 +85,24 @@ export function getVoiceSupportInfo(): VoiceSupportInfo {
     summary,
   };
 }
+
+/**
+ * Explicit user-gesture trigger to request browser microphone permission.
+ * Browsers block automatic permission requests unless triggered by a direct user tap.
+ */
+export async function requestWebMicrophonePermission(): Promise<{ granted: boolean; error?: string }> {
+  if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+    return { granted: false, error: 'navigator.mediaDevices.getUserMedia is not available in this context' };
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Keep active or release
+    stream.getTracks().forEach((track) => track.stop());
+    console.log('[Microphone] Permission successfully granted by user gesture!');
+    return { granted: true };
+  } catch (err: any) {
+    console.warn('[Microphone] User denied or browser error:', err);
+    return { granted: false, error: err?.message || String(err) };
+  }
+}
