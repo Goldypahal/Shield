@@ -71,8 +71,6 @@
           }
         }
       ],
-      "react-native-fast-tflite",
-      "@maplibre/maplibre-react-native",
       [
         "munim-bluetooth",
         {
