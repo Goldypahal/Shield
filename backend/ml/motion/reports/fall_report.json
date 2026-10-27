@@ -1,0 +1,20 @@
+{
+  "threshold": 0.9813265800476074,
+  "test_window_auc": 0.9996303915977478,
+  "test_window_sensitivity": 0.972972972972973,
+  "test_window_specificity": 0.999117387466902,
+  "test_stream": {
+    "falls": 222,
+    "falls_caught": 218,
+    "sensitivity": 0.9819819819819819,
+    "false_alarms": 12,
+    "adl_hours": 2.621194444444441,
+    "false_alarms_per_hour": 4.578065555355389
+  },
+  "test_people": ["mobi_1", "mobi_13", "mobi_15", "mobi_19", "mobi_20", "mobi_5",
+                  "sis_SA04", "sis_SA21", "sis_SE05", "sis_SE07", "sis_SE10", "sis_SE13"],
+  "recordings": {"mobi": [342, 288], "sis": [2707, 1798]},
+  "tflite_max_diff": 1.5497207641601562e-06,
+  "tflite_kb": 152,
+  "note": "Trained on Kaggle (MobiFall v2.0 + SisFall) with train_fall.py; recordings are [adl, fall]. Stream numbers are for the model alone, before the app's 3 s stillness check."
+}

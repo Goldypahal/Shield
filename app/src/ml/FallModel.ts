@@ -13,7 +13,7 @@ import { FALL_CHANNELS, FALL_WINDOW } from './FallDetector';
  * `available` stays false and fall detection is off; there is no rule-based fallback,
  * because the old impact-threshold rules alarmed on ordinary jumps and sit-downs.
  */
-export const FALL_MODEL_THRESHOLD = 0.98; // from fall_report.json "threshold" (0.981)
+export const FALL_MODEL_THRESHOLD = 0.98; // backend/ml/motion/reports/fall_report.json "threshold" (0.981)
 
 class FallModel {
   private model: TfliteModel | null = null;
