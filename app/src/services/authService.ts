@@ -123,7 +123,7 @@ class AuthService {
   async checkPinOnline(pin: string, lat?: number, lon?: number): Promise<boolean> {
     const client = await this.getAuthenticatedClient();
     try {
-      await client.post('/api/v1/me/pin/check', { pin, lat, lon });
+      await client.post('/api/v1/me/pin/check', { pin, lat, lon }, { timeout: 30000 }); // a sleeping server needs time
       return true;
     } catch (e) {
       if ((e as AxiosError).response?.status === 403) return false;

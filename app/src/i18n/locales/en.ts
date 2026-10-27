@@ -15,7 +15,7 @@ const en = {
   // Bottom navigation
   'tab.home': 'Home',
   'tab.routes': 'Routes',
-  'tab.safety': 'Safety Info',
+  'tab.helplines': 'Helplines',
   'tab.profile': 'Profile',
 
   // Language
@@ -42,8 +42,8 @@ const en = {
   'home.actions.title': 'Quick actions',
   'home.actions.route': 'Safe route',
   'home.actions.routeSub': 'Plan a safer way',
-  'home.actions.share': 'Share location',
-  'home.actions.shareSub': 'Live with guardians',
+  'home.actions.guardians': 'Guardians',
+  'home.actions.guardiansSub': 'Who gets your SOS',
   'home.actions.fakeCall': 'Fake call',
   'home.actions.fakeCallSub': 'Get out of a situation',
   'home.actions.checkin': 'Check-in timer',
@@ -124,6 +124,8 @@ const en = {
   // Scream SOS overlay
   'sos.screamDetected': 'SCREAM DETECTED',
   'sos.fallDetected': 'FALL DETECTED',
+  'sos.shakeDetected': 'SHAKE DETECTED',
+  'sos.voiceDetected': 'HELP CALL DETECTED',
   'sos.title': 'Emergency SOS',
   'sos.countdown': 'Sharing your live location with your parents and the police in {seconds} seconds.',
   'sos.imSafe': "I'M SAFE – ENTER PIN",

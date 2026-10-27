@@ -99,8 +99,13 @@ async def fetch_osm(parts: List[List[LatLon]]) -> Optional[Dict[str, Any]]:
     if hit and time.time() - hit[0] < CACHE_TTL_S:
         return hit[1]
     query = overpass_query(parts)
-    async with httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=8.0), headers={"User-Agent": USER_AGENT}) as client:
+    # Budget for all mirrors together: the app waits at most 90 s for a whole plan, and
+    # safety data is optional (routes are still returned without it).
+    deadline = time.time() + 35.0
+    async with httpx.AsyncClient(timeout=httpx.Timeout(20.0, connect=6.0), headers={"User-Agent": USER_AGENT}) as client:
         for url in OVERPASS_URLS:
+            if time.time() > deadline:
+                break
             try:
                 res = await client.post(url, data={"data": query})
                 if res.status_code == 200:

@@ -9,6 +9,7 @@ import {
   onVoiceSosTrigger,
   getVoiceSupportInfo,
   reportHeardPhrase,
+  isEmergencyPhrase,
   getActiveMediaStream,
   onActiveMediaStream,
 } from '../services/voiceTriggerHelper';
@@ -60,17 +61,6 @@ export interface ScreamTriggerOptions {
   background?: boolean;
 }
 
-const EMERGENCY_KEYWORDS = [
-  'help',
-  'help me',
-  'emergency',
-  'scream',
-  'bachao',
-  'save me',
-  'sos',
-  'danger',
-  'police',
-];
 
 /**
  * Listens to the microphone while `enabled` and calls `onScream` once a scream
@@ -148,10 +138,7 @@ export function useScreamTrigger(
               for (let i = event.resultIndex; i < event.results.length; ++i) {
                 const transcript = String(event.results[i][0]?.transcript || '').toLowerCase().trim();
                 console.log('[SpeechRecognition] Heard:', transcript);
-                const clean = transcript.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, ' ');
-                const matched = EMERGENCY_KEYWORDS.some((kw) => {
-                  return clean.includes(kw) || transcript.includes(kw);
-                });
+                const matched = isEmergencyPhrase(transcript);
 
                 reportHeardPhrase(transcript, matched);
 

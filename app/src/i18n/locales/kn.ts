@@ -11,7 +11,7 @@ const kn: Translation = {
 
   'tab.home': 'ಮುಖಪುಟ',
   'tab.routes': 'ಮಾರ್ಗಗಳು',
-  'tab.safety': 'ಸುರಕ್ಷತಾ ಮಾಹಿತಿ',
+  'tab.helplines': 'ಸಹಾಯವಾಣಿಗಳು',
   'tab.profile': 'ಪ್ರೊಫೈಲ್',
 
   'lang.title': 'ಭಾಷೆ',
@@ -36,8 +36,8 @@ const kn: Translation = {
   'home.actions.title': 'ತ್ವರಿತ ಕ್ರಿಯೆಗಳು',
   'home.actions.route': 'ಸುರಕ್ಷಿತ ಮಾರ್ಗ',
   'home.actions.routeSub': 'ಸುರಕ್ಷಿತ ದಾರಿಯನ್ನು ಯೋಜಿಸಿ',
-  'home.actions.share': 'ಸ್ಥಳ ಹಂಚಿಕೊಳ್ಳಿ',
-  'home.actions.shareSub': 'ರಕ್ಷಕರೊಂದಿಗೆ ಲೈವ್',
+  'home.actions.guardians': 'ಪೋಷಕರು',
+  'home.actions.guardiansSub': 'ನಿಮ್ಮ SOS ಯಾರಿಗೆ ಹೋಗುತ್ತದೆ',
   'home.actions.fakeCall': 'ನಕಲಿ ಕರೆ',
   'home.actions.fakeCallSub': 'ಪರಿಸ್ಥಿತಿಯಿಂದ ಹೊರಬನ್ನಿ',
   'home.actions.checkin': 'ಚೆಕ್-ಇನ್ ಟೈಮರ್',
@@ -116,6 +116,10 @@ const kn: Translation = {
   'sos.screamDetected': 'ಕಿರುಚಾಟ ಪತ್ತೆಯಾಗಿದೆ',
 
   'sos.fallDetected': 'ಬೀಳುವಿಕೆ ಪತ್ತೆಯಾಗಿದೆ',
+
+  'sos.shakeDetected': 'ಅಲುಗಾಟ ಪತ್ತೆಯಾಗಿದೆ',
+
+  'sos.voiceDetected': 'ಸಹಾಯದ ಕೂಗು ಕೇಳಿಸಿತು',
   'sos.title': 'ತುರ್ತು SOS',
   'sos.countdown': '{seconds} ಸೆಕೆಂಡುಗಳಲ್ಲಿ ನಿಮ್ಮ ಲೈವ್ ಸ್ಥಳವನ್ನು ನಿಮ್ಮ ಪೋಷಕರು ಮತ್ತು ಪೊಲೀಸರಿಗೆ ಕಳುಹಿಸಲಾಗುತ್ತದೆ.',
   'sos.imSafe': 'ನಾನು ಸುರಕ್ಷಿತ – PIN ನಮೂದಿಸಿ',

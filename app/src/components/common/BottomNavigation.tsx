@@ -5,7 +5,7 @@ import { useTheme } from '../../theme';
 import AlarmSoundService from '../../services/alarmSoundService';
 import { useI18n, StringKey } from '../../i18n';
 
-export type TabKey = 'Home' | 'Journey' | 'Safety' | 'Profile' | 'Contacts' | 'Map' | 'Settings';
+export type TabKey = 'Home' | 'Journey' | 'Helplines' | 'Profile' | 'Contacts' | 'Map' | 'Settings';
 
 interface BottomNavigationProps {
   activeTab: TabKey;
@@ -26,11 +26,11 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'Home', label: 'tab.home', iconActive: 'home', iconInactive: 'home-outline' },
   // 'Journey' and 'Map' both resolve to the Safe Routes screen in App.tsx
   { key: 'Journey', label: 'tab.routes', iconActive: 'navigate', iconInactive: 'navigate-outline', aliases: ['Map'] },
-  { key: 'Safety', label: 'tab.safety', iconActive: 'shield-checkmark', iconInactive: 'shield-checkmark-outline' },
+  { key: 'Helplines', label: 'tab.helplines', iconActive: 'call', iconInactive: 'call-outline' },
   { key: 'Profile', label: 'tab.profile', iconActive: 'person', iconInactive: 'person-outline', aliases: ['Settings', 'Contacts'] },
 ];
 
-const SOS_SLOT_INDEX = 2; // SOS sits between Routes and Safety Info
+const SOS_SLOT_INDEX = 2; // SOS sits between Routes and Helplines
 
 export default function BottomNavigation({ activeTab, onTabPress, onSos }: BottomNavigationProps) {
   const { colors, typography } = useTheme();

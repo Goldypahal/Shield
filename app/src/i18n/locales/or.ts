@@ -11,7 +11,7 @@ const or: Translation = {
 
   'tab.home': 'ହୋମ୍',
   'tab.routes': 'ରାସ୍ତା',
-  'tab.safety': 'ସୁରକ୍ଷା ସୂଚନା',
+  'tab.helplines': 'ହେଲ୍ପଲାଇନ୍',
   'tab.profile': 'ପ୍ରୋଫାଇଲ୍',
 
   'lang.title': 'ଭାଷା',
@@ -36,8 +36,8 @@ const or: Translation = {
   'home.actions.title': 'ଶୀଘ୍ର କାର୍ଯ୍ୟ',
   'home.actions.route': 'ସୁରକ୍ଷିତ ରାସ୍ତା',
   'home.actions.routeSub': 'ସୁରକ୍ଷିତ ବାଟ ବାଛନ୍ତୁ',
-  'home.actions.share': 'ଲୋକେସନ୍ ସେୟାର୍',
-  'home.actions.shareSub': 'ଅଭିଭାବକଙ୍କ ସହ ଲାଇଭ୍',
+  'home.actions.guardians': 'ଅଭିଭାବକ',
+  'home.actions.guardiansSub': 'ଆପଣଙ୍କ SOS କିଏ ପାଇବେ',
   'home.actions.fakeCall': 'ନକଲି କଲ୍',
   'home.actions.fakeCallSub': 'ପରିସ୍ଥିତିରୁ ବାହାରି ଆସନ୍ତୁ',
   'home.actions.checkin': 'ଚେକ୍-ଇନ୍ ଟାଇମର୍',
@@ -116,6 +116,10 @@ const or: Translation = {
   'sos.screamDetected': 'ଚିତ୍କାର ଶୁଣାଗଲା',
 
   'sos.fallDetected': 'ପଡ଼ିବା ଚିହ୍ନଟ ହେଲା',
+
+  'sos.shakeDetected': 'ହଲାଇବା ଚିହ୍ନଟ ହେଲା',
+
+  'sos.voiceDetected': 'ସାହାଯ୍ୟ ଡାକ ଶୁଣାଗଲା',
   'sos.title': 'ଜରୁରୀକାଳୀନ SOS',
   'sos.countdown': '{seconds} ସେକେଣ୍ଡରେ ଆପଣଙ୍କ ଲାଇଭ୍ ଲୋକେସନ୍ ଆପଣଙ୍କ ବାପାମାଆ ଓ ପୋଲିସଙ୍କୁ ପଠାଯିବ।',
   'sos.imSafe': 'ମୁଁ ସୁରକ୍ଷିତ – PIN ଦିଅନ୍ତୁ',

@@ -77,76 +77,41 @@ export async function deleteVoiceRecording(uri: string | null): Promise<void> {
 
 // --- Ringtone ---------------------------------------------------------------
 
+/** A phone-style marimba ringtone (assets/sounds/ringtone.wav), looped while the call rings. */
+const RINGTONE = require('../../assets/sounds/ringtone.wav');
+
 /**
- * Builds a classic phone ring (440 Hz + 480 Hz, ring-ring then pause) as a WAV,
- * so the feature needs no bundled audio asset.
+ * Starts the looping ringtone and returns its stop function straight away, so a call that
+ * is answered or declined while the sound is still loading also stops it (before, the stop
+ * function only arrived after loading and an early tap left the ringtone playing).
  */
-function buildRingtoneWavBase64(): string {
-  const sampleRate = 8000;
-  const pattern: Array<[number, boolean]> = [[0.4, true], [0.2, false], [0.4, true], [2.0, false]];
-  const total = Math.round(pattern.reduce((s, [d]) => s + d, 0) * sampleRate);
-  const bytes = new Uint8Array(44 + total * 2);
-  const view = new DataView(bytes.buffer);
-  const writeStr = (offset: number, s: string) => { for (let i = 0; i < s.length; i++) bytes[offset + i] = s.charCodeAt(i); };
-
-  writeStr(0, 'RIFF'); view.setUint32(4, 36 + total * 2, true); writeStr(8, 'WAVE');
-  writeStr(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
-  view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true);
-  view.setUint16(32, 2, true); view.setUint16(34, 16, true);
-  writeStr(36, 'data'); view.setUint32(40, total * 2, true);
-
-  let i = 0;
-  for (const [duration, on] of pattern) {
-    const n = Math.round(duration * sampleRate);
-    for (let k = 0; k < n; k++, i++) {
-      const t = i / sampleRate;
-      const v = on ? 0.35 * (Math.sin(2 * Math.PI * 440 * t) + Math.sin(2 * Math.PI * 480 * t)) : 0;
-      view.setInt16(44 + i * 2, Math.max(-1, Math.min(1, v)) * 32767, true);
+export function startRingtone(): () => Promise<void> {
+  let stopped = false;
+  let sound: Audio.Sound | null = null;
+  (async () => {
+    try {
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        allowsRecordingIOS: false,
+        staysActiveInBackground: true,
+        shouldDuckAndroid: false,
+        playThroughEarpieceAndroid: false,
+      });
+      const created = await Audio.Sound.createAsync(RINGTONE, { isLooping: true, volume: 1.0, shouldPlay: !stopped });
+      sound = created.sound;
+      if (stopped) await sound.unloadAsync().catch(() => undefined);
+    } catch (e) {
+      console.warn('Ringtone unavailable; vibration only', e);
     }
-  }
-  return toBase64(bytes);
-}
-
-function toBase64(bytes: Uint8Array): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-  let out = '';
-  for (let i = 0; i < bytes.length; i += 3) {
-    const a = bytes[i], b = bytes[i + 1] ?? 0, c = bytes[i + 2] ?? 0;
-    const triple = (a << 16) | (b << 8) | c;
-    out += chars[(triple >> 18) & 63] + chars[(triple >> 12) & 63]
-      + (i + 1 < bytes.length ? chars[(triple >> 6) & 63] : '=')
-      + (i + 2 < bytes.length ? chars[triple & 63] : '=');
-  }
-  return out;
-}
-
-let ringtoneUri: string | null = null;
-
-async function getRingtoneUri(): Promise<string> {
-  if (ringtoneUri) return ringtoneUri;
-  const b64 = buildRingtoneWavBase64();
-  if (Platform.OS === 'web' || !FileSystem.cacheDirectory) {
-    ringtoneUri = `data:audio/wav;base64,${b64}`;
-  } else {
-    ringtoneUri = `${FileSystem.cacheDirectory}fake-call-ring.wav`;
-    await FileSystem.writeAsStringAsync(ringtoneUri, b64, { encoding: FileSystem.EncodingType.Base64 });
-  }
-  return ringtoneUri;
-}
-
-/** Starts the looping ringtone; resolves to a stop function. */
-export async function startRingtone(): Promise<() => Promise<void>> {
-  try {
-    await Audio.setAudioModeAsync({ playsInSilentModeIOS: true, allowsRecordingIOS: false });
-    const { sound } = await Audio.Sound.createAsync({ uri: await getRingtoneUri() }, { isLooping: true, volume: 1.0 });
-    await sound.playAsync();
-    return async () => {
-      try { await sound.stopAsync(); await sound.unloadAsync(); } catch { /* already unloaded */ }
-    };
-  } catch (e) {
-    console.warn('Ringtone unavailable; vibration only', e);
-    return async () => undefined;
-  }
+  })();
+  return async () => {
+    stopped = true;
+    const s = sound;
+    sound = null;
+    if (s) {
+      try { await s.stopAsync(); await s.unloadAsync(); } catch { /* already unloaded */ }
+    }
+  };
 }
 
 /** Plays the recorded voice for an answered call. `speaker` false routes it to the earpiece on Android. */

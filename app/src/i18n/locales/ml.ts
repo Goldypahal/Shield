@@ -11,7 +11,7 @@ const ml: Translation = {
 
   'tab.home': 'ഹോം',
   'tab.routes': 'വഴികൾ',
-  'tab.safety': 'സുരക്ഷാ വിവരം',
+  'tab.helplines': 'ഹെൽപ്‌ലൈനുകൾ',
   'tab.profile': 'പ്രൊഫൈൽ',
 
   'lang.title': 'ഭാഷ',
@@ -36,8 +36,8 @@ const ml: Translation = {
   'home.actions.title': 'പെട്ടെന്നുള്ള പ്രവർത്തനങ്ങൾ',
   'home.actions.route': 'സുരക്ഷിത വഴി',
   'home.actions.routeSub': 'സുരക്ഷിതമായ വഴി ആസൂത്രണം ചെയ്യുക',
-  'home.actions.share': 'ലൊക്കേഷൻ പങ്കിടുക',
-  'home.actions.shareSub': 'രക്ഷാധികാരികളുമായി തത്സമയം',
+  'home.actions.guardians': 'രക്ഷിതാക്കൾ',
+  'home.actions.guardiansSub': 'നിങ്ങളുടെ SOS ആർക്ക് ലഭിക്കും',
   'home.actions.fakeCall': 'വ്യാജ കോൾ',
   'home.actions.fakeCallSub': 'ഒരു സാഹചര്യത്തിൽ നിന്ന് പുറത്തുകടക്കുക',
   'home.actions.checkin': 'ചെക്ക്-ഇൻ ടൈമർ',
@@ -116,6 +116,10 @@ const ml: Translation = {
   'sos.screamDetected': 'നിലവിളി കണ്ടെത്തി',
 
   'sos.fallDetected': 'വീഴ്ച കണ്ടെത്തി',
+
+  'sos.shakeDetected': 'കുലുക്കം കണ്ടെത്തി',
+
+  'sos.voiceDetected': 'സഹായത്തിനുള്ള വിളി കേട്ടു',
   'sos.title': 'അടിയന്തര SOS',
   'sos.countdown': '{seconds} സെക്കൻഡിനുള്ളിൽ നിങ്ങളുടെ തത്സമയ ലൊക്കേഷൻ മാതാപിതാക്കൾക്കും പോലീസിനും അയയ്ക്കും.',
   'sos.imSafe': 'എനിക്ക് കുഴപ്പമില്ല – PIN നൽകുക',

@@ -11,7 +11,7 @@ const pa: Translation = {
 
   'tab.home': 'ਹੋਮ',
   'tab.routes': 'ਰਸਤੇ',
-  'tab.safety': 'ਸੁਰੱਖਿਆ ਜਾਣਕਾਰੀ',
+  'tab.helplines': 'ਹੈਲਪਲਾਈਨਾਂ',
   'tab.profile': 'ਪ੍ਰੋਫਾਈਲ',
 
   'lang.title': 'ਭਾਸ਼ਾ',
@@ -36,8 +36,8 @@ const pa: Translation = {
   'home.actions.title': 'ਫ਼ੌਰੀ ਕਾਰਵਾਈਆਂ',
   'home.actions.route': 'ਸੁਰੱਖਿਅਤ ਰਸਤਾ',
   'home.actions.routeSub': 'ਸੁਰੱਖਿਅਤ ਰਾਹ ਚੁਣੋ',
-  'home.actions.share': 'ਲੋਕੇਸ਼ਨ ਸਾਂਝੀ ਕਰੋ',
-  'home.actions.shareSub': 'ਸਰਪ੍ਰਸਤਾਂ ਨਾਲ ਲਾਈਵ',
+  'home.actions.guardians': 'ਸਰਪ੍ਰਸਤ',
+  'home.actions.guardiansSub': 'ਤੁਹਾਡਾ SOS ਕਿਸਨੂੰ ਮਿਲੇ',
   'home.actions.fakeCall': 'ਨਕਲੀ ਕਾਲ',
   'home.actions.fakeCallSub': 'ਕਿਸੇ ਹਾਲਾਤ ਤੋਂ ਨਿਕਲੋ',
   'home.actions.checkin': 'ਚੈੱਕ-ਇਨ ਟਾਈਮਰ',
@@ -116,6 +116,10 @@ const pa: Translation = {
   'sos.screamDetected': 'ਚੀਕ ਸੁਣੀ ਗਈ',
 
   'sos.fallDetected': 'ਡਿੱਗਣ ਦਾ ਪਤਾ ਲੱਗਿਆ',
+
+  'sos.shakeDetected': 'ਹਿਲਾਉਣ ਦਾ ਪਤਾ ਲੱਗਿਆ',
+
+  'sos.voiceDetected': 'ਮਦਦ ਦੀ ਪੁਕਾਰ ਸੁਣੀ ਗਈ',
   'sos.title': 'ਐਮਰਜੈਂਸੀ SOS',
   'sos.countdown': '{seconds} ਸਕਿੰਟਾਂ ਵਿੱਚ ਤੁਹਾਡੀ ਲਾਈਵ ਲੋਕੇਸ਼ਨ ਤੁਹਾਡੇ ਮਾਪਿਆਂ ਅਤੇ ਪੁਲਿਸ ਨੂੰ ਭੇਜੀ ਜਾਵੇਗੀ।',
   'sos.imSafe': 'ਮੈਂ ਸੁਰੱਖਿਅਤ ਹਾਂ – PIN ਪਾਓ',

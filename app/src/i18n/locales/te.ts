@@ -11,7 +11,7 @@ const te: Translation = {
 
   'tab.home': 'హోమ్',
   'tab.routes': 'మార్గాలు',
-  'tab.safety': 'భద్రతా సమాచారం',
+  'tab.helplines': 'హెల్ప్‌లైన్లు',
   'tab.profile': 'ప్రొఫైల్',
 
   'lang.title': 'భాష',
@@ -36,8 +36,8 @@ const te: Translation = {
   'home.actions.title': 'త్వరిత చర్యలు',
   'home.actions.route': 'సురక్షిత మార్గం',
   'home.actions.routeSub': 'సురక్షితమైన దారిని ప్లాన్ చేయండి',
-  'home.actions.share': 'లొకేషన్ షేర్',
-  'home.actions.shareSub': 'సంరక్షకులతో లైవ్',
+  'home.actions.guardians': 'సంరక్షకులు',
+  'home.actions.guardiansSub': 'మీ SOS ఎవరికి వెళ్తుంది',
   'home.actions.fakeCall': 'నకిలీ కాల్',
   'home.actions.fakeCallSub': 'పరిస్థితి నుండి బయటపడండి',
   'home.actions.checkin': 'చెక్-ఇన్ టైమర్',
@@ -116,6 +116,10 @@ const te: Translation = {
   'sos.screamDetected': 'అరుపు గుర్తించబడింది',
 
   'sos.fallDetected': 'పడిపోవడం గుర్తించబడింది',
+
+  'sos.shakeDetected': 'ఊపడం గుర్తించబడింది',
+
+  'sos.voiceDetected': 'సహాయం కోసం పిలుపు వినబడింది',
   'sos.title': 'అత్యవసర SOS',
   'sos.countdown': '{seconds} సెకన్లలో మీ లైవ్ లొకేషన్ మీ తల్లిదండ్రులు మరియు పోలీసులకు పంపబడుతుంది.',
   'sos.imSafe': 'నేను సురక్షితం – PIN ఇవ్వండి',

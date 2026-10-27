@@ -11,7 +11,7 @@ const ta: Translation = {
 
   'tab.home': 'முகப்பு',
   'tab.routes': 'வழிகள்',
-  'tab.safety': 'பாதுகாப்பு தகவல்',
+  'tab.helplines': 'உதவி எண்கள்',
   'tab.profile': 'சுயவிவரம்',
 
   'lang.title': 'மொழி',
@@ -36,8 +36,8 @@ const ta: Translation = {
   'home.actions.title': 'விரைவுச் செயல்கள்',
   'home.actions.route': 'பாதுகாப்பான வழி',
   'home.actions.routeSub': 'பாதுகாப்பான வழியைத் திட்டமிடுங்கள்',
-  'home.actions.share': 'இருப்பிடம் பகிர்',
-  'home.actions.shareSub': 'பாதுகாவலர்களுடன் நேரலை',
+  'home.actions.guardians': 'பாதுகாவலர்கள்',
+  'home.actions.guardiansSub': 'உங்கள் SOS யாருக்கு செல்லும்',
   'home.actions.fakeCall': 'போலி அழைப்பு',
   'home.actions.fakeCallSub': 'சூழ்நிலையிலிருந்து வெளியேறுங்கள்',
   'home.actions.checkin': 'செக்-இன் டைமர்',
@@ -116,6 +116,10 @@ const ta: Translation = {
   'sos.screamDetected': 'அலறல் கண்டறியப்பட்டது',
 
   'sos.fallDetected': 'விழுதல் கண்டறியப்பட்டது',
+
+  'sos.shakeDetected': 'அசைவு கண்டறியப்பட்டது',
+
+  'sos.voiceDetected': 'உதவி அழைப்பு கேட்டது',
   'sos.title': 'அவசர SOS',
   'sos.countdown': '{seconds} விநாடிகளில் உங்கள் நேரடி இருப்பிடம் உங்கள் பெற்றோருக்கும் காவல்துறைக்கும் அனுப்பப்படும்.',
   'sos.imSafe': 'நான் பாதுகாப்பாக உள்ளேன் – PIN உள்ளிடவும்',

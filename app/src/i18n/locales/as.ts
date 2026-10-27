@@ -11,7 +11,7 @@ const asm: Translation = {
 
   'tab.home': 'হোম',
   'tab.routes': 'পথ',
-  'tab.safety': 'সুৰক্ষা তথ্য',
+  'tab.helplines': 'হেল্পলাইন',
   'tab.profile': 'প্ৰফাইল',
 
   'lang.title': 'ভাষা',
@@ -36,8 +36,8 @@ const asm: Translation = {
   'home.actions.title': 'ক্ষিপ্ৰ কাৰ্য',
   'home.actions.route': 'সুৰক্ষিত পথ',
   'home.actions.routeSub': 'সুৰক্ষিত বাট বাছক',
-  'home.actions.share': 'লোকেশ্বন শ্বেয়াৰ',
-  'home.actions.shareSub': 'অভিভাৱকৰ সৈতে লাইভ',
+  'home.actions.guardians': 'অভিভাৱক',
+  'home.actions.guardiansSub': 'আপোনাৰ SOS কোনে পাব',
   'home.actions.fakeCall': 'নকল কল',
   'home.actions.fakeCallSub': 'পৰিস্থিতিৰ পৰা ওলাই আহক',
   'home.actions.checkin': 'চেক-ইন টাইমাৰ',
@@ -116,6 +116,10 @@ const asm: Translation = {
   'sos.screamDetected': 'চিঞৰ শুনা গ’ল',
 
   'sos.fallDetected': 'পৰি যোৱা ধৰা পৰিল',
+
+  'sos.shakeDetected': 'জোকাৰণি ধৰা পৰিল',
+
+  'sos.voiceDetected': 'সহায়ৰ মাত শুনা গ’ল',
   'sos.title': 'জৰুৰীকালীন SOS',
   'sos.countdown': '{seconds} ছেকেণ্ডত আপোনাৰ লাইভ লোকেশ্বন আপোনাৰ মাক-দেউতাক আৰু আৰক্ষীলৈ পঠোৱা হ’ব।',
   'sos.imSafe': 'মই সুৰক্ষিত – PIN দিয়ক',

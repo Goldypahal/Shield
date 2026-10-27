@@ -11,7 +11,7 @@ const ur: Translation = {
 
   'tab.home': 'ہوم',
   'tab.routes': 'راستے',
-  'tab.safety': 'حفاظتی معلومات',
+  'tab.helplines': 'ہیلپ لائنز',
   'tab.profile': 'پروفائل',
 
   'lang.title': 'زبان',
@@ -36,8 +36,8 @@ const ur: Translation = {
   'home.actions.title': 'فوری اقدامات',
   'home.actions.route': 'محفوظ راستہ',
   'home.actions.routeSub': 'زیادہ محفوظ راستہ چنیں',
-  'home.actions.share': 'لوکیشن شیئر کریں',
-  'home.actions.shareSub': 'سرپرستوں کے ساتھ لائیو',
+  'home.actions.guardians': 'سرپرست',
+  'home.actions.guardiansSub': 'آپ کا SOS کسے ملے',
   'home.actions.fakeCall': 'جعلی کال',
   'home.actions.fakeCallSub': 'کسی صورتحال سے نکلیں',
   'home.actions.checkin': 'چیک اِن ٹائمر',
@@ -116,6 +116,10 @@ const ur: Translation = {
   'sos.screamDetected': 'چیخ سنائی دی',
 
   'sos.fallDetected': 'گرنے کا پتہ چلا',
+
+  'sos.shakeDetected': 'جھٹکا محسوس ہوا',
+
+  'sos.voiceDetected': 'مدد کی پکار سنی گئی',
   'sos.title': 'ایمرجنسی SOS',
   'sos.countdown': '{seconds} سیکنڈ میں آپ کی لائیو لوکیشن آپ کے والدین اور پولیس کو بھیج دی جائے گی۔',
   'sos.imSafe': 'میں محفوظ ہوں – PIN درج کریں',

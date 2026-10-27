@@ -80,7 +80,8 @@
             "advertise"
           ]
         }
-      ]
+      ],
+      "@maplibre/maplibre-react-native"
     ],
     "icon": "./assets/images/icon.png",
     "splash": {

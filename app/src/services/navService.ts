@@ -92,16 +92,33 @@ export interface NavCapabilities {
 export const ALL_MODES: TravelMode[] = ['walk', 'bicycle', 'two_wheeler', 'car', 'transit'];
 export const FREE_MODES: TravelMode[] = ['walk', 'bicycle', 'two_wheeler', 'car'];
 
+/**
+ * A sentence for a failed navigation request, or null to use the generic text. Before, a
+ * validation error (an object) was put on screen as-is, which crashes React Native, and
+ * a lost connection or expired sign-in showed the same vague message as a routing outage.
+ */
+export function navErrorMessage(e: any): string | null {
+  if (!e?.response) return 'No connection to SHIELD. Check your internet, then try again.';
+  if (e.response.status === 401) return 'Your sign-in has expired. Sign in again to plan routes.';
+  const detail = e.response.data?.detail;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail) && detail[0]?.msg) return String(detail[0].msg);
+  return null;
+}
+
+// The free server sleeps when idle and needs up to ~50 s for its first answer
+const WAKE_TIMEOUT_MS = 45000;
+
 export async function getCapabilities(): Promise<NavCapabilities> {
   const client = await AuthService.getAuthenticatedClient();
-  return (await client.get('/api/v1/nav/capabilities')).data;
+  return (await client.get('/api/v1/nav/capabilities', { timeout: WAKE_TIMEOUT_MS })).data;
 }
 
 export async function searchPlaces(q: string, near: LatLon | null, language: string): Promise<NavPlace[]> {
   const client = await AuthService.getAuthenticatedClient();
   const params: Record<string, string | number> = { q, language };
   if (near) Object.assign(params, { lat: near.lat, lon: near.lon });
-  return (await client.get('/api/v1/nav/search', { params })).data.places;
+  return (await client.get('/api/v1/nav/search', { params, timeout: WAKE_TIMEOUT_MS })).data.places;
 }
 
 /** Google suggestions come without coordinates; this fills them in. */
@@ -109,14 +126,14 @@ export async function resolvePlace(p: NavPlace): Promise<NavPlace> {
   if (p.lat !== null && p.lon !== null) return p;
   if (!p.place_id) throw new Error('Place has no location');
   const client = await AuthService.getAuthenticatedClient();
-  return (await client.get(`/api/v1/nav/place/${encodeURIComponent(p.place_id)}`)).data;
+  return (await client.get(`/api/v1/nav/place/${encodeURIComponent(p.place_id)}`, { timeout: WAKE_TIMEOUT_MS })).data;
 }
 
 export async function planNav(origin: LatLon, destination: LatLon, mode: TravelMode, language: string, departAt?: Date): Promise<NavPlan> {
   const client = await AuthService.getAuthenticatedClient();
   return (await client.post('/api/v1/nav/plan', {
     origin, destination, mode, language, depart_at: (departAt ?? new Date()).toISOString(),
-  }, { timeout: 60000 })).data;
+  }, { timeout: 90000 })).data;
 }
 
 /** Orders routes for the chosen tab; ties fall back to the safest. */
