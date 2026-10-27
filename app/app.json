@@ -50,7 +50,8 @@
             "microphoneUsageDescription": "SHIELD listens for a sustained scream so it can start an SOS for you. Audio is analysed on your phone and is not stored unless an SOS starts."
           }
         }
-      ]
+      ],
+      "react-native-fast-tflite"
     ]
   }
 }

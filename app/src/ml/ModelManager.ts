@@ -38,9 +38,9 @@ class ModelManager {
 
   private screamModel: ModelMetadata = {
     name: 'Shield Scream Detection CNN',
-    filename: 'best.pt',
-    isLoaded: true,
-    inputShape: [1, 1, 64, 313], // 64 mels x 313 time frames (5.0s @ 16kHz)
+    filename: 'scream_detection.tflite', // from best.pt via export_tflite.py; loaded by AudioClassifier
+    isLoaded: false,
+    inputShape: [1, 80000], // 5.0 s raw 16 kHz PCM; the log-mel preprocessing is inside the model
     version: '1.0.0',
     quantization: 'FLOAT32'
   };

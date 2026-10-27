@@ -5,8 +5,8 @@ import audioClassifier, { AudioClassifier } from '../ml/AudioClassifier';
 import { ScreamDurationDetector } from '../ml/ScreamDurationDetector';
 
 const SAMPLE_RATE = 16000;
-const HOP_MS = 250;
-const WINDOW = AudioClassifier.SAMPLES_PER_WINDOW; // 15,600 samples = 0.975 s
+const HOP_MS = 500;
+const WINDOW = AudioClassifier.SAMPLES_PER_WINDOW; // latest 1 s of audio per classification
 
 /** Native may still hand over base64 16-bit PCM; normalise everything to [-1, 1] floats. */
 function toFloat32(data: AudioDataEvent['data'] | number[]): Float32Array {
@@ -35,7 +35,7 @@ export interface ScreamTriggerOptions {
  * Listens to the microphone while `enabled` and calls `onScream` once the scream model
  * has heard a scream for about 3 seconds (see ScreamDurationDetector).
  *
- * Audio is streamed in 250 ms hops at 16 kHz mono and held only in a 0.975 s ring buffer
+ * Audio is streamed in 500 ms hops at 16 kHz mono and held only in a 1 s ring buffer
  * in memory (SRS DET-8): no file is written. The microphone is released whenever
  * `enabled` turns false, so pass false while an SOS, a call or other recording runs.
  */
@@ -54,6 +54,7 @@ export function useScreamTrigger(onScream: () => void, enabled: boolean, options
     const ring = new Float32Array(WINDOW);
     let filled = 0;
     const detector = new ScreamDurationDetector();
+    audioClassifier.load(); // warm the TFLite model before the first window arrives
 
     const onAudioStream = async (event: AudioDataEvent) => {
       if (stopped) return;
@@ -75,7 +76,7 @@ export function useScreamTrigger(onScream: () => void, enabled: boolean, options
         const probability = await audioClassifier.classifyWindow(ring.slice());
         if (stopped) return;
         const hopMs = Math.max(HOP_MS, Math.round((chunk.length / SAMPLE_RATE) * 1000));
-        const status = detector.push(probability, Date.now(), hopMs);
+        const status = detector.push(probability, Date.now(), hopMs, audioClassifier.threshold);
         onProgressRef.current?.(status.sustainedMs);
         if (status.triggered) onScreamRef.current();
       } catch (e) {
