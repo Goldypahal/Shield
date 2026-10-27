@@ -5,25 +5,18 @@
  */
 const en = {
   // Common
-  'common.call': 'Call',
   'common.callNumber': 'Call {number}',
   'common.close': 'Close',
-  'common.cancel': 'Cancel',
-  'common.seeAll': 'See all',
   'common.on': 'On',
   'common.off': 'Off',
   'common.allDay': '24x7',
-  'common.retry': 'Try again',
   'common.min': 'min',
-  'common.km': 'km',
-  'common.m': 'm',
 
   // Bottom navigation
   'tab.home': 'Home',
   'tab.routes': 'Routes',
   'tab.safety': 'Safety Info',
   'tab.profile': 'Profile',
-  'tab.sos': 'SOS',
 
   // Language
   'lang.title': 'Language',
@@ -61,7 +54,6 @@ const en = {
   'home.guardians.empty': 'No guardians yet. Your SOS reaches no one until you add one.',
   'home.guardians.add': 'Add guardian',
   'home.guardians.manage': 'Manage',
-  'home.checkin.title': 'Check-in timer',
 
   // Helplines screen
   'helplines.title': 'Helplines',
@@ -160,18 +152,33 @@ const en = {
   'sos.queuedBackup': 'The SHIELD server was unreachable, so your parents were alerted through the backup channel.',
   'sos.queued': 'No connection. Your alert is saved on this phone and will send as soon as you are online.',
 
+  // Check-in timer
+  'checkin.title': 'Check-in timer',
+  'checkin.within': 'Check in within {time}',
+  'checkin.activeBody': "If you don't, your guardians are alerted with your last location.",
+  'checkin.idleBody': "Going somewhere? If you don't check in on time, guardians are alerted automatically.",
+  'checkin.safe': "I'm safe",
+  'checkin.add10': '+10 min',
+  'checkin.start': 'Start timer',
+  'checkin.pickerTitle': 'I should be safe in…',
+  'checkin.labelPlaceholder': 'Where to? (optional, e.g. Home)',
+  'checkin.cancel': 'Cancel',
+  'checkin.confirmTitle': "Confirm you're safe",
+  'checkin.addTitle': 'Add 10 minutes',
+  'checkin.pinMessage': 'Enter your SOS PIN.',
+  'checkin.addTime': 'Add time',
+  'checkin.startError': 'Could not start the timer. Check your connection.',
+
   // Settings
   'settings.scream': 'Scream detection',
   'settings.screamOn': 'On: a 3-second scream starts a 10-second SOS countdown',
 
   // Navigation page
-  'nav.title': 'Routes',
   'nav.from': 'From',
   'nav.to': 'Where to?',
   'nav.myLocation': 'My location',
   'nav.searchPlaceholder': 'Search any place in India',
   'nav.swap': 'Swap start and destination',
-  'nav.searching': 'Searching…',
   'nav.noResults': 'No places found',
   'nav.mode.walk': 'Walk',
   'nav.mode.bicycle': 'Cycle',
@@ -196,8 +203,6 @@ const en = {
   'nav.open247': '{count} open 24x7',
   'nav.via': 'via {road}',
   'nav.start': 'Start',
-  'nav.stop': 'End trip',
-  'nav.details': 'Route details',
   'nav.whySafe': 'Why this score',
   'nav.places247': 'Open 24x7 along this route',
   'nav.noPlaces247': 'No 24x7 places found within 200 m of this route.',
@@ -205,8 +210,6 @@ const en = {
   'nav.accuracy': 'GPS ±{m} m',
   'nav.recenter': 'Re-centre',
   'nav.reportHazard': 'Report hazard',
-  'nav.arrived': 'You have arrived',
-  'nav.then': 'Then',
   'nav.nightNote': 'Night: lighting counts more in the score',
   'nav.longTripNote': 'Long trip: lighting and 24x7 places are checked near the start and end only',
   'nav.dataNote': 'Map data © OpenStreetMap contributors',
@@ -230,10 +233,8 @@ const en = {
   'nav.alongKm': '{km} along the route',
   'nav.offRoute': '{m} m off route',
   'nav.navigateHere': 'Go here',
-  'nav.noPhone': 'No phone listed',
   'nav.showAll': 'Show all routes',
   'nav.showLess': 'Show less',
-  'nav.steps': 'Directions',
   'nav.reason.unlit': 'Unlit',
   'nav.reason.isolated': 'Isolated path',
   'nav.reason.incident': 'Reported incident',

@@ -145,7 +145,7 @@ export default function HomeScreen({ onNavigate }: HomeScreenProps) {
             {statusItems.map((s) => (
               <View key={s.label} style={[styles.statusItem, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.md }]}>
                 <View style={[styles.dot, { backgroundColor: s.on === null ? colors.textMuted : s.on ? colors.statusSuccess : colors.statusWarning }]} />
-                <Text style={[typography.bodySmall, { color: colors.textSecondary, flex: 1 }]} numberOfLines={1}>{s.label}</Text>
+                <Text style={[typography.bodySmall, { color: colors.textSecondary, flex: 1 }]} numberOfLines={2}>{s.label}</Text>
                 <Text style={[typography.bodySmall, { color: colors.textPrimary, fontWeight: '700' }]}>{s.value}</Text>
               </View>
             ))}

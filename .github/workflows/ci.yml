@@ -40,6 +40,8 @@ jobs:
       - run: npm ci
       - name: Type-check
         run: npx tsc --noEmit -p .
+      - name: Translations match English (keys and placeholders)
+        run: python3 scripts/check-translations.py
 
   dashboard:
     runs-on: ubuntu-latest
