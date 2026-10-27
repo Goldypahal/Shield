@@ -63,14 +63,14 @@ export default function SplashScreen({ onContinue, autoDismissMs }: SplashScreen
           },
         ]}
       >
-        <HeimdalLogo size={96} />
+        <HeimdalLogo size={140} />
 
         <Text style={[typography.brandName, styles.brandTitle, { color: colors.textPrimary }]}>
-          Heimdal
+          HEIMDAL
         </Text>
 
-        <Text style={[typography.tagline, styles.tagline, { color: colors.textSecondary }]}>
-          Your safety. Our priority.
+        <Text style={[typography.tagline, styles.tagline, { color: colors.textSecondary, letterSpacing: 1.5 }]}>
+          WATCH | PROTECT | RESPOND
         </Text>
 
         {onContinue && (

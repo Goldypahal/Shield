@@ -21,7 +21,7 @@ const MAP_PAGE = `<!doctype html>
 .pin-end{width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${ROUTE_COLORS.end};border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45)}
 .pin-haven{width:22px;height:22px;border-radius:6px;border:2px solid #fff;color:#fff;font:700 12px/18px system-ui;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.45)}
 .pin-hazard{width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:18px solid ${HAZARD_COLOR};filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))}
-.pin-me{width:16px;height:16px;border-radius:50%;background:#2563EB;border:3px solid #fff;box-shadow:0 0 0 6px rgba(37,99,235,.25)}</style>
+.pin-me{width:16px;height:16px;border-radius:50%;background:#FF5A1F;border:3px solid #fff;box-shadow:0 0 0 6px rgba(255,90,31,.25)}</style>
 </head><body><div id="map"></div><script>
 var C = ${JSON.stringify(ROUTE_COLORS)};
 var map = L.map('map', { zoomControl: false, attributionControl: true }).setView([${DEFAULT_CENTER.lat}, ${DEFAULT_CENTER.lon}], 13);

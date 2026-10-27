@@ -31,6 +31,21 @@ const MAX_ATTEMPTS = 50; // an SOS is worth retrying for a long time
  */
 class OfflineQueueService {
   private syncing: Promise<void> | null = null;
+  private listeners: Set<(count: number) => void> = new Set();
+
+  onQueueChange(callback: (count: number) => void): () => void {
+    this.listeners.add(callback);
+    this.pendingCount().then(callback);
+    return () => {
+      this.listeners.delete(callback);
+    };
+  }
+
+  private notify() {
+    this.pendingCount().then((count) => {
+      this.listeners.forEach((l) => l(count));
+    }).catch(() => undefined);
+  }
 
   private async read(): Promise<QueuedAlert[]> {
     try {
@@ -42,6 +57,7 @@ class OfflineQueueService {
 
   private async write(items: QueuedAlert[]) {
     await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(items));
+    this.notify();
   }
 
   async pendingCount(): Promise<number> {
@@ -71,7 +87,10 @@ class OfflineQueueService {
   /** Replays every pending alert. Safe to call often, e.g. on each NetInfo reconnect. */
   syncWhenOnline(): Promise<void> {
     if (!this.syncing) {
-      this.syncing = this.flush().finally(() => { this.syncing = null; });
+      this.syncing = this.flush().finally(() => {
+        this.syncing = null;
+        this.notify();
+      });
     }
     return this.syncing;
   }

@@ -3,11 +3,13 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme';
 
-export type TabKey = 'Home' | 'Contacts' | 'Map' | 'Settings';
+export type TabKey = 'Home' | 'Journey' | 'Safety' | 'Profile' | 'Contacts' | 'Map' | 'Settings';
 
 interface BottomNavigationProps {
   activeTab: TabKey;
   onTabPress: (tab: TabKey) => void;
+  /** Opens the global SOS countdown from anywhere in the app. */
+  onSos?: () => void;
 }
 
 interface NavItem {
@@ -15,17 +17,53 @@ interface NavItem {
   label: string;
   iconActive: keyof typeof Ionicons.glyphMap;
   iconInactive: keyof typeof Ionicons.glyphMap;
+  aliases?: TabKey[];
 }
 
 const NAV_ITEMS: NavItem[] = [
   { key: 'Home', label: 'Home', iconActive: 'home', iconInactive: 'home-outline' },
-  { key: 'Contacts', label: 'Contacts', iconActive: 'people', iconInactive: 'people-outline' },
-  { key: 'Map', label: 'Map', iconActive: 'map', iconInactive: 'map-outline' },
-  { key: 'Settings', label: 'Settings', iconActive: 'settings', iconInactive: 'settings-outline' },
+  // 'Journey' and 'Map' both resolve to the Safe Routes screen in App.tsx
+  { key: 'Journey', label: 'Routes', iconActive: 'navigate', iconInactive: 'navigate-outline', aliases: ['Map'] },
+  { key: 'Safety', label: 'Safety Info', iconActive: 'shield-checkmark', iconInactive: 'shield-checkmark-outline' },
+  { key: 'Profile', label: 'Profile', iconActive: 'person', iconInactive: 'person-outline', aliases: ['Settings', 'Contacts'] },
 ];
 
-export default function BottomNavigation({ activeTab, onTabPress }: BottomNavigationProps) {
+const SOS_SLOT_INDEX = 2; // SOS sits between Routes and Safety Info
+
+export default function BottomNavigation({ activeTab, onTabPress, onSos }: BottomNavigationProps) {
   const { colors, typography } = useTheme();
+
+  const renderTab = (item: NavItem) => {
+    const isActive = activeTab === item.key || (item.aliases && item.aliases.includes(activeTab));
+    const iconName = isActive ? item.iconActive : item.iconInactive;
+    const tintColor = isActive ? colors.navActive : colors.navInactive;
+
+    return (
+      <TouchableOpacity
+        key={item.key}
+        onPress={() => onTabPress(item.key)}
+        style={styles.tabButton}
+        accessibilityRole="tab"
+        accessibilityState={{ selected: isActive }}
+        accessibilityLabel={`${item.label} tab`}
+        activeOpacity={0.7}
+      >
+        <Ionicons name={iconName} size={22} color={tintColor} />
+        <Text
+          style={[
+            styles.tabLabel,
+            typography.caption,
+            {
+              color: tintColor,
+              fontWeight: isActive ? '600' : '400',
+            },
+          ]}
+        >
+          {item.label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View
@@ -38,37 +76,26 @@ export default function BottomNavigation({ activeTab, onTabPress }: BottomNaviga
       ]}
       accessibilityRole="tablist"
     >
-      {NAV_ITEMS.map((item) => {
-        const isActive = activeTab === item.key;
-        const iconName = isActive ? item.iconActive : item.iconInactive;
-        const tintColor = isActive ? colors.navActive : colors.navInactive;
+      {NAV_ITEMS.slice(0, SOS_SLOT_INDEX).map(renderTab)}
 
-        return (
-          <TouchableOpacity
-            key={item.key}
-            onPress={() => onTabPress(item.key)}
-            style={styles.tabButton}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: isActive }}
-            accessibilityLabel={`${item.label} tab`}
-            activeOpacity={0.7}
-          >
-            <Ionicons name={iconName} size={22} color={tintColor} />
-            <Text
-              style={[
-                styles.tabLabel,
-                typography.caption,
-                {
-                  color: tintColor,
-                  fontWeight: isActive ? '600' : '400',
-                },
-              ]}
-            >
-              {item.label}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
+      <View style={styles.sosSlot}>
+        <TouchableOpacity
+          onPress={onSos}
+          disabled={!onSos}
+          style={[
+            styles.sosButton,
+            { backgroundColor: colors.sosPrimary, borderColor: colors.navBackground },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Emergency SOS. Opens a five second countdown before alerting your guardians."
+          activeOpacity={0.85}
+        >
+          <Ionicons name="warning" size={17} color="#FFFFFF" />
+          <Text style={styles.sosText}>SOS</Text>
+        </TouchableOpacity>
+      </View>
+
+      {NAV_ITEMS.slice(SOS_SLOT_INDEX).map(renderTab)}
     </View>
   );
 }
@@ -92,5 +119,31 @@ const styles = StyleSheet.create({
   tabLabel: {
     marginTop: 4,
     fontSize: 11,
+  },
+  sosSlot: {
+    width: 72,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sosButton: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 3,
+    marginTop: -16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  sosText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    marginTop: -1,
   },
 });

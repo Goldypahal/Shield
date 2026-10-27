@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Platform, TouchableOpacity, Text, AppState } from 'react-native';
+import { View, StyleSheet, Platform, TouchableOpacity, Text, AppState, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemeProvider, useTheme } from './src/theme';
 
@@ -16,7 +16,8 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import ContactsScreen from './src/screens/ContactsScreen';
 import FakeCallScreen from './src/screens/FakeCallScreen';
 import DeviceStatusBar from './src/components/common/DeviceStatusBar';
-import { TabKey } from './src/components/common/BottomNavigation';
+import BottomNavigation, { TabKey } from './src/components/common/BottomNavigation';
+import SosOverlay from './src/components/common/SosOverlay';
 
 import NotificationService from './src/services/notificationService';
 
@@ -30,6 +31,35 @@ function HeimdalMain() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   // Calculator disguise: shown at launch and whenever the app returns from the background
   const [disguised, setDisguised] = useState(false);
+  const [pendingInviteId, setPendingInviteId] = useState<string | undefined>(undefined);
+  const [sosVisible, setSosVisible] = useState(false);
+  // Hidden navbar while a fake call is ringing/in progress, so the simulation holds up
+  const [callActive, setCallActive] = useState(false);
+
+  // Handle guardian invitation deep links (?invite=<id> or /invite/<id>)
+  useEffect(() => {
+    const handleUrl = (url: string | null) => {
+      if (!url) return;
+      try {
+        const parsed = new URL(url, 'http://localhost');
+        const invite =
+          parsed.searchParams.get('invite') ||
+          (url.includes('/invite/') ? url.split('/invite/')[1]?.split('?')[0] : null);
+        if (invite) {
+          setPendingInviteId(invite);
+          setCurrentView('Contacts');
+          setActiveTab('Contacts');
+        }
+      } catch (_) {}
+    };
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location) {
+      handleUrl(window.location.href);
+    }
+    Linking.getInitialURL().then(handleUrl).catch(() => undefined);
+    const sub = Linking.addEventListener('url', ({ url }) => handleUrl(url));
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => {
     const lockIfEnabled = () =>
@@ -62,13 +92,17 @@ function HeimdalMain() {
   // Every screen except the splash needs an account: SOS, guardians and routes all act for a signed-in user
   const signedOut = currentView !== 'Splash' && session === null;
   const hidden = disguised && !!session;
+  // One navbar for the whole app shell: every signed-in screen gets it, the disguise and
+  // the sign-in/splash screens do not.
+  const showBottomNav = !!session && !disguised && !signedOut && currentView !== 'Splash' && !callActive;
 
   const handleTabPress = (tab: TabKey) => {
     setActiveTab(tab);
     if (tab === 'Home') setCurrentView('Home');
+    else if (tab === 'Journey' || tab === 'Map') setCurrentView('SafeRoutes');
+    else if (tab === 'Safety') setCurrentView('LiveLocation');
+    else if (tab === 'Profile' || tab === 'Settings') setCurrentView('Settings');
     else if (tab === 'Contacts') setCurrentView('Contacts');
-    else if (tab === 'Map') setCurrentView('SafeRoutes');
-    else if (tab === 'Settings') setCurrentView('Settings');
   };
 
   const handleNavigate = (view: string) => {
@@ -147,6 +181,24 @@ function HeimdalMain() {
               Settings
             </Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.screenPill, currentView === 'Contacts' && { backgroundColor: colors.brandAccent }]}
+            onPress={() => { setCurrentView('Contacts'); setActiveTab('Contacts'); }}
+          >
+            <Text style={[styles.screenPillText, { color: currentView === 'Contacts' ? '#FFFFFF' : colors.textSecondary }]}>
+              Contacts
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.screenPill, currentView === 'FakeCall' && { backgroundColor: colors.brandAccent }]}
+            onPress={() => setCurrentView('FakeCall')}
+          >
+            <Text style={[styles.screenPillText, { color: currentView === 'FakeCall' ? '#FFFFFF' : colors.textSecondary }]}>
+              FakeCall
+            </Text>
+          </TouchableOpacity>
         </View>
 
         <TouchableOpacity
@@ -179,6 +231,7 @@ function HeimdalMain() {
       >
         <DeviceStatusBar />
 
+        <View style={styles.screenArea}>
         {disguised && session && (
           <CalculatorScreen
             onUnlock={() => setDisguised(false)}
@@ -199,11 +252,7 @@ function HeimdalMain() {
         )}
 
         {!hidden && !signedOut && session && currentView === 'Home' && (
-          <HomeScreen
-            onNavigate={handleNavigate}
-            activeTab={activeTab}
-            onTabPress={handleTabPress}
-          />
+          <HomeScreen onNavigate={handleNavigate} />
         )}
 
         {!hidden && !signedOut && session && currentView === 'LiveLocation' && (
@@ -234,8 +283,6 @@ function HeimdalMain() {
               setCurrentView('Contacts');
               setActiveTab('Contacts');
             }}
-            activeTab={activeTab}
-            onTabPress={handleTabPress}
           />
         )}
 
@@ -245,6 +292,7 @@ function HeimdalMain() {
               setCurrentView('Home');
               setActiveTab('Home');
             }}
+            onActiveChange={setCallActive}
           />
         )}
 
@@ -254,11 +302,17 @@ function HeimdalMain() {
               setCurrentView('Home');
               setActiveTab('Home');
             }}
-            activeTab={activeTab}
-            onTabPress={handleTabPress}
+            initialInviteId={pendingInviteId}
           />
         )}
+        </View>
+
+        {showBottomNav && (
+          <BottomNavigation activeTab={activeTab} onTabPress={handleTabPress} onSos={() => setSosVisible(true)} />
+        )}
       </View>
+
+      <SosOverlay visible={sosVisible} onClose={() => setSosVisible(false)} />
     </View>
   );
 }
@@ -316,6 +370,10 @@ const styles = StyleSheet.create({
   themeToggleText: {
     fontSize: 11,
     fontWeight: '600',
+  },
+  screenArea: {
+    flex: 1,
+    width: '100%',
   },
   phoneFrame: {
     width: '100%',

@@ -16,7 +16,6 @@ import { useTheme } from '../theme';
 import AppHeader from '../components/common/AppHeader';
 import SettingsRow from '../components/settings/SettingsRow';
 import ThemeToggleModal from '../components/settings/ThemeToggleModal';
-import BottomNavigation, { TabKey } from '../components/common/BottomNavigation';
 import ContactService from '../services/contactService';
 import AuthService, { Session, authErrorMessage } from '../services/authService';
 import { ChangePinModal, ChangePasswordModal } from '../components/settings/SecurityModals';
@@ -28,15 +27,9 @@ import IncidentHistoryModal from '../components/settings/IncidentHistoryModal';
 
 interface SettingsScreenProps {
   onNavigateToContacts?: () => void;
-  activeTab?: TabKey;
-  onTabPress?: (tab: TabKey) => void;
 }
 
-export default function SettingsScreen({
-  onNavigateToContacts,
-  activeTab = 'Settings',
-  onTabPress,
-}: SettingsScreenProps) {
+export default function SettingsScreen({ onNavigateToContacts }: SettingsScreenProps) {
   const { colors, typography, isDark, mode, radii } = useTheme();
 
   const [themeModalVisible, setThemeModalVisible] = useState(false);
@@ -403,9 +396,6 @@ export default function SettingsScreen({
         </TouchableOpacity>
       </Modal>
 
-      {onTabPress && (
-        <BottomNavigation activeTab={activeTab} onTabPress={onTabPress} />
-      )}
     </SafeAreaView>
   );
 }

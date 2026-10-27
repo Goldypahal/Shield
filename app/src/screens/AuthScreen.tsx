@@ -200,8 +200,8 @@ export default function AuthScreen() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.brand}>
-            <HeimdalLogo size={56} />
-            <Text style={[typography.h2, { color: colors.textPrimary, marginTop: 10 }]}>SHIELD</Text>
+            <HeimdalLogo size={90} />
+            <Text style={[typography.h2, { color: colors.textPrimary, marginTop: 10, letterSpacing: 2 }]}>HEIMDAL</Text>
           </View>
 
           <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radii.xl }]}>

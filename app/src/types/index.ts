@@ -2,6 +2,8 @@ export type EmergencyContact = {
   id: string;
   name: string;
   phone: string;
+  verified?: boolean;
+  priority?: number;
 };
 
 export type UserProfile = {

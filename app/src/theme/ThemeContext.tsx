@@ -26,7 +26,8 @@ const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemColorScheme = useColorScheme();
-  const [mode, setModeState] = useState<ThemeMode>('system');
+  // SHIELD is designed light-first (white + orange); dark is opt-in in Settings
+  const [mode, setModeState] = useState<ThemeMode>('light');
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {

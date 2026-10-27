@@ -30,6 +30,8 @@ import {
 
 interface FakeCallScreenProps {
   onBack: () => void;
+  /** True while the call is ringing or in progress, so the app shell can hide the navbar. */
+  onActiveChange?: (active: boolean) => void;
 }
 
 type Phase = 'setup' | 'waiting' | 'ringing' | 'in_call';
@@ -51,7 +53,7 @@ function formatDuration(totalSeconds: number) {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-export default function FakeCallScreen({ onBack }: FakeCallScreenProps) {
+export default function FakeCallScreen({ onBack, onActiveChange }: FakeCallScreenProps) {
   const { colors, typography, isDark, radii } = useTheme();
   const [settings, setSettings] = useState<FakeCallSettings>(DEFAULT_SETTINGS);
   const [phase, setPhase] = useState<Phase>('setup');
@@ -71,6 +73,13 @@ export default function FakeCallScreen({ onBack }: FakeCallScreenProps) {
   useEffect(() => {
     loadSettings().then(setSettings);
   }, []);
+
+  // The screen-switcher bar would break the illusion of an incoming call
+  useEffect(() => {
+    onActiveChange?.(phase === 'ringing' || phase === 'in_call');
+  }, [phase, onActiveChange]);
+
+  useEffect(() => () => onActiveChange?.(false), [onActiveChange]);
 
   const update = (patch: Partial<FakeCallSettings>) => {
     setSettings((prev) => {

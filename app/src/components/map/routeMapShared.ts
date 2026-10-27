@@ -22,7 +22,7 @@ export interface RouteMapProps {
 }
 
 export const HAVEN_COLORS: Record<string, string> = {
-  police: '#1D4ED8',
+  police: '#0B132B',
   hospital: '#DB2777',
   pharmacy: '#059669',
   fuel: '#D97706',
@@ -39,7 +39,7 @@ export function riskColor(risk: number): string {
 
 // Route colours are fixed (not themed) so the line reads the same on light and dark basemaps.
 export const ROUTE_COLORS = {
-  selected: '#2563EB',
+  selected: '#FF5A1F',
   casing: '#FFFFFF',
   caution: '#DC2626',
   alternative: '#64748B',

@@ -5,7 +5,7 @@ import LocationTracker from './LocationTracker';
 import OfflineQueue from './OfflineQueue';
 import { checkPinOffline } from './pinVault';
 import ContactService from './contactService';
-import { triggerEmergency } from './sosService';
+import { triggerEmergency, SosResult } from './sosService';
 import { TriggerType } from './OfflineQueue';
 
 /**
@@ -43,6 +43,21 @@ export async function sendSilentSos(trigger: TriggerType = 'SOS_BUTTON'): Promis
     { uid: session.uid, name: session.name, phone: session.phone, emergencyContacts: contacts, sensitivityMode: 'NORMAL' },
     90, 'HIGH', trigger, { silent: true });
   await setActiveSos(result.alertId, true);
+}
+
+/**
+ * Visible SOS (navbar button or press-and-hold): the countdown already passed, so this
+ * raises the real alert, persists it on the device and starts live sharing.
+ */
+export async function sendSos(trigger: TriggerType = 'SOS_BUTTON'): Promise<SosResult> {
+  const session = await AuthService.ensureSession();
+  if (!session) throw new Error('Sign in to send an SOS.');
+  const contacts = await ContactService.listContacts().catch(() => []);
+  const result = await triggerEmergency(
+    { uid: session.uid, name: session.name, phone: session.phone, emergencyContacts: contacts, sensitivityMode: 'NORMAL' },
+    90, 'HIGH', trigger);
+  await setActiveSos(result.alertId, false);
+  return result;
 }
 
 async function finish() {
