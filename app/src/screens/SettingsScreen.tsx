@@ -21,7 +21,7 @@ import AuthService, { Session, authErrorMessage } from '../services/authService'
 import { ChangePinModal, ChangePasswordModal } from '../components/settings/SecurityModals';
 import PinPromptModal from '../components/common/PinPromptModal';
 import { keywordDetectionAvailable } from '../hooks/useKeywordTrigger';
-import { DiscreetSettings, getDiscreetSettings, updateDiscreetSettings } from '../services/discreetSettings';
+import { DiscreetSettings, DEFAULTS, getDiscreetSettings, updateDiscreetSettings } from '../services/discreetSettings';
 import { getActiveSos, stopActiveSos } from '../services/sosSession';
 import { getPoliceSharing, setPoliceSharing } from '../services/policeService';
 import IncidentHistoryModal from '../components/settings/IncidentHistoryModal';
@@ -45,7 +45,7 @@ export default function SettingsScreen({ onNavigateToContacts }: SettingsScreenP
   const [session, setSession] = useState<Session | null>(null);
   const [pinModalVisible, setPinModalVisible] = useState(false);
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
-  const [discreet, setDiscreet] = useState<DiscreetSettings>({ calculatorDisguise: false, shakeToSos: false, screamToSos: true, screamInBackground: true, fallToSos: true, keywordToSos: true });
+  const [discreet, setDiscreet] = useState<DiscreetSettings>(DEFAULTS);
   const [sosRunning, setSosRunning] = useState(false);
   const [stopPinVisible, setStopPinVisible] = useState(false);
   const [policeSharing, setPoliceSharingState] = useState<boolean | null>(null);
@@ -210,7 +210,7 @@ export default function SettingsScreen({ onNavigateToContacts }: SettingsScreenP
           <SettingsRow
             iconName="phone-portrait-outline"
             title="Shake to start SOS"
-            subtitle={discreet.shakeToSos ? 'On: shake 3 times to start the countdown' : 'Off'}
+            subtitle={discreet.shakeToSos ? 'On: shake the phone hard for about a second' : 'Off'}
             onPress={() => toggleDiscreet('shakeToSos')}
           />
 

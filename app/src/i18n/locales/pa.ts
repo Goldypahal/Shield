@@ -198,6 +198,8 @@ const pa: Translation = {
   'nav.badge.safest': 'ਸਭ ਤੋਂ ਸੁਰੱਖਿਅਤ',
   'nav.badge.shortest': 'ਸਭ ਤੋਂ ਛੋਟਾ',
   'nav.badge.fastest': 'ਸਭ ਤੋਂ ਤੇਜ਼',
+  'nav.badge.medium': 'ਦਰਮਿਆਨਾ ਖ਼ਤਰਾ',
+  'nav.badge.vulnerable': 'ਸਭ ਤੋਂ ਅਸੁਰੱਖਿਅਤ',
   'nav.loading': 'ਰਸਤੇ ਲੱਭੇ ਜਾ ਰਹੇ ਹਨ ਅਤੇ ਸੁਰੱਖਿਆ ਜਾਂਚੀ ਜਾ ਰਹੀ ਹੈ…',
   'nav.noRoutes': 'ਇਨ੍ਹਾਂ ਥਾਵਾਂ ਵਿਚਕਾਰ ਕੋਈ ਰਸਤਾ ਨਹੀਂ ਮਿਲਿਆ।',
   'nav.error': 'ਰਸਤਾ ਨਹੀਂ ਬਣ ਸਕਿਆ। ਆਪਣਾ ਕਨੈਕਸ਼ਨ ਜਾਂਚੋ।',

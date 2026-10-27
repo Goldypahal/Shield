@@ -1,6 +1,7 @@
 import 'react-native-get-random-values'; // must load before uuid
 import { v4 as uuidv4 } from 'uuid';
 import * as Location from 'expo-location';
+import { getBestLocation } from './locationService';
 import { AppState, Platform } from 'react-native';
 import { httpsCallable } from 'firebase/functions';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
@@ -46,11 +47,9 @@ async function bestEffortLocation(): Promise<{ latitude: number; longitude: numb
   const backgrounded = Platform.OS !== 'web' && AppState.currentState !== 'active';
   if (!backgrounded) {
     try {
-      const fresh = await Promise.race([
-        Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }),
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), GPS_TIMEOUT_MS))
-      ]);
-      if (fresh) return fresh.coords;
+      // a recent last-known fix at once, else a quick Wi-Fi/cell/GPS fix (never hangs)
+      const best = await getBestLocation(GPS_TIMEOUT_MS);
+      if (best) return best;
     } catch {
       // fall through to last known
     }

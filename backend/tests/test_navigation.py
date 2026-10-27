@@ -114,7 +114,9 @@ def test_badges():
         {"distance_m": 1100, "duration_s": 700, "safety": {"score": 70}},
     ]
     nav_safety.assign_badges(routes)
-    assert [r["badges"] for r in routes] == [["safest"], ["shortest"], ["fastest"]]
+    assert [r["badges"] for r in routes] == [["safest"], ["shortest", "vulnerable"], ["fastest", "medium"]]
+    assert [r["tier"] for r in routes] == ["safest", "vulnerable", "medium"]
+    assert [r["risk"] for r in routes] == ["low", "medium", "low"]
 
 
 # ---------------------------------------------------------------- providers
@@ -224,6 +226,11 @@ def test_plan_endpoint_scores_every_route(client, account, monkeypatch):
         return overpass_fixture()
 
     monkeypatch.setattr(nav_router, "fetch_osm", fake_osm)
+
+    async def no_profile(*a, **k):
+        return None
+
+    monkeypatch.setattr(nav_router, "edge_profile", no_profile)
     res = client.post("/api/v1/nav/plan", headers=user.headers, json={
         "origin": {"lat": A[0], "lon": A[1]}, "destination": {"lat": B[0], "lon": B[1]},
         "mode": "walk", "depart_at": "2026-10-27T23:00:00+05:30"})
@@ -271,3 +278,89 @@ def test_capabilities(client, account, monkeypatch):
     body = client.get("/api/v1/nav/capabilities", headers=user.headers).json()
     assert body["provider"] == "openstreetmap" and body["two_wheeler_uses_car_profile"] is True
     assert "transit" in body["all_modes"] and "transit" not in body["modes"]
+
+
+# ---------------------------------------------------------------- fast scoring and tiers
+
+import nav_roadclass  # noqa: E402
+
+
+def test_road_classes_score_a_route_without_overpass():
+    # Valhalla edges: 500 m primary road, then 500 m footway
+    edges = [{"length": 0.5, "road_class": "primary", "use": "road", "sidewalk": "both"},
+             {"length": 0.5, "road_class": "service_other", "use": "footway", "sidewalk": "none"}]
+    prof = nav_roadclass.parse_edges(edges, 1000)
+    assert prof.at(100) == "primary" and prof.at(900) == "footway"
+    s = nav_safety.score_route(ROUTE, 1000, None, [], "night", profile=prof)
+    assert s["score"] is not None and s["partial"] and s["lighting_estimated"]
+    assert 50 <= s["components"]["activity"] <= 80  # half main road, half footway
+    all_main = nav_roadclass.parse_edges([{"length": 1.0, "road_class": "primary", "use": "road"}], 1000)
+    assert nav_safety.score_route(ROUTE, 1000, None, [], "night", profile=all_main)["score"] > s["score"]
+
+
+def test_detour_vias_sit_either_side_of_the_trip():
+    left, right = nav_roadclass.detour_vias(A, B)
+    assert left[0] > A[0] > right[0]  # an east-west trip: one via north, one south
+    assert 200 < haversine(left, ((A[0] + B[0]) / 2, (A[1] + B[1]) / 2)) < 400
+
+
+def test_overlap_tells_same_and_different_routes_apart():
+    north = [A, (A[0] + 0.004, A[1]), (B[0] + 0.004, B[1]), B]
+    assert nav_roadclass.overlap(ROUTE, ROUTE) == 1.0
+    assert nav_roadclass.overlap(ROUTE, north) < 0.5
+
+
+class OneRouteRouter(FakeRouter):
+    async def routes(self, origin, dest, mode, language="en", via=None):
+        if via is None:
+            return [RouteOption(coords=ROUTE, distance_m=1000, duration_s=720, summary="Madhya Marg")]
+        detour = [A, (via[0], A[1]), (via[0], B[1]), B]
+        return [RouteOption(coords=detour, distance_m=1300, duration_s=950, summary="via")]
+
+
+def test_plan_adds_detours_and_ranks_tiers(client, account, monkeypatch):
+    user = account()
+    monkeypatch.setattr(nav_router, "routing_provider", lambda: OneRouteRouter())
+
+    async def no_osm(parts):
+        return None
+
+    async def profile(coords, dist, mode):
+        mid_south = coords[1][0] < A[0] if len(coords) > 2 else False
+        cls = "footway" if mid_south else "primary" if len(coords) > 4 else "residential"
+        return nav_roadclass.parse_edges([{"length": dist / 1000, "road_class": cls, "use": "footway" if cls == "footway" else "road"}], dist)
+
+    monkeypatch.setattr(nav_router, "fetch_osm", no_osm)
+    monkeypatch.setattr(nav_router, "edge_profile", profile)
+    res = client.post("/api/v1/nav/plan", headers=user.headers, json={
+        "origin": {"lat": A[0], "lon": A[1]}, "destination": {"lat": B[0], "lon": B[1]},
+        "mode": "walk", "depart_at": "2026-10-27T23:00:00+05:30"})
+    assert res.status_code == 200, res.text
+    routes = res.json()["routes"]
+    assert len(routes) == 3  # the router's one route plus a detour on each side
+    tiers = {r["tier"] for r in routes}
+    assert tiers == {"safest", "medium", "vulnerable"}
+    vulnerable = next(r for r in routes if r["tier"] == "vulnerable")
+    assert vulnerable["safety"]["score"] == min(r["safety"]["score"] for r in routes)
+    assert "shortest" in routes[0]["badges"]
+
+
+def test_slow_overpass_answers_within_budget_then_fills_cache(monkeypatch):
+    calls = []
+
+    async def slow_mirrors(query, deadline):
+        calls.append(query)
+        await asyncio.sleep(0.3)
+        return overpass_fixture()
+
+    monkeypatch.setattr(nav_safety, "_query_mirrors", slow_mirrors)
+    nav_safety._cache.clear()
+
+    async def scenario():
+        first = await nav_safety.fetch_osm([ROUTE], budget_s=0.05)
+        await asyncio.sleep(0.4)  # the background lookup finishes
+        second = await nav_safety.fetch_osm([ROUTE], budget_s=0.05)
+        return first, second
+
+    first, second = asyncio.run(scenario())
+    assert first is None and second is not None and len(calls) == 1

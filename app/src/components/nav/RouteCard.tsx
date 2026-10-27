@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme';
 import { useI18n, StringKey } from '../../i18n';
-import { NavRoute, Place247, formatDuration, formatKm, scoreColor } from '../../services/navService';
+import { NavRoute, Place247, formatDuration, formatKm, scoreColor, TIER_COLORS, SHORTEST_COLOR, RouteBadge } from '../../services/navService';
 import { PLACE_COLORS, PLACE_ICONS } from './navMapShared';
 import { callNumber } from '../common/HelplineRow';
 
@@ -15,6 +15,11 @@ interface RouteCardProps {
   onStart: () => void;
   onPlace: (p: Place247) => void;
 }
+
+const BADGE_COLOR: Record<RouteBadge, string> = {
+  safest: TIER_COLORS.safest, medium: TIER_COLORS.medium, vulnerable: TIER_COLORS.vulnerable,
+  shortest: SHORTEST_COLOR, fastest: '#7C3AED',
+};
 
 const PLACE_LABEL: Record<Place247['kind'], StringKey> = {
   pharmacy: 'nav.place.pharmacy', hospital: 'nav.place.hospital', police: 'nav.place.police', fuel: 'nav.place.fuel',
@@ -57,6 +62,7 @@ export default function RouteCard({ route, selected, expanded, onPress, onStart,
       style={[styles.card, {
         backgroundColor: colors.surface, borderRadius: radii.lg,
         borderColor: selected ? colors.brandAccent : colors.border, borderWidth: selected ? 2 : 1,
+        borderLeftWidth: 6, borderLeftColor: TIER_COLORS[route.tier ?? 'other'],
       }]}
       accessibilityRole="button"
       accessibilityState={{ selected }}
@@ -75,8 +81,8 @@ export default function RouteCard({ route, selected, expanded, onPress, onStart,
           {route.badges.length > 0 && (
             <View style={styles.badges}>
               {route.badges.map((b) => (
-                <View key={b} style={[styles.badge, { backgroundColor: b === 'safest' ? '#DCFCE7' : '#E0E7FF' }]}>
-                  <Text style={[styles.badgeText, { color: b === 'safest' ? '#166534' : '#3730A3' }]}>{t(`nav.badge.${b}` as StringKey)}</Text>
+                <View key={b} style={[styles.badge, { backgroundColor: `${BADGE_COLOR[b]}22`, borderColor: BADGE_COLOR[b], borderWidth: 1 }]}>
+                  <Text style={[styles.badgeText, { color: BADGE_COLOR[b] }]}>{t(`nav.badge.${b}` as StringKey)}</Text>
                 </View>
               ))}
             </View>
@@ -89,7 +95,8 @@ export default function RouteCard({ route, selected, expanded, onPress, onStart,
       </View>
 
       <View style={styles.metrics}>
-        {metric('bulb-outline', s.lit_pct === null ? t('nav.litUnknown') : t('nav.lit', { pct: s.lit_pct }))}
+        {metric('bulb-outline', s.lit_pct !== null ? t('nav.lit', { pct: s.lit_pct })
+          : s.lighting_estimated && s.components.lighting !== null ? `~${s.components.lighting}% lit (est.)` : t('nav.litUnknown'))}
         {metric('alert-circle-outline', s.incidents ? t('nav.incidents', { count: s.incidents }) : t('nav.noIncidents'),
           s.incidents ? colors.sosPrimary : colors.textSecondary)}
         {metric('time-outline', t('nav.open247', { count: s.places_247.filter((p) => p.open_247).length }))}

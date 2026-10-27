@@ -3,15 +3,10 @@ import { AppState, Platform } from 'react-native';
 import type { AudioDataEvent, UseAudioRecorderState } from '@siteed/audio-studio';
 import { optionalNative } from '../utils/nativeModules';
 import audioClassifier, { AudioClassifier } from '../ml/AudioClassifier';
-import { ScreamDurationDetector } from '../ml/ScreamDurationDetector';
+import { VoiceAnalyzer, CryDetector } from '../ml/VoiceAnalyzer';
 import ScreamSosController from '../services/screamSosController';
-import {
-  onVoiceSosTrigger,
-  getVoiceSupportInfo,
-  reportHeardPhrase,
-  getActiveMediaStream,
-  onActiveMediaStream,
-} from '../services/voiceTriggerHelper';
+import { onVoiceSosTrigger } from '../services/voiceTriggerHelper';
+import { getVoiceState, pushLevel, setCryProgress, setMicState } from '../services/voiceMonitor';
 
 // The microphone stream needs native code that Expo Go lacks; without it scream detection is off.
 const audioStudio = optionalNative(
@@ -28,7 +23,10 @@ const noRecorder = (): Pick<UseAudioRecorderState, 'startRecording' | 'stopRecor
 const useRecorder = audioStudio ? audioStudio.useAudioRecorder : noRecorder;
 
 const SAMPLE_RATE = 16000;
-const HOP_MS = 500;
+const HOP_MS = 250;
+const MODEL_EVERY_MS = 500;
+/** Digital silence for this long while listening: another app or service has the microphone. */
+const SILENCE_MS = 4000;
 const WINDOW = AudioClassifier.SAMPLES_PER_WINDOW; // latest 1 s of audio per classification
 
 /** Native may still hand over base64 16-bit PCM; normalise everything to [-1, 1] floats. */
@@ -110,7 +108,11 @@ export function useScreamTrigger(
     let busy = false;
     const ring = new Float32Array(WINDOW);
     let filled = 0;
-    const detector = new ScreamDurationDetector();
+    const analyzer = new VoiceAnalyzer();
+    const cry = new CryDetector();
+    let lastModelAt = 0;
+    let modelProb = 0;
+    let silentSince: number | null = null;
 
     // WEB PLATFORM: Managed centrally via voiceTriggerHelper and onVoiceSosTrigger
     if (Platform.OS === 'web') {
@@ -119,14 +121,17 @@ export function useScreamTrigger(
       };
     }
 
-    // NATIVE PLATFORM IMPLEMENTATION (@siteed/audio-studio)
+    // NATIVE: @siteed/audio-studio streams 16 kHz audio every 250 ms. Each chunk gives the
+    // live loudness (meter), the noise floor and whether it is a voice; a sustained loud,
+    // voiced, high-pitched cry (or a loud sound the scream model calls a scream) starts the SOS.
     const onAudioStream = async (event: AudioDataEvent) => {
       if (stopped) return;
       ScreamSosController.tick(); // keeps a countdown moving while timers are paused
       const chunk = toFloat32(event.data as AudioDataEvent['data']);
       if (chunk.length === 0) return;
+      const now = Date.now();
 
-      // Slide the newest samples into the 1 s window
+      // Slide the newest samples into the 1 s window (scream model input)
       if (chunk.length >= WINDOW) {
         ring.set(chunk.subarray(chunk.length - WINDOW));
       } else {
@@ -134,20 +139,41 @@ export function useScreamTrigger(
         ring.set(chunk, WINDOW - chunk.length);
       }
       filled = Math.min(WINDOW, filled + chunk.length);
-      if (filled < WINDOW || busy) return;
 
-      busy = true;
-      try {
-        const probability = await audioClassifier.classifyWindow(ring.slice());
-        if (stopped) return;
-        const hopMs = Math.max(HOP_MS, Math.round((chunk.length / SAMPLE_RATE) * 1000));
-        const status = detector.push(probability, Date.now(), hopMs, audioClassifier.threshold);
-        onProgressRef.current?.(status.sustainedMs);
-        if (status.triggered) onScreamRef.current();
-      } catch (e) {
-        console.warn('[ScreamTrigger] classification failed', e);
-      } finally {
-        busy = false;
+      const hop = analyzer.process(chunk);
+      if (hop.silent) {
+        silentSince = silentSince ?? now;
+        if (now - silentSince > SILENCE_MS && getVoiceState().scream !== 'silenced') {
+          setMicState('scream', 'silenced', 'Another app or the speech recogniser is using the microphone; loudness comes from speech recognition.');
+        }
+        return;
+      }
+      if (silentSince !== null || getVoiceState().scream !== 'on') setMicState('scream', 'on', null);
+      silentSince = null;
+      pushLevel(hop.peakDb, 'audio', { floorDb: hop.floorDb, voiced: hop.voicedRatio >= 0.3 });
+
+      // The scream model adds evidence for rough screams; it never decides alone (it is
+      // only consulted for sounds that are already at the trigger level)
+      const triggerDb = getVoiceState().triggerDb;
+      if (filled >= WINDOW && !busy && hop.medianDb >= triggerDb && now - lastModelAt >= MODEL_EVERY_MS) {
+        busy = true;
+        lastModelAt = now;
+        audioClassifier.classifyWindow(ring.slice())
+          .then((p) => { modelProb = audioClassifier.engine === 'tflite' ? p : 0; })
+          .catch(() => { modelProb = 0; })
+          .finally(() => { busy = false; });
+      } else if (hop.medianDb < triggerDb) {
+        modelProb = 0;
+      }
+
+      const hopMs = Math.max(HOP_MS, Math.round((chunk.length / SAMPLE_RATE) * 1000));
+      const crying = cry.isCry(hop, triggerDb, modelProb, audioClassifier.threshold);
+      const status = cry.push(crying, now, hopMs);
+      setCryProgress(status.sustainedMs);
+      onProgressRef.current?.(status.sustainedMs);
+      if (status.triggered) {
+        console.log(`[ScreamTrigger] sustained cry: ${hop.medianDb.toFixed(0)} dB, f0 ${hop.f0.toFixed(0)} Hz, voiced ${(hop.voicedRatio * 100).toFixed(0)}% -> SOS`);
+        onScreamRef.current();
       }
     };
 
@@ -156,11 +182,14 @@ export function useScreamTrigger(
     const start = async () => {
       try {
         if (Platform.OS !== 'web' && audioStudio) {
+          setMicState('scream', 'starting');
           const perm = await audioStudio.AudioStudioModule.requestPermissionsAsync();
           if (!perm?.granted) {
             console.warn('[ScreamTrigger] Microphone permission denied; scream detection is off.');
+            setMicState('scream', 'denied', 'Microphone permission is off. Allow it to use voice SOS.');
             return;
           }
+          audioClassifier.load().catch(() => undefined);
         }
         if (stopped) return;
         await startRecording({
@@ -179,7 +208,7 @@ export function useScreamTrigger(
           showNotification: background && Platform.OS === 'android',
           notification: {
             title: 'SHIELD is listening for screams',
-            text: 'A 3-second scream starts an SOS. Audio is analysed on your phone and not stored.',
+            text: 'A loud scream or shout of about 3 seconds starts an SOS. Audio is analysed on your phone and not stored.',
             android: {
               channelId: 'scream-listening',
               channelName: 'Scream detection',
@@ -197,9 +226,11 @@ export function useScreamTrigger(
           },
         });
         started = true;
+        setMicState('scream', 'on', null);
         if (stopped) stopRecording().catch(() => undefined);
       } catch (e) {
         console.warn('[ScreamTrigger] Could not start the microphone; scream detection is off.', e);
+        setMicState('scream', 'error', 'Could not start the microphone. Close other apps that record audio and try again.');
       }
     };
 
@@ -218,6 +249,8 @@ export function useScreamTrigger(
       stopped = true;
       waitForForeground?.remove();
       onProgressRef.current?.(0);
+      setCryProgress(0);
+      setMicState('scream', 'off');
       if (started) stopRecording().catch(() => undefined);
     };
   }, [enabled, background]);

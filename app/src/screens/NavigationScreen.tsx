@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Animated, Platform,
+  View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Animated, Platform, Linking,
 } from 'react-native';
 import * as Location from 'expo-location';
+import { ensureLocationReady, getBestLocation, LocationReadiness } from '../services/locationService';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme';
 import { useI18n, StringKey } from '../i18n';
@@ -15,7 +16,7 @@ import { callNumber } from '../components/common/HelplineRow';
 import { PLACE_COLORS, PLACE_ICONS } from '../components/nav/navMapShared';
 import {
   ALL_MODES, FREE_MODES, NavPlace, NavPlan, Place247, SortKey, TravelMode, getCapabilities, planNav, sortRoutes,
-  toPlannedRoute, formatKm, navErrorMessage,
+  toPlannedRoute, formatKm, navErrorMessage, TIER_COLORS,
 } from '../services/navService';
 import type { LatLon } from '../services/routeService';
 
@@ -43,6 +44,8 @@ export default function NavigationScreen({ onBack }: NavigationScreenProps) {
 
   const [me, setMe] = useState<{ lat: number; lon: number; accuracy: number | null } | null>(null);
   const [locationDenied, setLocationDenied] = useState(false);
+  const [locationProblem, setLocationProblem] = useState<LocationReadiness | null>(null);
+  const [locationRetry, setLocationRetry] = useState(0);
   const [start, setStart] = useState<Endpoint>(null);
   const [dest, setDest] = useState<Endpoint>(null);
   const [searchFor, setSearchFor] = useState<'start' | 'dest' | null>(null);
@@ -74,24 +77,32 @@ export default function NavigationScreen({ onBack }: NavigationScreenProps) {
     ]).start(() => setToast(null));
   }, [toastOpacity]);
 
-  // Live position at the best accuracy the phone offers (GPS + Wi-Fi + cell; often 3-5 m outdoors)
+  // Live position: a quick first fix (never hangs indoors), then GPS tracking at the best
+  // accuracy the phone offers (GPS + Wi-Fi + cell; often 3-5 m outdoors)
   useEffect(() => {
     let sub: Location.LocationSubscription | null = null;
     let cancelled = false;
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync().catch(() => ({ status: 'denied' as const }));
-      if (status !== 'granted') { setLocationDenied(true); return; }
-      const last = await Location.getLastKnownPositionAsync().catch(() => null);
-      if (last && !cancelled) setMe({ lat: last.coords.latitude, lon: last.coords.longitude, accuracy: last.coords.accuracy ?? null });
-      sub = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.BestForNavigation, distanceInterval: 2, timeInterval: 2000 },
-        (p) => setMe({ lat: p.coords.latitude, lon: p.coords.longitude, accuracy: p.coords.accuracy ?? null }),
-      );
-      if (cancelled) sub.remove();
+      const ready = await ensureLocationReady();
+      if (ready !== 'ok') { setLocationDenied(true); setLocationProblem(ready); return; }
+      setLocationDenied(false);
+      setLocationProblem(null);
+      const first = await getBestLocation(10000);
+      if (first && !cancelled) setMe((prev) => prev ?? { lat: first.latitude, lon: first.longitude, accuracy: first.accuracy });
+      try {
+        sub = await Location.watchPositionAsync(
+          { accuracy: Location.Accuracy.High, distanceInterval: 2, timeInterval: 2000 },
+          (p) => setMe({ lat: p.coords.latitude, lon: p.coords.longitude, accuracy: p.coords.accuracy ?? null }),
+        );
+        if (cancelled) sub.remove();
+      } catch (e) {
+        console.warn('[nav] location watch failed', e);
+      }
+      if (!first && !cancelled) showToast('Still looking for your location. Move near a window, or pick a start point.');
     })();
     getCapabilities().then((c) => setModes(c.modes)).catch(() => undefined);
     return () => { cancelled = true; sub?.remove(); };
-  }, []);
+  }, [locationRetry]);
 
   const origin: LatLon | null = start?.point ?? (me ? { lat: me.lat, lon: me.lon } : null);
 
@@ -142,7 +153,11 @@ export default function NavigationScreen({ onBack }: NavigationScreenProps) {
     setDest(newDest);
   };
 
-  const mapRoutes = useMemo(() => routes.map((r) => ({ id: r.id, coords: r.coords, caution: r.safety.caution })), [routes]);
+  // Every alternative is drawn in its safety-tier colour (safest green, medium amber, most
+  // vulnerable red; others grey), the selected one on top and thicker
+  const mapRoutes = useMemo(() => routes.map((r) => ({
+    id: r.id, coords: r.coords, caution: r.safety.caution, color: TIER_COLORS[r.tier ?? 'other'],
+  })), [routes]);
   // Re-fit when the plan changes and when the sheet settles or opens, so routes are never hidden under it
   const fitKey = plan ? `${plan.routes.map((r) => r.id + r.distance_m).join('|')}:${Math.round(sheetH / 40)}` : '';
 
@@ -151,7 +166,7 @@ export default function NavigationScreen({ onBack }: NavigationScreenProps) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <NavMap
-          routes={[{ id: selected.id, coords: selected.coords, caution: selected.safety.caution }]}
+          routes={[{ id: selected.id, coords: selected.coords, caution: selected.safety.caution, color: TIER_COLORS[selected.tier ?? 'other'] }]}
           selectedId={selected.id}
           origin={null}
           destination={dest?.point ?? null}
@@ -254,7 +269,16 @@ export default function NavigationScreen({ onBack }: NavigationScreenProps) {
           })}
         </ScrollView>
         {locationDenied && !start && (
-          <Text style={[typography.bodySmall, styles.notice, { backgroundColor: colors.statusWarningBg, color: colors.textPrimary }]}>{t('nav.locationOff')}</Text>
+          <TouchableOpacity
+            onPress={() => (locationProblem === 'blocked' ? Linking.openSettings() : setLocationRetry((k) => k + 1))}
+            accessibilityRole="button"
+          >
+            <Text style={[typography.bodySmall, styles.notice, { backgroundColor: colors.statusWarningBg, color: colors.textPrimary }]}>
+              {locationProblem === 'services_off' ? 'Location is off on this phone. Tap to turn it on.'
+                : locationProblem === 'blocked' ? 'Location permission is blocked. Tap to open Settings and allow it.'
+                : `${t('nav.locationOff')} Tap to allow.`}
+            </Text>
+          </TouchableOpacity>
         )}
       </View>
 
@@ -320,6 +344,21 @@ export default function NavigationScreen({ onBack }: NavigationScreenProps) {
                   </TouchableOpacity>
                 ))}
               </View>
+              {routes.length > 1 && (
+                <View style={styles.legend}>
+                  {(['safest', 'medium', 'vulnerable'] as const).filter((k) => routes.some((r) => r.tier === k)).map((k) => (
+                    <TouchableOpacity
+                      key={k}
+                      onPress={() => { const r = routes.find((x) => x.tier === k); if (r) { setSelectedId(r.id); setExpanded(true); } }}
+                      style={styles.legendItem}
+                      accessibilityRole="button"
+                    >
+                      <View style={[styles.legendSwatch, { backgroundColor: TIER_COLORS[k] }]} />
+                      <Text style={[typography.bodySmall, { color: colors.textSecondary, fontWeight: '700' }]}>{t(`nav.badge.${k}` as StringKey)}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
               <ScrollView style={{ maxHeight: expanded ? 460 : 190 }} contentContainerStyle={{ paddingBottom: 6 }}>
                 {(expanded ? routes : routes.filter((r) => r.id === selected?.id)).map((r) => (
                   <RouteCard
@@ -408,6 +447,9 @@ const shadow = {
 };
 
 const styles = StyleSheet.create({
+  legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingHorizontal: 4, paddingBottom: 8 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendSwatch: { width: 18, height: 6, borderRadius: 3 },
   retryBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 8, marginTop: 10 },
   container: { flex: 1, overflow: 'hidden' },
   top: { position: 'absolute', top: 0, left: 0, right: 0, paddingTop: 10 },

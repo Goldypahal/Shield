@@ -198,6 +198,8 @@ const ta: Translation = {
   'nav.badge.safest': 'மிகப் பாதுகாப்பானது',
   'nav.badge.shortest': 'மிகக் குறுகியது',
   'nav.badge.fastest': 'மிக வேகமானது',
+  'nav.badge.medium': 'நடுத்தர ஆபத்து',
+  'nav.badge.vulnerable': 'மிக ஆபத்தானது',
   'nav.loading': 'வழிகளைத் தேடி பாதுகாப்பைச் சரிபார்க்கிறோம்…',
   'nav.noRoutes': 'இந்த இடங்களுக்கு இடையே வழி கிடைக்கவில்லை.',
   'nav.error': 'வழியைத் திட்டமிட முடியவில்லை. உங்கள் இணைப்பைச் சரிபார்க்கவும்.',

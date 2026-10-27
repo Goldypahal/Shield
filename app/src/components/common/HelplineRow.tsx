@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { callPhone } from '../../services/phoneCall';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme';
 import { useI18n } from '../../i18n';
 import { Helpline, formatHelplineNumber } from '../../data/helplines';
 
-export const callNumber = (number: string) => Linking.openURL(`tel:${number}`).catch(() => undefined);
+export const callNumber = (number: string) => callPhone(number).catch(() => undefined);
 
 interface HelplineRowProps {
   helpline: Helpline;

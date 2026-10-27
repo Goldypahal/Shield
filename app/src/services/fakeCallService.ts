@@ -18,7 +18,7 @@ export type FakeCallSettings = {
 };
 
 const SETTINGS_KEY = '@shield_fake_call_settings';
-const RECORDING_FILE = 'fake-call-voice.m4a';
+const RECORDING_PREFIX = 'fake-call-voice-';
 
 export const DEFAULT_SETTINGS: FakeCallSettings = {
   callerName: 'Mom',
@@ -48,8 +48,20 @@ export async function startVoiceRecording(): Promise<void> {
   const permission = await Audio.requestPermissionsAsync();
   if (!permission.granted) throw new Error('Microphone permission is needed to record the caller voice.');
   await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-  const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-  activeRecording = recording;
+  // The voice-SOS listeners give the microphone back when this screen opens, but stopping
+  // takes a moment: retry briefly instead of failing on the first tap
+  let lastError: unknown = null;
+  for (let i = 0; i < 4; i++) {
+    try {
+      const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      activeRecording = recording;
+      return;
+    } catch (e) {
+      lastError = e;
+      await new Promise((r) => setTimeout(r, 500));
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('The microphone is busy. Try again in a moment.');
 }
 
 /** Stops recording and keeps the clip somewhere that survives app restarts. Returns its URI. */
@@ -60,13 +72,29 @@ export async function stopVoiceRecording(): Promise<string | null> {
   await recording.stopAndUnloadAsync();
   await Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true });
   const tempUri = recording.getURI();
-  if (!tempUri) return null;
-  // On web the recording is a blob URL (kept for this session only); on phones copy it to app storage
+  if (!tempUri) throw new Error('Nothing was recorded.');
+  // On web the recording is a blob URL (kept for this session only); on phones copy it to
+  // app storage under a new name each time (a reused name could replay a cached old clip)
   if (Platform.OS === 'web' || !FileSystem.documentDirectory) return tempUri;
-  const target = `${FileSystem.documentDirectory}${RECORDING_FILE}`;
-  await FileSystem.deleteAsync(target, { idempotent: true });
+  const info = await FileSystem.getInfoAsync(tempUri);
+  if (!info.exists || (info.size ?? 0) < 1000) throw new Error('The recording is empty. Hold the record button a little longer and speak.');
+  const target = `${FileSystem.documentDirectory}${RECORDING_PREFIX}${Date.now()}.m4a`;
   await FileSystem.copyAsync({ from: tempUri, to: target });
+  // keep only the newest clip
+  try {
+    const files = await FileSystem.readDirectoryAsync(FileSystem.documentDirectory);
+    await Promise.all(files
+      .filter((f) => f.startsWith(RECORDING_PREFIX) && `${FileSystem.documentDirectory}${f}` !== target)
+      .map((f) => FileSystem.deleteAsync(`${FileSystem.documentDirectory}${f}`, { idempotent: true })));
+  } catch { /* old clips stay; harmless */ }
   return target;
+}
+
+/** Whether a saved clip is still on the phone (settings can outlive a reinstall's files). */
+export async function recordingExists(uri: string | null): Promise<boolean> {
+  if (!uri) return false;
+  if (Platform.OS === 'web') return true;
+  try { return (await FileSystem.getInfoAsync(uri)).exists; } catch { return false; }
 }
 
 export async function deleteVoiceRecording(uri: string | null): Promise<void> {
@@ -77,8 +105,10 @@ export async function deleteVoiceRecording(uri: string | null): Promise<void> {
 
 // --- Ringtone ---------------------------------------------------------------
 
-/** A phone-style marimba ringtone (assets/sounds/ringtone.wav), looped while the call rings. */
+/** Fallback: a phone-style marimba ringtone (assets/sounds/ringtone.wav). */
 const RINGTONE = require('../../assets/sounds/ringtone.wav');
+/** The phone's own default ringtone (Android Settings.System.DEFAULT_RINGTONE_URI). */
+const DEVICE_RINGTONE = 'content://settings/system/ringtone';
 
 /**
  * Starts the looping ringtone and returns its stop function straight away, so a call that
@@ -97,7 +127,17 @@ export function startRingtone(): () => Promise<void> {
         shouldDuckAndroid: false,
         playThroughEarpieceAndroid: false,
       });
-      const created = await Audio.Sound.createAsync(RINGTONE, { isLooping: true, volume: 1.0, shouldPlay: !stopped });
+      // The phone's own ringtone, so the fake call sounds exactly like a real one; the
+      // bundled tone when the phone has none set (or on iOS, which does not expose it)
+      let created: { sound: Audio.Sound } | null = null;
+      if (Platform.OS === 'android') {
+        try {
+          created = await Audio.Sound.createAsync({ uri: DEVICE_RINGTONE }, { isLooping: true, volume: 1.0, shouldPlay: !stopped });
+        } catch (e) {
+          console.warn('Device ringtone unavailable, using the bundled one', e);
+        }
+      }
+      if (!created) created = await Audio.Sound.createAsync(RINGTONE, { isLooping: true, volume: 1.0, shouldPlay: !stopped });
       sound = created.sound;
       if (stopped) await sound.unloadAsync().catch(() => undefined);
     } catch (e) {

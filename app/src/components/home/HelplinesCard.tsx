@@ -1,3 +1,4 @@
+import { callPhone } from '../../services/phoneCall';
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native';
 import * as Location from 'expo-location';
@@ -6,7 +7,7 @@ import { useTheme } from '../../theme';
 import { DEFAULT_HELPLINES, NearbyPolice, nearbyPolice } from '../../services/policeService';
 import { formatDistance } from '../../services/routeService';
 
-const call = (number: string) => Linking.openURL(`tel:${number}`).catch(() => undefined);
+const call = (number: string) => callPhone(number).catch(() => undefined);
 
 /** One-tap helplines (112, 1091, 181) and the nearest police station and patrol van. */
 export default function HelplinesCard() {

@@ -14,6 +14,7 @@ and if Overpass cannot be reached the score uses the remaining components and is
 partial. Long routes (> 60 km) are analysed for the first and last 10 km, where walking,
 waiting and last-mile risk concentrate.
 """
+import asyncio
 import logging
 import math
 import os
@@ -29,7 +30,14 @@ from nav_providers import USER_AGENT
 logger = logging.getLogger("shield-nav-safety")
 
 OVERPASS_URLS = [u.strip() for u in os.environ.get(
-    "OVERPASS_URLS", "https://overpass-api.de/api/interpreter,https://overpass.kumi.systems/api/interpreter").split(",") if u.strip()]
+    "OVERPASS_URLS",
+    "https://overpass-api.de/api/interpreter,https://overpass.private.coffee/api/interpreter,"
+    "https://overpass.kumi.systems/api/interpreter,https://maps.mail.ru/osm/tools/overpass/api/interpreter").split(",") if u.strip()]
+# How long a route plan waits for Overpass. The public servers often need 30+ s or fail;
+# a plan answers within this budget with the road-class score (Valhalla) and the Overpass
+# result is still fetched in the background, so asking again moments later is complete.
+OVERPASS_BUDGET_S = float(os.environ.get("OVERPASS_BUDGET_S", "8"))
+OVERPASS_BACKGROUND_S = 45.0
 SAMPLE_M = 25.0
 LONG_ROUTE_M = 60000.0
 LONG_ROUTE_ENDS_M = 10000.0
@@ -52,6 +60,14 @@ ROAD_ACTIVITY = {
     "motorway": 0.5, "motorway_link": 0.5,
 }
 ISOLATED_CLASSES = {"footway", "path", "steps", "track", "cycleway"}
+# Without OSM lighting data: how likely a road of this class is lit at night (main roads
+# in Indian cities almost always are, lanes and paths often are not). Marked as estimated.
+LIT_LIKELIHOOD = {
+    "trunk": 0.9, "primary": 0.9, "secondary": 0.85, "tertiary": 0.75, "trunk_link": 0.85, "primary_link": 0.85,
+    "secondary_link": 0.8, "tertiary_link": 0.7, "pedestrian": 0.75, "living_street": 0.55, "residential": 0.55,
+    "unclassified": 0.45, "service": 0.4, "cycleway": 0.35, "footway": 0.35, "path": 0.2, "steps": 0.3, "track": 0.1,
+    "motorway": 0.7, "motorway_link": 0.7,
+}
 
 # Score weights by time of day: lighting, incidents, help nearby, road activity
 WEIGHTS = {
@@ -92,32 +108,72 @@ def overpass_query(parts: List[List[LatLon]]) -> str:
             ".roads out tags geom;.lamps out;.help out tags center;")
 
 
-async def fetch_osm(parts: List[List[LatLon]]) -> Optional[Dict[str, Any]]:
-    """OSM features along the given route parts, or None when Overpass is unavailable."""
-    key = tuple(tuple((round(a, 4), round(b, 4)) for a, b in simplify(p, 40)) for p in parts)
-    hit = _cache.get(key)
-    if hit and time.time() - hit[0] < CACHE_TTL_S:
-        return hit[1]
-    query = overpass_query(parts)
-    # Budget for all mirrors together: the app waits at most 90 s for a whole plan, and
-    # safety data is optional (routes are still returned without it).
-    deadline = time.time() + 35.0
-    async with httpx.AsyncClient(timeout=httpx.Timeout(20.0, connect=6.0), headers={"User-Agent": USER_AGENT}) as client:
-        for url in OVERPASS_URLS:
-            if time.time() > deadline:
-                break
+_inflight: Dict[Tuple, "asyncio.Task"] = {}
+
+
+def _osm_key(parts: List[List[LatLon]]) -> Tuple:
+    return tuple(tuple((round(a, 4), round(b, 4)) for a, b in simplify(p, 40)) for p in parts)
+
+
+async def _query_mirrors(query: str, deadline_s: float) -> Optional[Dict[str, Any]]:
+    """Asks every Overpass mirror at once; the first good answer wins."""
+    async with httpx.AsyncClient(timeout=httpx.Timeout(deadline_s, connect=6.0), headers={"User-Agent": USER_AGENT}) as client:
+        async def one(url: str) -> Optional[Dict[str, Any]]:
             try:
                 res = await client.post(url, data={"data": query})
                 if res.status_code == 200:
-                    data = res.json()
-                    _cache[key] = (time.time(), data)
-                    if len(_cache) > 500:
-                        _cache.pop(next(iter(_cache)))
-                    return data
+                    return res.json()
                 logger.warning("Overpass %s returned %s", url, res.status_code)
             except (httpx.HTTPError, ValueError) as e:
                 logger.warning("Overpass %s failed: %s", url, e)
+            return None
+
+        tasks = [asyncio.ensure_future(one(u)) for u in OVERPASS_URLS]
+        try:
+            for fut in asyncio.as_completed(tasks, timeout=deadline_s):
+                try:
+                    data = await fut
+                except asyncio.TimeoutError:
+                    break
+                if data is not None:
+                    return data
+        except asyncio.TimeoutError:
+            pass
+        finally:
+            for t in tasks:
+                t.cancel()
     return None
+
+
+async def fetch_osm(parts: List[List[LatLon]], budget_s: Optional[float] = None) -> Optional[Dict[str, Any]]:
+    """OSM features along the given route parts, or None when Overpass does not answer
+    within `budget_s` (the lookup then continues in the background and fills the cache)."""
+    key = _osm_key(parts)
+    hit = _cache.get(key)
+    if hit and time.time() - hit[0] < CACHE_TTL_S:
+        return hit[1]
+    budget = OVERPASS_BUDGET_S if budget_s is None else budget_s
+
+    task = _inflight.get(key)
+    if task is None or task.done():
+        query = overpass_query(parts)
+
+        async def run():
+            data = await _query_mirrors(query, OVERPASS_BACKGROUND_S)
+            if data is not None:
+                _cache[key] = (time.time(), data)
+                if len(_cache) > 500:
+                    _cache.pop(next(iter(_cache)))
+            _inflight.pop(key, None)
+            return data
+
+        task = asyncio.ensure_future(run())
+        _inflight[key] = task
+    try:
+        return await asyncio.wait_for(asyncio.shield(task), timeout=budget)
+    except asyncio.TimeoutError:
+        logger.info("Overpass slower than %.0f s; answering with road classes, OSM data follows in the cache", budget)
+        return None
 
 
 # ---------------------------------------------------------------- features
@@ -161,8 +217,10 @@ def parse_osm(data: Dict[str, Any]):
 # ---------------------------------------------------------------- scoring
 
 def score_route(coords: List[LatLon], distance_m: float, osm: Optional[Dict[str, Any]],
-                incidents: List[Dict[str, Any]], period: str) -> Dict[str, Any]:
-    """Safety breakdown for one route. `incidents`: dicts with lat, lon, weight, radius_m, public."""
+                incidents: List[Dict[str, Any]], period: str, profile: Any = None) -> Dict[str, Any]:
+    """Safety breakdown for one route. `incidents`: dicts with lat, lon, weight, radius_m, public.
+    `profile`: road classes along the route (nav_roadclass.EdgeProfile), used where OSM
+    roads from Overpass are missing."""
     long_trip = distance_m > LONG_ROUTE_M
     parts = analysed_parts(coords, distance_m)
     proj = Projector(coords[len(coords) // 2][0])
@@ -213,8 +271,16 @@ def score_route(coords: List[LatLon], distance_m: float, osm: Optional[Dict[str,
     covered = 0
     flags: List[Optional[str]] = []
     hit_incidents: Dict[int, Dict[str, Any]] = {}
-    for p, _ in samples:
+    lit_est_sum, lit_est_n = 0.0, 0
+    for p, along in samples:
         _, road = road_idx.nearest(p, ROAD_MATCH_M) if roads else (None, None)
+        if road is None and profile is not None:
+            cls = profile.at(along)
+            if cls:
+                road = {"cls": cls, "lit": None, "name": ""}
+        if road is not None and osm is None:
+            lit_est_sum += LIT_LIKELIHOOD.get(road["cls"], 0.5)
+            lit_est_n += 1
         lamp_d, _ = lamp_idx.nearest(p, LAMP_RADIUS_M) if lamps else (None, None)
         if road is not None:
             activity_sum += ROAD_ACTIVITY.get(road["cls"], 0.5)
@@ -246,8 +312,9 @@ def score_route(coords: List[LatLon], distance_m: float, osm: Optional[Dict[str,
     analysed_km = max(0.05, n * SAMPLE_M / 1000.0)
     incident_load = sum(i.get("weight", 1.0) for i in hit_incidents.values())
     have_osm = osm is not None
+    lighting_estimated = not have_osm and lit_est_n > 0
     components: Dict[str, Optional[float]] = {
-        "lighting": (lit + 0.4 * unknown) / n if have_osm else None,
+        "lighting": (lit + 0.4 * unknown) / n if have_osm else (lit_est_sum / lit_est_n if lighting_estimated else None),
         "activity": (activity_sum / matched) if matched else None,
         "incidents": 1.0 / (1.0 + 2.0 * incident_load / analysed_km),
         "help": covered / n if have_osm else None,
@@ -260,6 +327,8 @@ def score_route(coords: List[LatLon], distance_m: float, osm: Optional[Dict[str,
     return {
         "score": score,
         "partial": not have_osm,
+        "lighting_estimated": lighting_estimated,
+        "road_classes": profile is not None or bool(roads),
         "long_trip": long_trip,
         "period": period,
         "lit_pct": round(100 * lit / n) if have_osm else None,
@@ -306,17 +375,41 @@ def caution_stretches(samples: List[Tuple[LatLon, float]], flags: List[Optional[
     return out[:30]
 
 
+def risk_level(score: Optional[int]) -> str:
+    if score is None:
+        return "unknown"
+    return "low" if score >= 70 else "medium" if score >= 50 else "high"
+
+
 def assign_badges(routes: List[Dict[str, Any]]) -> None:
-    """Marks the safest, shortest and fastest route (a route can hold several badges)."""
+    """Marks the safest, shortest and fastest route (a route can hold several badges), and
+    ranks every route into a tier: 'safest', 'medium' (middle risk), 'vulnerable' (the most
+    exposed of the alternatives), so the map can show all of them side by side."""
     for r in routes:
         r["badges"] = []
+        r["tier"] = "other"
+        r["risk"] = risk_level(r["safety"]["score"])
     if not routes:
         return
-    scored = [r for r in routes if r["safety"]["score"] is not None]
+    scored = sorted([r for r in routes if r["safety"]["score"] is not None],
+                    key=lambda r: (-r["safety"]["score"], r["distance_m"]))
     if len(scored) >= 1 and len(routes) > 1:
-        best = max(scored, key=lambda r: (r["safety"]["score"], -r["distance_m"]))
-        best["badges"].append("safest")
+        scored[0]["badges"].append("safest")
     min(routes, key=lambda r: r["distance_m"])["badges"].append("shortest")
     min(routes, key=lambda r: r["duration_s"])["badges"].append("fastest")
     if len(routes) == 1 and routes[0]["safety"]["score"] is not None:
         routes[0]["badges"].insert(0, "safest")
+    if scored:
+        scored[0]["tier"] = "safest"
+    if len(scored) >= 2:
+        scored[-1]["tier"] = "vulnerable"
+        if scored[-1]["safety"]["score"] < scored[0]["safety"]["score"]:
+            scored[-1]["badges"].append("vulnerable")
+    if len(scored) >= 3:
+        middle = scored[len(scored) // 2] if len(scored) % 2 else scored[(len(scored) - 1) // 2]
+        if middle["tier"] == "other":
+            middle["tier"] = "medium"
+            middle["badges"].append("medium")
+    for r in scored[1:-1]:
+        if r["tier"] == "other":
+            r["tier"] = "medium"

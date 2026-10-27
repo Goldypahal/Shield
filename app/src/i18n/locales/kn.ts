@@ -198,6 +198,8 @@ const kn: Translation = {
   'nav.badge.safest': 'ಅತ್ಯಂತ ಸುರಕ್ಷಿತ',
   'nav.badge.shortest': 'ಅತಿ ಚಿಕ್ಕದು',
   'nav.badge.fastest': 'ಅತಿ ವೇಗ',
+  'nav.badge.medium': 'ಮಧ್ಯಮ ಅಪಾಯ',
+  'nav.badge.vulnerable': 'ಅತ್ಯಂತ ಅಪಾಯಕಾರಿ',
   'nav.loading': 'ಮಾರ್ಗಗಳನ್ನು ಹುಡುಕಿ ಸುರಕ್ಷತೆ ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ…',
   'nav.noRoutes': 'ಈ ಸ್ಥಳಗಳ ನಡುವೆ ಮಾರ್ಗ ಸಿಗಲಿಲ್ಲ.',
   'nav.error': 'ಮಾರ್ಗ ಯೋಜಿಸಲು ಆಗಲಿಲ್ಲ. ನಿಮ್ಮ ಸಂಪರ್ಕ ಪರಿಶೀಲಿಸಿ.',

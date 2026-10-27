@@ -198,6 +198,8 @@ const ur: Translation = {
   'nav.badge.safest': 'سب سے محفوظ',
   'nav.badge.shortest': 'سب سے چھوٹا',
   'nav.badge.fastest': 'سب سے تیز',
+  'nav.badge.medium': 'درمیانہ خطرہ',
+  'nav.badge.vulnerable': 'سب سے غیر محفوظ',
   'nav.loading': 'راستے تلاش کیے جا رہے ہیں اور حفاظت جانچی جا رہی ہے…',
   'nav.noRoutes': 'ان جگہوں کے درمیان کوئی راستہ نہیں ملا۔',
   'nav.error': 'راستہ نہیں بن سکا۔ اپنا کنکشن چیک کریں۔',

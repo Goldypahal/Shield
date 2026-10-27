@@ -198,6 +198,8 @@ const gu: Translation = {
   'nav.badge.safest': 'સૌથી સુરક્ષિત',
   'nav.badge.shortest': 'સૌથી ટૂંકો',
   'nav.badge.fastest': 'સૌથી ઝડપી',
+  'nav.badge.medium': 'મધ્યમ જોખમ',
+  'nav.badge.vulnerable': 'સૌથી જોખમી',
   'nav.loading': 'રસ્તા શોધી રહ્યા છીએ અને સુરક્ષા તપાસી રહ્યા છીએ…',
   'nav.noRoutes': 'આ સ્થળો વચ્ચે કોઈ રસ્તો મળ્યો નહીં.',
   'nav.error': 'રસ્તો બની શક્યો નહીં. તમારું કનેક્શન તપાસો.',

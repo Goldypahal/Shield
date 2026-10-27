@@ -202,6 +202,8 @@ const en = {
   'nav.badge.safest': 'Safest',
   'nav.badge.shortest': 'Shortest',
   'nav.badge.fastest': 'Fastest',
+  'nav.badge.medium': 'Medium risk',
+  'nav.badge.vulnerable': 'Most vulnerable',
   'nav.loading': 'Finding routes and checking safety…',
   'nav.noRoutes': 'No route found between these places.',
   'nav.error': 'Could not plan a route. Check your connection.',

@@ -198,6 +198,8 @@ const or: Translation = {
   'nav.badge.safest': 'ସବୁଠୁ ସୁରକ୍ଷିତ',
   'nav.badge.shortest': 'ସବୁଠୁ ଛୋଟ',
   'nav.badge.fastest': 'ସବୁଠୁ ଶୀଘ୍ର',
+  'nav.badge.medium': 'ମଧ୍ୟମ ବିପଦ',
+  'nav.badge.vulnerable': 'ସବୁଠୁ ବିପଦପୂର୍ଣ୍ଣ',
   'nav.loading': 'ରାସ୍ତା ଖୋଜି ସୁରକ୍ଷା ଯାଞ୍ଚ କରାଯାଉଛି…',
   'nav.noRoutes': 'ଏହି ସ୍ଥାନଗୁଡ଼ିକ ମଧ୍ୟରେ କୌଣସି ରାସ୍ତା ମିଳିଲା ନାହିଁ।',
   'nav.error': 'ରାସ୍ତା ଯୋଜନା କରିହେଲା ନାହିଁ। ଆପଣଙ୍କ ସଂଯୋଗ ଯାଞ୍ଚ କରନ୍ତୁ।',

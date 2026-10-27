@@ -3,6 +3,9 @@ import { Platform } from 'react-native';
 import { optionalNative } from '../utils/nativeModules';
 import { matchEmergency, RECOGNIZER_HINTS } from '../services/emergencyKeywords';
 import { reportHeardPhrase } from '../services/voiceTriggerHelper';
+import { judgeKeyword, pushLevel, reportHeard, setMicState, getVoiceState } from '../services/voiceMonitor';
+import { recognizerRmsToDb, CryDetector } from '../ml/VoiceAnalyzer';
+import { setCryProgress } from '../services/voiceMonitor';
 
 type SpeechModule = typeof import('expo-speech-recognition');
 
@@ -12,93 +15,162 @@ const speech = Platform.OS === 'web'
   ? null
   : optionalNative<SpeechModule>(() => require('expo-speech-recognition'), 'Speech recognition (expo-speech-recognition)');
 
+const androidVersion = Platform.OS === 'android' ? Number(Platform.Version) : 0;
+
+/** Speech recognition is in this build (Android 8+ or iOS). */
+export const keywordDetectionAvailable = !!speech && (Platform.OS === 'ios' || androidVersion >= 26);
+
 /**
- * Continuous recognition needs Android 13+ (API 33). Older Android would have to restart
- * the recogniser every few seconds, which beeps each time, so it is not offered there.
+ * Android 13+ records the microphone inside SHIELD and hands the audio to the recogniser
+ * (continuous, no start beep), so the scream listener can run at the same time. On older
+ * Android the recogniser records in the Google app; two apps cannot share the microphone
+ * there, so while the app is open the recogniser has it and loudness comes from its volume.
  */
-export const keywordDetectionAvailable =
-  !!speech && (Platform.OS === 'ios' || (Platform.OS === 'android' && Number(Platform.Version) >= 33));
+export const keywordsNeedExclusiveMic = Platform.OS === 'android' && androidVersion < 33;
+
+interface Attempt { lang: string; onDevice: boolean }
 
 /**
  * Listens for spoken cries for help ("help", "bachao", "call the police", see
- * emergencyKeywords.ts) while `enabled`, and calls `onKeyword` with the matched phrase.
+ * emergencyKeywords.ts) while `enabled`. A recognised phrase starts an SOS when it was said
+ * in a raised voice (voiceMonitor.judgeKeyword: at or above the walker's trigger level,
+ * normal speech + 15 %), so a calm "can you help me with this" in a conversation does not.
  *
- * Runs only while the app is on screen (phones don't allow speech recognition in the
- * background). Prefers on-device recognition, so nothing is sent to a server when the phone
- * has the language pack. Hindi app language listens in Hindi (Devanagari words), others
- * in Indian English ("bachao" and "madad karo" are recognised in English too).
+ * Phones don't allow speech recognition in the background, so it runs while the app is
+ * open. Recognition is on the phone when it has the language pack, else Google's online
+ * recogniser; if a language is not available it falls back to the next one.
  */
-export function useKeywordTrigger(onKeyword: (phrase: string) => void, enabled: boolean, appLang = 'en') {
+export function useKeywordTrigger(onKeyword: (phrase: string) => void, enabled: boolean, appLang = 'en', onCry?: () => void) {
   const onKeywordRef = useRef(onKeyword);
   onKeywordRef.current = onKeyword;
+  const onCryRef = useRef(onCry);
+  onCryRef.current = onCry;
 
   useEffect(() => {
-    if (!enabled || !speech || !keywordDetectionAvailable) return;
+    if (!enabled || !speech || !keywordDetectionAvailable) {
+      if (Platform.OS !== 'web') setMicState('keywords', enabled && !keywordDetectionAvailable ? 'unavailable' : 'off');
+      return;
+    }
     const M = speech.ExpoSpeechRecognitionModule;
     let stopped = false;
-    let failures = 0;
+    let quickEnds = 0; // sessions that ended within 2 s without hearing anything
+    let sessionStart = 0;
+    let heardThisSession = false;
     let restartTimer: ReturnType<typeof setTimeout> | null = null;
     const subs: Array<{ remove: () => void }> = [];
+    const onDeviceOk = (() => { try { return M.supportsOnDeviceRecognition(); } catch { return false; } })();
+    const primary = appLang === 'hi' ? 'hi-IN' : 'en-IN';
+    const attempts: Attempt[] = [
+      ...(onDeviceOk ? [{ lang: primary, onDevice: true }] : []),
+      { lang: primary, onDevice: false },
+      { lang: 'en-US', onDevice: false },
+    ];
+    let attempt = 0;
+    const continuous = Platform.OS === 'ios' || androidVersion >= 33;
 
     const start = () => {
       if (stopped) return;
-      const onDevice = (() => { try { return M.supportsOnDeviceRecognition(); } catch { return false; } })();
+      const a = attempts[Math.min(attempt, attempts.length - 1)];
       try {
         M.start({
-          lang: appLang === 'hi' ? 'hi-IN' : 'en-IN',
+          lang: a.lang,
           interimResults: true,
-          continuous: true,
+          continuous,
           maxAlternatives: 3,
-          requiresOnDeviceRecognition: onDevice,
+          requiresOnDeviceRecognition: a.onDevice,
           contextualStrings: RECOGNIZER_HINTS,
           addsPunctuation: false,
-          // no "listening" chime and don't take over the audio session on iOS
+          volumeChangeEventOptions: { enabled: true, intervalMillis: 200 },
+          // Older Android: keep each session open as long as the recogniser allows
+          ...(continuous ? {} : {
+            androidIntentOptions: {
+              EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 10000,
+              EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 10000,
+              EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS: 15000,
+            },
+          }),
           iosTaskHint: 'search',
         });
       } catch (e) {
         console.warn('[KeywordTrigger] start failed', e);
+        quickEnds += 1;
         scheduleRestart();
       }
     };
 
     const scheduleRestart = () => {
       if (stopped || restartTimer) return;
-      failures += 1;
-      if (failures > 6) {
-        console.warn('[KeywordTrigger] speech recognition keeps failing; voice keywords are off until the app restarts');
+      if (quickEnds > 10) {
+        setMicState('keywords', 'error', 'Speech recognition keeps failing. Voice keywords are paused; scream detection still works.');
         return;
       }
-      restartTimer = setTimeout(() => { restartTimer = null; start(); }, Math.min(30000, 1000 * 2 ** failures));
+      const delay = quickEnds === 0 ? (continuous ? 300 : 150) : Math.min(15000, 400 * 2 ** quickEnds);
+      restartTimer = setTimeout(() => { restartTimer = null; start(); }, delay);
     };
 
+    subs.push(M.addListener('start', () => {
+      sessionStart = Date.now();
+      heardThisSession = false;
+      setMicState('keywords', 'on', getVoiceState().note?.startsWith('Speech recognition') ? null : undefined);
+    }));
+    // When the recogniser has the microphone to itself (older Android, app open), a long
+    // loud cry is judged from its volume: 6 dB over the trigger level for 2.5 s
+    const cry = new CryDetector();
+    let lastVol = 0;
+    subs.push(M.addListener('volumechange', (ev: { value: number }) => {
+      const db = recognizerRmsToDb(ev.value);
+      pushLevel(db, 'speech', { voiced: ev.value > 3 });
+      if (keywordsNeedExclusiveMic && onCryRef.current) {
+        const now = Date.now();
+        const st = cry.push(db >= getVoiceState().triggerDb + 6, now, lastVol ? Math.min(500, now - lastVol) : 200);
+        lastVol = now;
+        setCryProgress(st.sustainedMs);
+        if (st.triggered) onCryRef.current();
+      }
+    }));
     subs.push(M.addListener('result', (ev) => {
-      failures = 0;
+      heardThisSession = true;
+      quickEnds = 0;
       for (const r of ev.results) {
         const phrase = matchEmergency(r.transcript, ev.isFinal);
+        reportHeard(r.transcript);
         reportHeardPhrase(r.transcript, phrase !== null);
         if (phrase) {
-          onKeywordRef.current(phrase);
+          if (judgeKeyword(phrase)) onKeywordRef.current(phrase);
           return;
         }
       }
     }));
     subs.push(M.addListener('error', (ev) => {
-      if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed' || ev.error === 'language-not-supported') {
-        console.warn('[KeywordTrigger] unavailable:', ev.error, ev.message);
-        stopped = true; // permanent for this session
+      console.warn('[KeywordTrigger] error:', ev.error, ev.message);
+      if (ev.error === 'not-allowed') {
+        stopped = true;
+        setMicState('keywords', 'denied', 'Microphone or speech permission is off. Allow it to use voice keywords.');
+      } else if (ev.error === 'language-not-supported' || ev.error === 'service-not-allowed' || ev.error === 'network') {
+        // next recogniser: on-device -> online -> English (US)
+        if (attempt < attempts.length - 1) {
+          attempt += 1;
+          console.warn('[KeywordTrigger] falling back to', attempts[attempt]);
+        }
       }
+      // 'no-speech', 'speech-timeout', 'aborted', 'busy': 'end' follows and restarts
     }));
-    // Continuous recognition still ends now and then (silence, Android service limits): restart
+    // Continuous recognition still ends now and then (silence, service limits): restart
     subs.push(M.addListener('end', () => {
-      if (!stopped) {
-        restartTimer = setTimeout(() => { restartTimer = null; start(); }, 400);
-      }
+      const quick = !heardThisSession && Date.now() - sessionStart < 2000;
+      quickEnds = quick ? quickEnds + 1 : 0;
+      if (!stopped) scheduleRestart();
     }));
 
     (async () => {
+      setMicState('keywords', 'starting');
       const perm = await M.requestPermissionsAsync().catch(() => null);
       if (!perm?.granted) {
-        console.warn('[KeywordTrigger] microphone/speech permission not granted; voice keywords are off');
+        setMicState('keywords', 'denied', 'Microphone or speech permission is off. Allow it to use voice keywords.');
+        return;
+      }
+      if (!M.isRecognitionAvailable()) {
+        setMicState('keywords', 'unavailable', 'This phone has no speech recogniser (install or update the Google app). Scream detection still works.');
         return;
       }
       start();
@@ -109,6 +181,7 @@ export function useKeywordTrigger(onKeyword: (phrase: string) => void, enabled: 
       if (restartTimer) clearTimeout(restartTimer);
       subs.forEach((s) => s.remove());
       try { M.abort(); } catch { /* not running */ }
+      setMicState('keywords', 'off');
     };
   }, [enabled, appLang]);
 }

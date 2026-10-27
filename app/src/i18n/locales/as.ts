@@ -198,6 +198,8 @@ const asm: Translation = {
   'nav.badge.safest': 'আটাইতকৈ সুৰক্ষিত',
   'nav.badge.shortest': 'আটাইতকৈ চুটি',
   'nav.badge.fastest': 'আটাইতকৈ দ্ৰুত',
+  'nav.badge.medium': 'মধ্যমীয়া বিপদ',
+  'nav.badge.vulnerable': 'আটাইতকৈ বিপদজনক',
   'nav.loading': 'পথ বিচৰা আৰু সুৰক্ষা পৰীক্ষা কৰা হৈছে…',
   'nav.noRoutes': 'এই ঠাইবোৰৰ মাজত কোনো পথ পোৱা নগ’ল।',
   'nav.error': 'পথ পৰিকল্পনা কৰিব পৰা নগ’ল। আপোনাৰ সংযোগ পৰীক্ষা কৰক।',

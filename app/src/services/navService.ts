@@ -4,8 +4,16 @@ import type { PlannedRoute, RouteSegment, LatLon } from './routeService';
 /** Client for the all-India planner (/api/v1/nav). */
 
 export type TravelMode = 'walk' | 'bicycle' | 'two_wheeler' | 'car' | 'transit';
-export type RouteBadge = 'safest' | 'shortest' | 'fastest';
-export type SortKey = RouteBadge;
+export type RouteBadge = 'safest' | 'shortest' | 'fastest' | 'medium' | 'vulnerable';
+export type SortKey = 'safest' | 'shortest' | 'fastest';
+/** Where a route ranks among the alternatives by safety score. */
+export type RouteTier = 'safest' | 'medium' | 'vulnerable' | 'other';
+
+/** One colour per tier, used on the map and the cards. */
+export const TIER_COLORS: Record<RouteTier, string> = {
+  safest: '#16A34A', medium: '#F59E0B', vulnerable: '#DC2626', other: '#64748B',
+};
+export const SHORTEST_COLOR = '#2563EB';
 
 export interface NavPlace {
   name: string;
@@ -49,6 +57,8 @@ export interface RouteSafety {
   places_247: Place247[];
   caution: CautionStretch[];
   components: { lighting: number | null; activity: number | null; incidents: number | null; help: number | null };
+  /** No OSM lighting data: lighting estimated from road classes. */
+  lighting_estimated?: boolean;
 }
 
 export interface NavStep {
@@ -71,6 +81,9 @@ export interface NavRoute {
   steps: NavStep[];
   safety: RouteSafety;
   badges: RouteBadge[];
+  /** Safety rank among the alternatives (older servers: missing). */
+  tier?: RouteTier;
+  risk?: 'low' | 'medium' | 'high' | 'unknown';
 }
 
 export interface NavPlan {

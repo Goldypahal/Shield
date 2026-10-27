@@ -198,6 +198,8 @@ const bn: Translation = {
   'nav.badge.safest': 'সবচেয়ে নিরাপদ',
   'nav.badge.shortest': 'সবচেয়ে ছোট',
   'nav.badge.fastest': 'সবচেয়ে দ্রুত',
+  'nav.badge.medium': 'মাঝারি ঝুঁকি',
+  'nav.badge.vulnerable': 'সবচেয়ে ঝুঁকিপূর্ণ',
   'nav.loading': 'রাস্তা খোঁজা ও নিরাপত্তা যাচাই হচ্ছে…',
   'nav.noRoutes': 'এই জায়গাগুলির মধ্যে কোনো রাস্তা পাওয়া যায়নি।',
   'nav.error': 'রাস্তা তৈরি করা যায়নি। আপনার সংযোগ দেখুন।',

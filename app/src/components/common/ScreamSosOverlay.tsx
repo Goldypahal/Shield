@@ -1,3 +1,4 @@
+import { callPhone } from '../../services/phoneCall';
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -184,7 +185,7 @@ export default function ScreamSosOverlay() {
               <Text style={styles.primaryButtonText}>{t('sos.enterPinButton')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => Linking.openURL('tel:112').catch(() => undefined)}
+              onPress={() => callPhone('112').catch(() => undefined)}
               style={styles.linkButton}
               accessibilityRole="button"
               accessibilityLabel="Call 112"
@@ -219,7 +220,7 @@ export default function ScreamSosOverlay() {
             <Text style={styles.body}>{t('sos.inDanger')}</Text>
             <TouchableOpacity
               style={styles.primaryButton}
-              onPress={() => Linking.openURL('tel:112').catch(() => undefined)}
+              onPress={() => callPhone('112').catch(() => undefined)}
               accessibilityRole="button"
               accessibilityLabel="Call 112"
             >

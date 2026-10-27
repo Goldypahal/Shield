@@ -1,14 +1,16 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, StatusBar,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, StatusBar, AppState, Linking, Platform,
 } from 'react-native';
+import { ensureLocationReady, LocationReadiness } from '../services/locationService';
+import { getDetectorStatus, onDetectorStatus, DetectorStatus } from '../services/detectorStatus';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme';
 import { useI18n } from '../i18n';
 import AuthService from '../services/authService';
 import ContactService from '../services/contactService';
-import { getDiscreetSettings, onDiscreetSettingsChange, DiscreetSettings } from '../services/discreetSettings';
+import { getDiscreetSettings, onDiscreetSettingsChange, DiscreetSettings, updateDiscreetSettings } from '../services/discreetSettings';
 import { getActiveSos, stopActiveSos } from '../services/sosSession';
 import { EmergencyContact } from '../types';
 import { HELPLINES, HOME_HELPLINE_IDS } from '../data/helplines';
@@ -36,11 +38,32 @@ export default function HomeScreen({ onNavigate }: HomeScreenProps) {
   const [contacts, setContacts] = useState<EmergencyContact[] | null>(null);
   const [discreet, setDiscreet] = useState<DiscreetSettings | null>(null);
   const [locationOk, setLocationOk] = useState<boolean | null>(null);
+  const [locationState, setLocationState] = useState<LocationReadiness | null>(null);
+  const [detectors, setDetectors] = useState<DetectorStatus>(getDetectorStatus());
   const [sosActive, setSosActive] = useState(false);
   const [pinVisible, setPinVisible] = useState(false);
   const [langVisible, setLangVisible] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const checkinY = useRef(0);
+
+  // Permission granted AND location switched on (both are needed for a fix)
+  const refreshLocation = useCallback(() => {
+    if (Platform.OS === 'web') { setLocationOk(true); return; }
+    Promise.all([Location.getForegroundPermissionsAsync(), Location.hasServicesEnabledAsync()])
+      .then(([p, on]) => {
+        setLocationOk(p.granted && on);
+        setLocationState(!p.granted ? (p.canAskAgain ? 'denied' : 'blocked') : on ? 'ok' : 'services_off');
+      })
+      .catch(() => setLocationOk(null));
+  }, []);
+
+  /** Tapping the Location item fixes it: asks for permission, turns location on, or opens Settings. */
+  const fixLocation = useCallback(async () => {
+    const r = await ensureLocationReady();
+    setLocationState(r);
+    setLocationOk(r === 'ok');
+    if (r === 'blocked') Linking.openSettings().catch(() => undefined);
+  }, []);
 
   const refreshSos = useCallback(() => {
     getActiveSos().then((a) => setSosActive(!!a && !a.silent)).catch(() => undefined);
@@ -50,22 +73,34 @@ export default function HomeScreen({ onNavigate }: HomeScreenProps) {
     AuthService.ensureSession().then((s) => setName(s?.name?.split(' ')[0] || null)).catch(() => undefined);
     ContactService.listContacts().then(setContacts).catch(() => setContacts([]));
     getDiscreetSettings().then(setDiscreet).catch(() => undefined);
-    Location.getForegroundPermissionsAsync().then((p) => setLocationOk(p.granted)).catch(() => setLocationOk(null));
+    refreshLocation();
     refreshSos();
     const unsub = onDiscreetSettingsChange(setDiscreet);
+    const unsubDet = onDetectorStatus(setDetectors);
+    // Coming back from the phone's Settings (permission or location switched on): re-check
+    const sub = AppState.addEventListener('change', (st) => { if (st === 'active') refreshLocation(); });
     const poll = setInterval(refreshSos, 5000); // an SOS can start from scream, shake or the navbar
-    return () => { unsub(); clearInterval(poll); };
+    return () => { unsub(); unsubDet(); sub.remove(); clearInterval(poll); };
   }, [refreshSos]);
 
   const guardianCount = contacts?.length ?? 0;
   // on: true = good, false = needs attention, null = unknown or optional-and-off (grey)
-  const statusItems: { label: string; on: boolean | null; value: string }[] = [
-    { label: t('home.status.scream'), on: discreet ? discreet.screamToSos && screamDetectionAvailable : null, value: discreet?.screamToSos && screamDetectionAvailable ? t('common.on') : t('common.off') },
-    { label: t('home.status.location'), on: locationOk, value: locationOk ? t('home.status.allowed') : t('home.status.blocked') },
-    { label: t('home.status.guardians'), on: contacts ? guardianCount > 0 : null, value: String(guardianCount) },
-    { label: t('home.status.shake'), on: discreet?.shakeToSos ? true : null, value: discreet?.shakeToSos ? t('common.on') : t('common.off') },
+  const statusItems: { label: string; on: boolean | null; value: string; onPress: () => void }[] = [
+    { label: t('home.status.scream'), on: discreet ? discreet.screamToSos && screamDetectionAvailable : null, value: discreet?.screamToSos && screamDetectionAvailable ? t('common.on') : t('common.off'),
+      onPress: () => updateDiscreetSettings({ screamToSos: !discreet?.screamToSos }).catch(() => undefined) },
+    { label: t('home.status.location'), on: locationOk,
+      value: locationOk ? t('home.status.allowed') : locationState === 'services_off' ? t('common.off') : t('home.status.blocked'),
+      onPress: fixLocation },
+    { label: t('home.status.guardians'), on: contacts ? guardianCount > 0 : null, value: String(guardianCount), onPress: () => onNavigate('Contacts') },
+    { label: t('home.status.shake'), on: discreet?.shakeToSos ? true : null, value: discreet?.shakeToSos ? t('common.on') : t('common.off'),
+      onPress: () => updateDiscreetSettings({ shakeToSos: !discreet?.shakeToSos }).catch(() => undefined) },
+    { label: 'Fall detection', on: discreet?.fallToSos ? detectors.fall !== 'off' || null : null,
+      value: !discreet?.fallToSos ? t('common.off') : detectors.fall === 'model' ? 'AI on' : detectors.fall === 'physics' ? t('common.on') : t('common.on'),
+      onPress: () => updateDiscreetSettings({ fallToSos: !discreet?.fallToSos }).catch(() => undefined) },
+    { label: 'Voice keywords', on: discreet?.keywordToSos ? true : null, value: discreet?.keywordToSos ? t('common.on') : t('common.off'),
+      onPress: () => updateDiscreetSettings({ keywordToSos: !discreet?.keywordToSos }).catch(() => undefined) },
   ];
-  // Shake is optional, so it does not count against "all on"
+  // Shake, fall and keywords are optional, so they do not count against "all on"
   const allOn = statusItems.slice(0, 3).every((s) => s.on);
 
   const actions: { icon: IconName; title: string; sub: string; tint: string; onPress: () => void }[] = [
@@ -126,13 +161,8 @@ export default function HomeScreen({ onNavigate }: HomeScreenProps) {
         <VoiceEmergencyBanner />
 
         {/* Protection status */}
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={() => onNavigate('Settings')}
-          style={[styles.statusCard, card, { borderWidth: 1 }]}
-          accessibilityRole="button"
-        >
-          <View style={styles.statusTop}>
+        <View style={[styles.statusCard, card, { borderWidth: 1 }]}>
+          <TouchableOpacity activeOpacity={0.85} onPress={() => onNavigate('Settings')} style={styles.statusTop} accessibilityRole="button">
             <View style={[styles.statusIcon, { backgroundColor: allOn ? colors.statusSuccessBg : colors.statusWarningBg }]}>
               <Ionicons name={allOn ? 'shield-checkmark' : 'shield-outline'} size={26} color={allOn ? colors.statusSuccess : colors.statusWarning} />
             </View>
@@ -145,17 +175,31 @@ export default function HomeScreen({ onNavigate }: HomeScreenProps) {
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-          </View>
+          </TouchableOpacity>
           <View style={styles.statusGrid}>
             {statusItems.map((s) => (
-              <View key={s.label} style={[styles.statusItem, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.md }]}>
+              <TouchableOpacity
+                key={s.label}
+                onPress={s.onPress}
+                style={[styles.statusItem, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.md }]}
+                accessibilityRole="button"
+                accessibilityLabel={`${s.label}: ${s.value}. Tap to change.`}
+              >
                 <View style={[styles.dot, { backgroundColor: s.on === null ? colors.textMuted : s.on ? colors.statusSuccess : colors.statusWarning }]} />
                 <Text style={[typography.bodySmall, { color: colors.textSecondary, flex: 1 }]} numberOfLines={2}>{s.label}</Text>
-                <Text style={[typography.bodySmall, { color: colors.textPrimary, fontWeight: '700' }]}>{s.value}</Text>
-              </View>
+                <Text style={[typography.bodySmall, { color: s.on === false ? colors.statusWarning : colors.textPrimary, fontWeight: '700' }]}>{s.value}</Text>
+              </TouchableOpacity>
             ))}
           </View>
-        </TouchableOpacity>
+          {locationOk === false && (
+            <TouchableOpacity onPress={fixLocation} style={[styles.fixButton, { backgroundColor: colors.brandAccent, borderRadius: radii.md }]} accessibilityRole="button">
+              <Ionicons name="location" size={16} color="#FFFFFF" />
+              <Text style={[typography.button, { color: '#FFFFFF' }]}>
+                {locationState === 'services_off' ? 'Turn on location' : locationState === 'blocked' ? 'Allow location in Settings' : 'Allow location'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* Quick actions */}
         {sectionTitle(t('home.actions.title'))}
@@ -268,6 +312,7 @@ const styles = StyleSheet.create({
   statusGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 8, marginTop: 12 },
   statusItem: { width: '48.8%', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 8 },
   dot: { width: 8, height: 8, borderRadius: 4 },
+  fixButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 10, marginTop: 10 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 24, marginBottom: 10 },
   actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
   action: { width: '48.8%', padding: 12, gap: 2 },

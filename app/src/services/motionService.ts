@@ -1,4 +1,4 @@
-import { Accelerometer } from 'expo-sensors';
+import { subscribeMotion } from './motionHub';
 import MotionClassifier, { MotionClassificationResult } from '../ml/MotionClassifier';
 
 let latestResult: MotionClassificationResult = {
@@ -14,9 +14,8 @@ function ensureSubscription() {
   if (subscribed) return;
 
   subscribed = true;
-  // Sample at 50Hz (20ms) for impact & fall detection per SRS DET-5
-  Accelerometer.setUpdateInterval(50);
-  Accelerometer.addListener(({ x, y, z }) => {
+  // The shared 50 Hz stream (one sensor rate for the whole app, see motionHub)
+  subscribeMotion(({ ax: x, ay: y, az: z }) => {
     // Convert g-force to m/s^2 for classifier
     const G = 9.80665;
     latestResult = MotionClassifier.addReading({

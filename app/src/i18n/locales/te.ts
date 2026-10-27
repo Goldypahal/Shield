@@ -198,6 +198,8 @@ const te: Translation = {
   'nav.badge.safest': 'అత్యంత సురక్షితం',
   'nav.badge.shortest': 'అతి చిన్నది',
   'nav.badge.fastest': 'అత్యంత వేగం',
+  'nav.badge.medium': 'మధ్యస్థ ప్రమాదం',
+  'nav.badge.vulnerable': 'అత్యంత ప్రమాదకరం',
   'nav.loading': 'మార్గాలు వెతుకుతూ భద్రతను పరిశీలిస్తున్నాం…',
   'nav.noRoutes': 'ఈ ప్రదేశాల మధ్య మార్గం కనబడలేదు.',
   'nav.error': 'మార్గం ప్లాన్ చేయలేకపోయాం. మీ కనెక్షన్ చూడండి.',

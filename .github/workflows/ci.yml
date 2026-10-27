@@ -44,6 +44,8 @@ jobs:
         run: python3 scripts/check-translations.py
       - name: Voice SOS keywords (phrases trigger, everyday speech does not)
         run: node scripts/test-keywords.cjs
+      - name: Voice, shake and fall detectors
+        run: node scripts/test-voice.cjs
 
   dashboard:
     runs-on: ubuntu-latest

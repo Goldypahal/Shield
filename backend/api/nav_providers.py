@@ -77,10 +77,14 @@ class OsrmProvider:
             "walk": os.environ.get("OSRM_FOOT_URL", "https://routing.openstreetmap.de/routed-foot/route/v1/foot"),
         }
 
-    async def routes(self, origin: LatLon, dest: LatLon, mode: str, language: str = "en") -> List[RouteOption]:
+    async def routes(self, origin: LatLon, dest: LatLon, mode: str, language: str = "en",
+                     via: Optional[LatLon] = None) -> List[RouteOption]:
         profile = "car" if mode in ("car", "two_wheeler") else mode
-        url = f"{self.urls[profile]}/{origin[1]:.6f},{origin[0]:.6f};{dest[1]:.6f},{dest[0]:.6f}"
-        params = {"alternatives": "3", "overview": "full", "geometries": "geojson", "steps": "true"}
+        points = [origin] + ([via] if via else []) + [dest]
+        url = f"{self.urls[profile]}/" + ";".join(f"{p[1]:.6f},{p[0]:.6f}" for p in points)
+        params = {"alternatives": "false" if via else "3", "overview": "full", "geometries": "geojson", "steps": "true"}
+        if via:
+            params["continue_straight"] = "true"  # no U-turn at the via point
         data = await _get_json(url, params)
         if data.get("code") != "Ok":
             if data.get("code") in ("NoRoute", "NoSegment"):
@@ -90,9 +94,12 @@ class OsrmProvider:
         for r in data.get("routes", []):
             coords = [(lat, lon) for lon, lat in r["geometry"]["coordinates"]]
             steps, roads = [], []
-            for leg in r.get("legs", []):
+            legs = r.get("legs", [])
+            for li, leg in enumerate(legs):
                 for s in leg.get("steps", []):
                     m = s.get("maneuver", {})
+                    if m.get("type") == "arrive" and li < len(legs) - 1:
+                        continue  # the via point is not a destination
                     road = s.get("name") or s.get("ref") or ""
                     if road and road not in roads and s.get("distance", 0) > 200:
                         roads.append(road)
@@ -144,22 +151,25 @@ class GoogleRoutesProvider:
     def __init__(self, api_key: str):
         self.key = api_key
 
-    async def routes(self, origin: LatLon, dest: LatLon, mode: str, language: str = "en") -> List[RouteOption]:
+    async def routes(self, origin: LatLon, dest: LatLon, mode: str, language: str = "en",
+                     via: Optional[LatLon] = None) -> List[RouteOption]:
         body: Dict[str, Any] = {
             "origin": {"location": {"latLng": {"latitude": origin[0], "longitude": origin[1]}}},
             "destination": {"location": {"latLng": {"latitude": dest[0], "longitude": dest[1]}}},
             "travelMode": self.TRAVEL_MODE[mode],
-            "computeAlternativeRoutes": mode != "transit",
+            "computeAlternativeRoutes": mode != "transit" and via is None,
             "languageCode": language,
             "regionCode": "IN",
             "units": "METRIC",
         }
+        if via is not None:
+            body["intermediates"] = [{"via": True, "location": {"latLng": {"latitude": via[0], "longitude": via[1]}}}]
         if mode in ("car", "two_wheeler"):
             body["routingPreference"] = "TRAFFIC_AWARE"
         headers = {"X-Goog-Api-Key": self.key, "X-Goog-FieldMask": self.FIELDS}
         async with httpx.AsyncClient(timeout=TIMEOUT, headers={"User-Agent": USER_AGENT}) as client:
             try:
-                res = await client.post(self.URL, json=body, headers=headers)
+                res = await client.post(self.URL, json=body, headers=headers)  # noqa: E501
             except httpx.HTTPError as e:
                 raise ProviderError(f"Google Routes unreachable: {e}") from e
         if res.status_code != 200:

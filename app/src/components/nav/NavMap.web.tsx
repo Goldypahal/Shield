@@ -51,9 +51,9 @@ export default function NavMap(props: NavMapProps) {
       for (const id of ['alternatives', 'selected', 'caution', 'incidents', 'places', 'me']) m.addSource(id, { type: 'geojson', data: EMPTY });
       const round = { 'line-cap': 'round', 'line-join': 'round' } as const;
       m.addLayer({ id: 'alt-casing', type: 'line', source: 'alternatives', layout: round, paint: { 'line-color': NAV_COLORS.casing, 'line-width': 9 } });
-      m.addLayer({ id: 'alt-line', type: 'line', source: 'alternatives', layout: round, paint: { 'line-color': NAV_COLORS.alternative, 'line-width': 6 } });
+      m.addLayer({ id: 'alt-line', type: 'line', source: 'alternatives', layout: round, paint: { 'line-color': ['get', 'color'], 'line-width': 6, 'line-opacity': 0.75 } });
       m.addLayer({ id: 'sel-casing', type: 'line', source: 'selected', layout: round, paint: { 'line-color': NAV_COLORS.casing, 'line-width': 12 } });
-      m.addLayer({ id: 'sel-line', type: 'line', source: 'selected', layout: round, paint: { 'line-color': NAV_COLORS.selected, 'line-width': 7 } });
+      m.addLayer({ id: 'sel-line', type: 'line', source: 'selected', layout: round, paint: { 'line-color': ['get', 'color'], 'line-width': 8 } });
       m.addLayer({ id: 'caution-line', type: 'line', source: 'caution', layout: round, paint: { 'line-color': NAV_COLORS.caution, 'line-width': 7, 'line-dasharray': [1.2, 1] } });
       m.addLayer({ id: 'incident-dot', type: 'circle', source: 'incidents', paint: { 'circle-radius': 6, 'circle-color': NAV_COLORS.incident, 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 } });
       m.addLayer({ id: 'place-dot', type: 'circle', source: 'places', paint: { 'circle-radius': 8, 'circle-color': ['get', 'color'], 'circle-stroke-color': '#fff', 'circle-stroke-width': 2.5 } });
@@ -87,8 +87,8 @@ export default function NavMap(props: NavMapProps) {
     if (!m || !ready.current) return;
     const selected = routes.find((r) => r.id === selectedId) ?? null;
     const set = (id: string, data: FC) => (m.getSource(id) as GeoJSONSource | undefined)?.setData(data);
-    set('alternatives', { type: 'FeatureCollection', features: routes.filter((r) => r.id !== selectedId).map((r) => line(r.coords, { id: r.id })) });
-    set('selected', { type: 'FeatureCollection', features: selected ? [line(selected.coords)] : [] });
+    set('alternatives', { type: 'FeatureCollection', features: routes.filter((r) => r.id !== selectedId).map((r) => line(r.coords, { id: r.id, color: r.color ?? NAV_COLORS.alternative })) });
+    set('selected', { type: 'FeatureCollection', features: selected ? [line(selected.coords, { color: selected.color ?? NAV_COLORS.selected })] : [] });
     set('caution', { type: 'FeatureCollection', features: (selected?.caution ?? []).map((c) => line(c.coords)) });
     set('incidents', { type: 'FeatureCollection', features: incidents.map((p) => point(p.lat, p.lon)) });
     set('places', { type: 'FeatureCollection', features: places.map((p, i) => point(p.lat, p.lon, { i, color: PLACE_COLORS[p.kind] })) });

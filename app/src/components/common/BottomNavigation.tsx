@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Pressable, Animated, Easing, Vibration } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme';
 import AlarmSoundService from '../../services/alarmSoundService';
@@ -31,6 +31,78 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 const SOS_SLOT_INDEX = 2; // SOS sits between Routes and Helplines
+
+/** The SOS button must be held this long, so a pocket or a stray tap never starts one. */
+export const SOS_HOLD_MS = 3000;
+
+/**
+ * Press and hold for 3 s to start the SOS. A ring fills while held, the phone ticks once a
+ * second, and letting go early cancels. A short tap only shows "Hold 3 s".
+ */
+function HoldSosButton({ onSos, colors }: { onSos?: () => void; colors: { sosPrimary: string; navBackground: string } }) {
+  const progress = useRef(new Animated.Value(0)).current;
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ticks = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [holding, setHolding] = useState(false);
+  const [hint, setHint] = useState(false);
+
+  const clear = () => {
+    if (timer.current) clearTimeout(timer.current);
+    if (ticks.current) clearInterval(ticks.current);
+    timer.current = null;
+    ticks.current = null;
+  };
+  const begin = () => {
+    if (!onSos) return;
+    clear();
+    setHolding(true);
+    setHint(false);
+    Vibration.vibrate(30);
+    progress.setValue(0);
+    Animated.timing(progress, { toValue: 1, duration: SOS_HOLD_MS, easing: Easing.linear, useNativeDriver: false }).start();
+    ticks.current = setInterval(() => Vibration.vibrate(30), 1000);
+    timer.current = setTimeout(() => {
+      clear();
+      setHolding(false);
+      progress.setValue(0);
+      Vibration.vibrate([0, 120, 80, 120]);
+      AlarmSoundService.playSosPressSound();
+      onSos();
+    }, SOS_HOLD_MS);
+  };
+  const end = () => {
+    if (!timer.current) return;
+    clear();
+    setHolding(false);
+    setHint(true);
+    Animated.timing(progress, { toValue: 0, duration: 150, useNativeDriver: false }).start();
+    setTimeout(() => setHint(false), 2000);
+  };
+
+  const size = progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
+  return (
+    <View style={styles.sosSlot}>
+      {(holding || hint) && (
+        <View style={styles.holdHint} pointerEvents="none">
+          <Text style={styles.holdHintText}>{holding ? 'Keep holding...' : 'Hold 3 s for SOS'}</Text>
+        </View>
+      )}
+      <Pressable
+        onPressIn={begin}
+        onPressOut={end}
+        disabled={!onSos}
+        style={[styles.sosButton, { backgroundColor: colors.sosPrimary, borderColor: colors.navBackground }]}
+        accessibilityRole="button"
+        accessibilityLabel="Emergency SOS. Press and hold for 3 seconds to start the countdown before your guardians are alerted."
+        accessibilityHint="Hold for 3 seconds"
+      >
+        <Animated.View style={[styles.holdFill, { height: size }]} pointerEvents="none" />
+        <Ionicons name="warning" size={17} color="#FFFFFF" />
+        <Text style={styles.sosText}>{holding ? 'HOLD' : 'SOS'}</Text>
+      </Pressable>
+    </View>
+  );
+}
 
 export default function BottomNavigation({ activeTab, onTabPress, onSos }: BottomNavigationProps) {
   const { colors, typography } = useTheme();
@@ -81,25 +153,7 @@ export default function BottomNavigation({ activeTab, onTabPress, onSos }: Botto
     >
       {NAV_ITEMS.slice(0, SOS_SLOT_INDEX).map(renderTab)}
 
-      <View style={styles.sosSlot}>
-        <TouchableOpacity
-          onPress={() => {
-            AlarmSoundService.playSosPressSound();
-            onSos?.();
-          }}
-          disabled={!onSos}
-          style={[
-            styles.sosButton,
-            { backgroundColor: colors.sosPrimary, borderColor: colors.navBackground },
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel="Emergency SOS. Opens a five second countdown before alerting your guardians."
-          activeOpacity={0.85}
-        >
-          <Ionicons name="warning" size={17} color="#FFFFFF" />
-          <Text style={styles.sosText}>SOS</Text>
-        </TouchableOpacity>
-      </View>
+      <HoldSosButton onSos={onSos} colors={colors} />
 
       {NAV_ITEMS.slice(SOS_SLOT_INDEX).map(renderTab)}
     </View>
@@ -139,12 +193,31 @@ const styles = StyleSheet.create({
     marginTop: -16,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
     shadowColor: '#DC2626',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 8,
   },
+  holdFill: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  holdHint: {
+    position: 'absolute',
+    bottom: 58,
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    minWidth: 120,
+    alignItems: 'center',
+  },
+  holdHintText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
   sosText: {
     color: '#FFFFFF',
     fontSize: 9,

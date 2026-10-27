@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme';
+import NativeVoiceBanner from './NativeVoiceBanner';
 import {
   requestWebMicrophonePermission,
   stopWebMicrophone,
@@ -20,7 +21,8 @@ import {
   getActiveMediaStream,
 } from '../../services/voiceTriggerHelper';
 
-export default function VoiceEmergencyBanner() {
+/** Browser version: the Web Speech API and a Web Audio meter (voiceTriggerHelper). */
+function WebVoiceBanner() {
   const { colors, radii, isDark } = useTheme();
   const [listening, setListening] = useState(isVoiceListening());
   const [heardText, setHeardText] = useState(getLastHeardPhrase());
@@ -586,3 +588,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+
+/** Phones use the native listeners (scream + keywords) and show their live state. */
+export default function VoiceEmergencyBanner() {
+  return Platform.OS === 'web' ? <WebVoiceBanner /> : <NativeVoiceBanner />;
+}

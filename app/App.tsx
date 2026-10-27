@@ -8,6 +8,8 @@ import AuthScreen from './src/screens/AuthScreen';
 import CalculatorScreen from './src/screens/CalculatorScreen';
 import { getDiscreetSettings, onDiscreetSettingsChange } from './src/services/discreetSettings';
 import { sendSilentSos } from './src/services/sosSession';
+import { ensureLocationReady } from './src/services/locationService';
+import { BACKEND_URL } from './src/config/env';
 import AuthService, { Session } from './src/services/authService';
 import HomeScreen from './src/screens/HomeScreen';
 import NavigationScreen from './src/screens/NavigationScreen';
@@ -21,7 +23,7 @@ import BottomNavigation, { TabKey } from './src/components/common/BottomNavigati
 import ScreamSosOverlay from './src/components/common/ScreamSosOverlay';
 import { useScreamTrigger } from './src/hooks/useScreamTrigger';
 import { useFallTrigger } from './src/hooks/useFallTrigger';
-import { useKeywordTrigger } from './src/hooks/useKeywordTrigger';
+import { useKeywordTrigger, keywordsNeedExclusiveMic, keywordDetectionAvailable } from './src/hooks/useKeywordTrigger';
 import { useI18n } from './src/i18n';
 import ScreamSosController from './src/services/screamSosController';
 import { useShakeTrigger } from './src/hooks/useShakeTrigger';
@@ -41,9 +43,9 @@ function ScreamListener({ enabled, background, onScream }: { enabled: boolean; b
 }
 
 /** Owns speech recognition for spoken cries for help on phones (render-less). */
-function KeywordListener({ enabled, onKeyword }: { enabled: boolean; onKeyword: (phrase: string) => void }) {
+function KeywordListener({ enabled, onKeyword, onCry }: { enabled: boolean; onKeyword: (phrase: string) => void; onCry: () => void }) {
   const { lang } = useI18n();
-  useKeywordTrigger(onKeyword, enabled, lang);
+  useKeywordTrigger(onKeyword, enabled, lang, onCry);
   return null;
 }
 
@@ -139,6 +141,12 @@ function HeimdalMain() {
     return () => sub.remove();
   }, []);
 
+  // The free server sleeps when idle and needs up to ~50 s to wake: wake it at launch, so
+  // routes and SOS calls later are answered at once
+  useEffect(() => {
+    fetch(`${BACKEND_URL}/health`).catch(() => undefined);
+  }, []);
+
   useEffect(() => {
     AuthService.ensureSession()
       .then(async (s) => s ?? (await AuthService.devAutoSignIn()))
@@ -158,6 +166,9 @@ function HeimdalMain() {
     // An SOS that was sent and never stood down (app killed, phone restarted) comes back
     // on screen with the siren until the PIN is entered.
     ScreamSosController.restore().catch(() => undefined);
+    // Ask for location once after sign-in, so an SOS always carries a position and the
+    // Home card is green (it also offers to switch location on when it is off)
+    ensureLocationReady().catch(() => undefined);
     try {
       NotificationService.registerForPushNotifications().catch(() => {});
     } catch (_) {}
@@ -196,10 +207,16 @@ function HeimdalMain() {
   // once an SOS is being sent or shown, and during a fake call (it records its own audio).
   // The microphone stays on during the countdown: in the background its chunks are what
   // advance the countdown (Android pauses JS timers), see ScreamSosController.tick.
+  const listenForKeywords =
+    keywordDetection && keywordDetectionAvailable && !!session && appActive && !sosRunning &&
+    !callActive && currentView !== 'FakeCall' && Platform.OS !== 'web';
   const listenForScreams =
     screamDetection && !!session && (appActive || screamInBackground) &&
     screamSosPhase !== 'sending' && screamSosPhase !== 'sent' &&
-    !callActive && currentView !== 'FakeCall';
+    !callActive && currentView !== 'FakeCall' &&
+    // Android 12 and older: the speech recogniser records in another app and the two cannot
+    // share the microphone, so while it listens (app open) the recogniser has it
+    !(keywordsNeedExclusiveMic && listenForKeywords);
 
   // Fall detection: motion sensors only reach the app while it is open, so it runs then.
   const watchForFalls =
@@ -420,8 +437,9 @@ function HeimdalMain() {
       <ScreamListener enabled={listenForScreams} background={screamInBackground} onScream={() => ScreamSosController.start('AUDIO_DISTRESS')} />
       <FallListener enabled={watchForFalls} onFall={() => ScreamSosController.start('FALL')} />
       <KeywordListener
-        enabled={keywordDetection && !!session && appActive && !sosRunning && !callActive && currentView !== 'FakeCall' && Platform.OS !== 'web'}
+        enabled={listenForKeywords}
         onKeyword={() => ScreamSosController.start('VOICE')}
+        onCry={() => { if (screamDetection) ScreamSosController.start('AUDIO_DISTRESS'); }}
       />
       <ShakeListener enabled={shakeDetection && !!session && appActive && !sosRunning} onShake={() => ScreamSosController.start('SHAKE')} />
     </View>

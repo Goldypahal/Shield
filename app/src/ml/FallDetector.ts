@@ -34,6 +34,17 @@ export interface FallDetectorOptions {
   stillGyroMax: number;
   /** No new fall for this long after one was reported. */
   cooldownMs: number;
+  /**
+   * Physics path, next to the model: free fall (|acc| below `freefallG` for `freefallMs`)
+   * followed within `impactWithinMs` by an impact of at least `impactG`. This is what a
+   * dropped phone or a person falling with the phone in hand does even when the model,
+   * trained on phones in a trouser pocket, scores the movement lower. Set impactG to 0 to
+   * turn it off. Stillness afterwards is still required, as for the model.
+   */
+  freefallG: number;
+  freefallMs: number;
+  impactG: number;
+  impactWithinMs: number;
 }
 
 export const DEFAULT_FALL_OPTIONS: FallDetectorOptions = {
@@ -44,6 +55,10 @@ export const DEFAULT_FALL_OPTIONS: FallDetectorOptions = {
   stillAccToleranceG: 0.3,
   stillGyroMax: 1.0,
   cooldownMs: 30000,
+  freefallG: 0.5,
+  freefallMs: 80,
+  impactG: 1.8,
+  impactWithinMs: 1000,
 };
 
 export type FallPhase = 'watching' | 'impact' | 'cooldown';
@@ -69,6 +84,10 @@ export class FallDetector {
   private stillSince: number | null = null;
   private cooldownUntil = 0;
   private score = -1;
+  private freefallSince: number | null = null;
+  private freefallEnded = 0;
+  /** What raised the last impact: the model or the free-fall + impact physics. */
+  public lastImpactBy: 'model' | 'physics' | null = null;
 
   constructor(private readonly predict: FallPredictor, opts: Partial<FallDetectorOptions> = {}) {
     this.opts = { ...DEFAULT_FALL_OPTIONS, ...opts };
@@ -117,6 +136,25 @@ export class FallDetector {
       return this.status(false);
     }
 
+    // watching, physics path: free fall then a hard landing
+    if (this.opts.impactG > 0) {
+      const accG = Math.sqrt(s.ax * s.ax + s.ay * s.ay + s.az * s.az) / G;
+      if (accG < this.opts.freefallG) {
+        if (this.freefallSince === null) this.freefallSince = t;
+      } else {
+        if (this.freefallSince !== null && t - this.freefallSince >= this.opts.freefallMs) this.freefallEnded = t;
+        this.freefallSince = null;
+        if (accG >= this.opts.impactG && this.freefallEnded && t - this.freefallEnded <= this.opts.impactWithinMs) {
+          this.freefallEnded = 0;
+          this.phase = 'impact';
+          this.impactAt = t;
+          this.stillSince = null;
+          this.lastImpactBy = 'physics';
+          return this.status(false);
+        }
+      }
+    }
+
     // watching: score the latest 2 s every hop
     if (this.filled < FALL_WINDOW || this.sinceHop < this.opts.hopSamples || this.busy) return this.status(false);
     this.sinceHop = 0;
@@ -127,6 +165,7 @@ export class FallDetector {
       this.busy = false;
     }
     if (this.score >= this.opts.threshold && this.phase === 'watching') {
+      this.lastImpactBy = 'model';
       this.phase = 'impact';
       this.impactAt = t;
       this.stillSince = null;

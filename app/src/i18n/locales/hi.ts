@@ -198,6 +198,8 @@ const hi: Translation = {
   'nav.badge.safest': 'सबसे सुरक्षित',
   'nav.badge.shortest': 'सबसे छोटा',
   'nav.badge.fastest': 'सबसे तेज़',
+  'nav.badge.medium': 'मध्यम जोखिम',
+  'nav.badge.vulnerable': 'सबसे असुरक्षित',
   'nav.loading': 'रास्ते खोजे जा रहे हैं और सुरक्षा जांची जा रही है…',
   'nav.noRoutes': 'इन जगहों के बीच कोई रास्ता नहीं मिला।',
   'nav.error': 'रास्ता नहीं बन सका। अपना कनेक्शन जांचें।',

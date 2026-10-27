@@ -1,93 +1,37 @@
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
-import { Accelerometer } from 'expo-sensors';
+import { subscribeMotion, ShakeDetector } from '../services/motionHub';
 
-/** Calls onShake after three hard shakes within ~1.2 s of each other. Listens only while `enabled`. */
+/**
+ * Calls onShake when the phone is shaken hard for about a second (see ShakeDetector).
+ * Listens only while `enabled`. Uses the shared 50 Hz motion stream, so it no longer
+ * slows the fall detector's sensor rate down.
+ */
 export function useShakeTrigger(onShake: () => void, enabled = true) {
-  const lastShakeTime = useRef(0);
-  const shakeCount = useRef(0);
   const callback = useRef(onShake);
   callback.current = onShake;
 
   useEffect(() => {
     if (!enabled) return;
-    let sub: { remove: () => void } | null = null;
-    let cancelled = false;
+    const detector = new ShakeDetector();
 
-    const handleShake = () => {
-      const now = Date.now();
-      const delta = now - lastShakeTime.current;
-      if (delta < 280) {
-        // Human hand cannot reverse shake direction in under 280ms; ignore same-motion jitter
-        return;
-      }
-      if (delta <= 1400) {
-        shakeCount.current += 1;
-      } else {
-        shakeCount.current = 1;
-      }
-      lastShakeTime.current = now;
-
-      if (shakeCount.current >= 3) {
-        shakeCount.current = 0;
-        console.log('[ShakeTrigger] 3 vigorous deliberate shakes detected -> Triggering SOS');
-        callback.current();
-      }
-    };
-
-    // Web browser fallback for devicemotion (mobile Chrome/Safari)
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const onDeviceMotion = (e: DeviceMotionEvent) => {
-        if (cancelled) return;
-        let magnitude = 0;
-        if (e.acceleration && (e.acceleration.x !== null || e.acceleration.y !== null)) {
-          const ax = e.acceleration.x || 0;
-          const ay = e.acceleration.y || 0;
-          const az = e.acceleration.z || 0;
-          magnitude = Math.sqrt(ax * ax + ay * ay + az * az) / 9.8; // in G's
-        } else if (e.accelerationIncludingGravity) {
-          const gx = (e.accelerationIncludingGravity.x || 0) / 9.8;
-          const gy = (e.accelerationIncludingGravity.y || 0) / 9.8;
-          const gz = (e.accelerationIncludingGravity.z || 0) / 9.8;
-          const totalG = Math.sqrt(gx * gx + gy * gy + gz * gz);
-          magnitude = Math.abs(totalG - 1.0); // delta from 1G stationary gravity
-        }
-
-        // Require vigorous intentional shaking (> 2.0 G above rest)
-        if (magnitude > 2.0) {
-          handleShake();
-        }
+    // Mobile browsers: devicemotion (m/s^2, gravity included)
+    if (Platform.OS === 'web') {
+      if (typeof window === 'undefined') return;
+      const onMotion = (e: DeviceMotionEvent) => {
+        const a = e.accelerationIncludingGravity;
+        if (!a) return;
+        if (detector.push({ ax: (a.x || 0) / 9.81, ay: (a.y || 0) / 9.81, az: (a.z || 0) / 9.81, t: Date.now() })) callback.current();
       };
-
-      try {
-        window.addEventListener('devicemotion', onDeviceMotion);
-      } catch (_) {}
-
-      return () => {
-        cancelled = true;
-        try {
-          window.removeEventListener('devicemotion', onDeviceMotion);
-        } catch (_) {}
-      };
+      window.addEventListener('devicemotion', onMotion);
+      return () => window.removeEventListener('devicemotion', onMotion);
     }
 
-    // Native accelerometer (iOS & Android native build)
-    Accelerometer.isAvailableAsync()
-      .then((available) => {
-        if (!available || cancelled) return;
-        Accelerometer.setUpdateInterval(250);
-        sub = Accelerometer.addListener(({ x, y, z }) => {
-          const magnitude = Math.sqrt(x * x + y * y + z * z);
-          if (magnitude > 1.9) {
-            handleShake();
-          }
-        });
-      })
-      .catch(() => undefined);
-
-    return () => {
-      cancelled = true;
-      sub?.remove();
-    };
+    return subscribeMotion((s) => {
+      if (detector.push(s)) {
+        console.log('[ShakeTrigger] deliberate shake detected -> SOS');
+        callback.current();
+      }
+    });
   }, [enabled]);
 }

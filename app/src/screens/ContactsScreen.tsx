@@ -20,6 +20,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme';
 import AppHeader from '../components/common/AppHeader';
+import { callPhone } from '../services/phoneCall';
 import ContactService, { normalizePhone } from '../services/contactService';
 import { EmergencyContact } from '../types';
 
@@ -293,7 +294,7 @@ export default function ContactsScreen({ onBack, initialInviteId }: ContactsScre
               <View style={styles.actionColumn}>
                 <TouchableOpacity
                   style={[styles.actionBtn, { backgroundColor: colors.surfaceSecondary }]}
-                  onPress={() => Linking.openURL(`tel:${contact.phone}`).catch(() => RNAlert.alert('Cannot call', `Call ${contact.phone} from your phone app.`))}
+                  onPress={() => callPhone(contact.phone).catch(() => RNAlert.alert('Cannot call', `Call ${contact.phone} from your phone app.`))}
                   accessibilityRole="button"
                   accessibilityLabel={`Call ${contact.name}`}
                 >

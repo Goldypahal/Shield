@@ -17,20 +17,61 @@ export async function requestLocationPermissions(): Promise<boolean> {
   }
 }
 
-export async function getCurrentLocation(): Promise<{ latitude: number; longitude: number }> {
-  const granted = await requestLocationPermissions();
-  if (!granted) {
-    throw new Error('Location permission denied');
+export type LocationReadiness = 'ok' | 'denied' | 'blocked' | 'services_off';
+
+/**
+ * Makes location usable: asks for the permission when it can, and on Android asks the
+ * phone to switch location on (the system "Turn on location?" dialog) when it is off.
+ * 'blocked' means the walker said "don't ask again": only the phone's Settings can fix it.
+ */
+export async function ensureLocationReady(): Promise<LocationReadiness> {
+  if (Platform.OS === 'web') return 'ok';
+  try {
+    let perm = await Location.getForegroundPermissionsAsync();
+    if (!perm.granted && perm.canAskAgain) perm = await Location.requestForegroundPermissionsAsync();
+    if (!perm.granted) return perm.canAskAgain ? 'denied' : 'blocked';
+    if (!(await Location.hasServicesEnabledAsync())) {
+      if (Platform.OS === 'android') {
+        try { await Location.enableNetworkProviderAsync(); } catch { /* the walker said no */ }
+      }
+      if (!(await Location.hasServicesEnabledAsync())) return 'services_off';
+    }
+    return 'ok';
+  } catch (e) {
+    console.warn('[location] readiness check failed', e);
+    return 'denied';
   }
+}
 
-  const location = await Location.getCurrentPositionAsync({
-    accuracy: Location.Accuracy.High,
-  });
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | null> {
+  return Promise.race([p.catch(() => null), new Promise<null>((r) => setTimeout(() => r(null), ms))]);
+}
 
-  return {
-    latitude: location.coords.latitude,
-    longitude: location.coords.longitude,
-  };
+/**
+ * The best position available within `timeoutMs`, never hanging: a recent last-known fix
+ * at once if there is one, else a fresh fix (balanced accuracy: Wi-Fi + cell answer in
+ * seconds indoors, where GPS-only "high accuracy" can wait forever), else any last fix.
+ * Precise tracking afterwards is watchPositionAsync's job.
+ */
+export async function getBestLocation(timeoutMs = 10000): Promise<{ latitude: number; longitude: number; accuracy: number | null } | null> {
+  const pick = (l: Location.LocationObject | null) =>
+    l ? { latitude: l.coords.latitude, longitude: l.coords.longitude, accuracy: l.coords.accuracy ?? null } : null;
+  const recent = await withTimeout(Location.getLastKnownPositionAsync({ maxAge: 2 * 60 * 1000, requiredAccuracy: 300 }), 1500);
+  if (recent) return pick(recent);
+  const fresh = await withTimeout(Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }), timeoutMs);
+  if (fresh) return pick(fresh);
+  const low = await withTimeout(Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low }), 4000);
+  if (low) return pick(low);
+  return pick(await withTimeout(Location.getLastKnownPositionAsync(), 1500));
+}
+
+export async function getCurrentLocation(): Promise<{ latitude: number; longitude: number }> {
+  const ready = await ensureLocationReady();
+  if (ready === 'denied' || ready === 'blocked') throw new Error('Location permission denied');
+  if (ready === 'services_off') throw new Error('Location is turned off on this phone');
+  const loc = await getBestLocation();
+  if (!loc) throw new Error('No location fix yet. Move near a window or outdoors and try again.');
+  return { latitude: loc.latitude, longitude: loc.longitude };
 }
 
 /**

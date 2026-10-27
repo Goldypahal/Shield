@@ -24,6 +24,7 @@ import {
   stopVoiceRecording,
   deleteVoiceRecording,
   startRingtone,
+  recordingExists,
   playCallerVoice,
   setSpeaker,
 } from '../services/fakeCallService';
@@ -71,7 +72,14 @@ export default function FakeCallScreen({ onBack, onActiveChange }: FakeCallScree
   const previewRef = useRef<Audio.Sound | null>(null);
 
   useEffect(() => {
-    loadSettings().then(setSettings);
+    // A saved clip whose file is gone (app data cleared) is forgotten, so "Play" never fails
+    loadSettings().then(async (st) => {
+      if (st.recordingUri && !(await recordingExists(st.recordingUri))) {
+        st = { ...st, recordingUri: null };
+        saveSettings(st).catch(() => undefined);
+      }
+      setSettings(st);
+    });
   }, []);
 
   // The screen-switcher bar would break the illusion of an incoming call
@@ -130,7 +138,12 @@ export default function FakeCallScreen({ onBack, onActiveChange }: FakeCallScree
         clearTimers();
         setIsRecording(false);
         const uri = await stopVoiceRecording();
-        if (uri) update({ recordingUri: uri });
+        if (uri) {
+          const old = settings.recordingUri;
+          update({ recordingUri: uri });
+          if (old && old !== uri) deleteVoiceRecording(old).catch(() => undefined);
+          RNAlert.alert('Recording saved', `${recordSeconds} s clip saved on this phone. It plays when you answer the fake call.`);
+        }
       } else {
         await stopVoice();
         await startVoiceRecording();

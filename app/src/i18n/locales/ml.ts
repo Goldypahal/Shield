@@ -198,6 +198,8 @@ const ml: Translation = {
   'nav.badge.safest': 'ഏറ്റവും സുരക്ഷിതം',
   'nav.badge.shortest': 'ഏറ്റവും ചെറുത്',
   'nav.badge.fastest': 'ഏറ്റവും വേഗം',
+  'nav.badge.medium': 'ഇടത്തരം അപകടസാധ്യത',
+  'nav.badge.vulnerable': 'ഏറ്റവും അപകടസാധ്യതയുള്ളത്',
   'nav.loading': 'വഴികൾ തിരഞ്ഞ് സുരക്ഷ പരിശോധിക്കുന്നു…',
   'nav.noRoutes': 'ഈ സ്ഥലങ്ങൾക്കിടയിൽ വഴി കണ്ടെത്തിയില്ല.',
   'nav.error': 'വഴി ആസൂത്രണം ചെയ്യാനായില്ല. നിങ്ങളുടെ കണക്ഷൻ പരിശോധിക്കുക.',

@@ -11,6 +11,8 @@ export interface NavMapRoute {
   id: string;
   coords: [number, number][];
   caution: CautionStretch[];
+  /** Line colour (safety tier); grey when missing. */
+  color?: string;
 }
 
 export interface NavMapProps {

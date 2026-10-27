@@ -76,8 +76,19 @@ const txt = (p) => p.evaluate(() => document.body.innerText);
     ok('helplines tab: search', /1098/.test(await txt(p)));
   });
 
+  // The SOS button has to be held for 3 s: a tap only shows a hint
+  const holdSos = async (ms = 3300) => {
+    const b = p.getByLabel(/Emergency SOS/).first(); const box = await b.boundingBox();
+    await p.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await p.mouse.down(); await p.waitForTimeout(ms); await p.mouse.up();
+  };
+  await step('SOS button: a short tap does not start an SOS', async () => {
+    await holdSos(600); await p.waitForTimeout(800);
+    const t = await txt(p);
+    ok('SOS button: a short tap does not start an SOS', !/I.?M SAFE/i.test(t) && (await p.getByLabel('SOS PIN').count()) === 0, /Hold 3 s/.test(t) ? 'hint shown' : '');
+  });
+
   await step('SOS button: PIN-only, wrong PIN refused, duress looks stopped', async () => {
-    await p.getByLabel(/SOS/i).first().click(); await p.waitForTimeout(1200);
+    await holdSos(); await p.waitForTimeout(1200);
     const back = await p.keyboard.press('Escape'); await p.waitForTimeout(300);
     const stillOpen = /Emergency SOS/.test(await txt(p)) || (await p.getByText(/I.?M SAFE/i).count()) > 0;
     await p.getByText(/I.?m safe/i).first().click(); await p.waitForTimeout(400);
@@ -90,7 +101,7 @@ const txt = (p) => p.evaluate(() => document.body.innerText);
   });
 
   await step('SOS sent then stopped with PIN', async () => {
-    await p.getByLabel(/SOS/i).first().click(); await p.waitForTimeout(7000);
+    await holdSos(); await p.waitForTimeout(7000);
     const sent = (await p.getByLabel('SOS PIN').count()) > 0;
     await p.getByLabel('SOS PIN').fill('1234'); await p.keyboard.press('Enter'); await p.waitForTimeout(2500);
     const stopped = /SOS stopped/.test(await txt(p));

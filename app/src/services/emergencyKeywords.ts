@@ -17,7 +17,9 @@
 export const DISTRESS_PHRASES = [
   'help', 'help me', 'please help', 'someone help', 'help us', 'help help',
   'save me', 'please save me', 'somebody save me',
-  'bachao', 'bachaao', 'mujhe bachao', 'koi bachao',
+  'bachao', 'bachaao', 'bachav', 'bachaav', 'bachaw', 'bacha o', 'mujhe bachao', 'koi bachao',
+  // how English recognisers often write "madad" / "bachao"
+  'madat', 'madad karo', 'madat karo', 'mujhe bachao',
   'madad', 'madad karo', 'chhodo mujhe', 'chodo mujhe', 'leave me alone', 'let me go',
   // Devanagari, for the Hindi recogniser
   'बचाओ', 'मुझे बचाओ', 'कोई बचाओ', 'मदद', 'मदद करो', 'छोड़ो मुझे', 'छोड़ दो',
@@ -79,4 +81,4 @@ export function isEmergencyPhrase(transcript: string, isFinal = true): boolean {
 }
 
 /** Hints for recognisers that accept a vocabulary bias (Android 13+, iOS). */
-export const RECOGNIZER_HINTS = ['help', 'help me', 'save me', 'bachao', 'madad karo', 'stop', 'police', 'emergency', 'call the police'];
+export const RECOGNIZER_HINTS = ['help', 'help me', 'save me', 'bachao', 'mujhe bachao', 'madad karo', 'stop', 'police', 'emergency', 'call the police', 'leave me alone'];

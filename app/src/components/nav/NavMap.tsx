@@ -5,10 +5,11 @@ import { useTheme } from '../../theme';
 import { optionalNative } from '../../utils/nativeModules';
 import type { NavMapProps } from './navMapShared';
 
-// MapLibre needs its native code, which Expo Go does not have: load it only when present.
+// The phone map runs MapLibre GL JS in a WebView (NavMapWebView), the same engine as the
+// web app. Loaded only when the WebView native module is present (not in Expo Go).
 const NativeMap = optionalNative<React.ComponentType<NavMapProps>>(
-  () => require('./NavMapNative').default,
-  'MapLibre map',
+  () => require('./NavMapWebView').default,
+  'Map (react-native-webview)',
 );
 
 /** Shown instead of the map in Expo Go; routes, scores and 24x7 places still work. */
