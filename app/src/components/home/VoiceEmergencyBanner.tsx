@@ -86,9 +86,13 @@ export default function VoiceEmergencyBanner() {
 
     try {
       const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => undefined);
+      }
       const source = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.3;
       source.connect(analyser);
       const data = new Uint8Array(analyser.frequencyBinCount);
 
@@ -96,14 +100,17 @@ export default function VoiceEmergencyBanner() {
       const loop = () => {
         analyser.getByteFrequencyData(data);
         let sum = 0;
+        let peak = 0;
         for (let i = 0; i < data.length; i++) {
           sum += data[i];
+          if (data[i] > peak) peak = data[i];
         }
         const avg = sum / data.length;
-        const level = Math.min(100, Math.round((avg / 128) * 100));
+        // Combines voice frequency energy and volume peak for snappy, realistic meter response
+        const level = Math.min(100, Math.round(((avg * 1.2 + peak * 0.8) / 180) * 100));
         setAudioLevel(level);
 
-        // DIRECT TRIGGER: Shouting reaching 90% on the meter
+        // DIRECT TRIGGER: When shouting reaches 90% or more on the meter
         if (level >= 90) {
           loudFrames += 1;
           if (loudFrames >= 2) { // ~33ms of sustained 90%+ shouting

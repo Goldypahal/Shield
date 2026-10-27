@@ -190,13 +190,20 @@ export function getVoiceSupportInfo(): VoiceSupportInfo {
 
 let activeSpeechRec: any = null;
 let keepListening = false;
+let speechErrorCount = 0;
 
 function startBrowserSpeechRecognition() {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || !keepListening) return;
   const SpeechRecClass =
     (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
   if (!SpeechRecClass) {
-    console.warn('[SpeechRecognition] Speech API not supported in this browser.');
+    console.log('[SpeechRecognition] Web Speech API not supported; using local audio analysis.');
+    return;
+  }
+
+  // If cloud speech has repeatedly failed (e.g. offline or no Google speech servers), don't spam restarts
+  if (speechErrorCount >= 4) {
+    console.log('[SpeechRecognition] Cloud speech offline; audio volume & scream meter active.');
     return;
   }
 
@@ -215,6 +222,7 @@ function startBrowserSpeechRecognition() {
     rec.lang = navigator.language || 'en-US';
 
     rec.onresult = (event: any) => {
+      speechErrorCount = 0;
       for (let i = event.resultIndex; i < event.results.length; ++i) {
         const transcript = String(event.results[i][0]?.transcript || '').toLowerCase().trim();
         console.log('[SpeechRecognition] Heard phrase:', transcript);
@@ -235,30 +243,30 @@ function startBrowserSpeechRecognition() {
     rec.onerror = (err: any) => {
       console.warn('[SpeechRecognition] Status:', err?.error);
       if (err?.error === 'not-allowed') {
+        keepListening = false;
         setVoiceListening(false);
+      } else if (err?.error === 'network' || err?.error === 'audio-capture') {
+        speechErrorCount += 1;
       }
     };
 
     rec.onend = () => {
-      if (keepListening) {
-        // Chrome automatically pauses on long silence; restart automatically
+      if (keepListening && speechErrorCount < 4) {
         setTimeout(() => {
           if (keepListening) {
             startBrowserSpeechRecognition();
           }
-        }, 200);
+        }, 600);
       }
     };
 
     rec.start();
     activeSpeechRec = rec;
     setVoiceListening(true);
-    console.log('[SpeechRecognition] Continuous listening active for "help", "save me", "bachao", etc.');
+    console.log('[SpeechRecognition] Continuous listening active.');
   } catch (e) {
     console.warn('[SpeechRecognition] Start error:', e);
-    if (keepListening) {
-      setTimeout(startBrowserSpeechRecognition, 1000);
-    }
+    speechErrorCount += 1;
   }
 }
 
@@ -268,13 +276,34 @@ function startBrowserSpeechRecognition() {
  */
 export async function requestWebMicrophonePermission(): Promise<{ granted: boolean; error?: string }> {
   if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
-    return { granted: false, error: 'Microphone API not available' };
+    return { granted: false, error: 'Microphone API not available in this browser.' };
   }
 
+  // 1. If we already have an acquired stream, just re-enable it immediately without re-prompting!
+  if (activeMediaStream && activeMediaStream.getAudioTracks().length > 0) {
+    try {
+      activeMediaStream.getAudioTracks().forEach((track: any) => {
+        track.enabled = true;
+      });
+      keepListening = true;
+      speechErrorCount = 0;
+      setVoiceListening(true);
+      startBrowserSpeechRecognition();
+      streamListeners.forEach((listener) => {
+        try {
+          listener(activeMediaStream);
+        } catch (_) {}
+      });
+      return { granted: true };
+    } catch (_) {}
+  }
+
+  // 2. Request microphone stream from browser
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     activeMediaStream = stream;
     keepListening = true;
+    speechErrorCount = 0;
     setVoiceListening(true);
     console.log('[Microphone] Stream acquired via user gesture!');
     streamListeners.forEach((listener) => {
@@ -290,7 +319,11 @@ export async function requestWebMicrophonePermission(): Promise<{ granted: boole
   } catch (err: any) {
     console.warn('[Microphone] User denied or browser error:', err);
     setVoiceListening(false);
-    return { granted: false, error: err?.message || String(err) };
+    keepListening = false;
+    const msg = err?.name === 'NotAllowedError'
+      ? 'Microphone access was blocked. Please tap the lock/tune icon in the URL bar and allow microphone.'
+      : err?.message || String(err);
+    return { granted: false, error: msg };
   }
 }
 
@@ -310,16 +343,12 @@ export function stopWebMicrophone(): void {
 
   if (activeMediaStream) {
     try {
-      activeMediaStream.getTracks().forEach((track: any) => track.stop());
+      // Disable audio tracks rather than destroying them completely, avoiding OS hardware lockups
+      activeMediaStream.getAudioTracks().forEach((track: any) => {
+        track.enabled = false;
+      });
     } catch (_) {}
-    activeMediaStream = null;
   }
 
-  streamListeners.forEach((listener) => {
-    try {
-      listener(null);
-    } catch (_) {}
-  });
-
-  console.log('[Microphone] Stopped and released.');
+  console.log('[Microphone] Paused and muted.');
 }
