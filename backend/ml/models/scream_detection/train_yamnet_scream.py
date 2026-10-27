@@ -117,13 +117,8 @@ def main():
 
     # --- Evaluate exactly like the app: 0.975 s windows every 0.5 s, sustained-scream rule
     def window_scores(f):
-        y, _ = librosa.load(f, sr=SR, mono=True)
-        if len(y) < FRAME:
-            y = np.pad(y, (0, FRAME - len(y)))
-        hop = int(HOP_S * SR)
-        wins = np.stack([y[s:s + FRAME] for s in range(0, len(y) - FRAME + 1, hop)])
-        embs = np.concatenate([Y(w.astype(np.float32))[1].numpy()[:1] for w in wins])
-        return head.predict(embs, verbose=0)[:, 0]
+        # YAMNet's own frames: 0.96 s every 0.48 s, practically the app's 0.975 s every 0.5 s
+        return head.predict(feats[f][0], verbose=0)[:, 0]
 
     def sos_count(seq, t, req_s, gap_s=0.6):
         hits, run_start, last, cool = 0, None, -99.0, -1.0
