@@ -10,7 +10,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_BACKEND_URL": "https://shield-api.onrender.com"
+        "EXPO_PUBLIC_BACKEND_URL": "https://shield-api-pz6b.onrender.com"
       }
     },
     "production": {
@@ -19,7 +19,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_BACKEND_URL": "https://shield-api.onrender.com"
+        "EXPO_PUBLIC_BACKEND_URL": "https://shield-api-pz6b.onrender.com"
       }
     }
   },

@@ -17,5 +17,5 @@ jobs:
     steps:
       - name: Ping /health
         env:
-          URL: ${{ vars.SHIELD_API_URL || 'https://shield-api.onrender.com' }}
+          URL: ${{ vars.SHIELD_API_URL || 'https://shield-api-pz6b.onrender.com' }}
         run: curl --silent --show-error --fail --max-time 90 --retry 2 "$URL/health"
