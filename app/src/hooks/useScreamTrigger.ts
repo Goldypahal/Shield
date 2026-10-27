@@ -203,6 +203,7 @@ export function useScreamTrigger(
 
           const buffer = new Float32Array(analyser.frequencyBinCount);
 
+          let loudFrames = 0;
           const checkAudio = () => {
             if (stopped) return;
             analyser.getFloatTimeDomainData(buffer);
@@ -211,8 +212,20 @@ export function useScreamTrigger(
               sum += buffer[i] * buffer[i];
             }
             const rms = Math.sqrt(sum / buffer.length);
-            // Visual meter update only: volume alone will NEVER falsely trigger SOS!
-            onProgressRef.current?.(Math.min(100, Math.round(rms * 100)));
+            const level = Math.min(100, Math.round((rms / 0.35) * 100));
+            onProgressRef.current?.(level);
+
+            // Shouting >= 90% triggers SOS directly
+            if (level >= 90) {
+              loudFrames += 1;
+              if (loudFrames >= 2) {
+                console.log(`[useScreamTrigger] Shouting level reached ${level}% (>= 90%) -> Triggering SOS directly!`);
+                safeTriggerScream('shouting_meter_90_percent');
+                loudFrames = 0;
+              }
+            } else {
+              loudFrames = 0;
+            }
 
             requestAnimationFrame(checkAudio);
           };

@@ -293,3 +293,33 @@ export async function requestWebMicrophonePermission(): Promise<{ granted: boole
     return { granted: false, error: err?.message || String(err) };
   }
 }
+
+/**
+ * Explicitly stops the microphone stream and speech recognition.
+ */
+export function stopWebMicrophone(): void {
+  keepListening = false;
+  setVoiceListening(false);
+
+  if (activeSpeechRec) {
+    try {
+      activeSpeechRec.abort();
+    } catch (_) {}
+    activeSpeechRec = null;
+  }
+
+  if (activeMediaStream) {
+    try {
+      activeMediaStream.getTracks().forEach((track: any) => track.stop());
+    } catch (_) {}
+    activeMediaStream = null;
+  }
+
+  streamListeners.forEach((listener) => {
+    try {
+      listener(null);
+    } catch (_) {}
+  });
+
+  console.log('[Microphone] Stopped and released.');
+}
