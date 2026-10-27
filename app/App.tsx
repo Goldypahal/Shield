@@ -34,14 +34,35 @@ function ScreamListener({ enabled, onScream }: { enabled: boolean; onScream: () 
   return null;
 }
 
+// Mock default session so login is not required for now
+const DEFAULT_GUEST_SESSION: Session = {
+  user: {
+    id: 'user_heimdal_1',
+    email: 'user@heimdal.app',
+    name: 'Heimdal User',
+    phone: '+91 98765 43210',
+    initials: 'HU',
+  },
+  tokens: {
+    access: 'dev_guest_access_token',
+    refresh: 'dev_guest_refresh_token',
+  },
+  emergencyContacts: [],
+  discreet: {
+    screamToSos: true,
+    calculatorDisguise: false,
+    alertPoliceOnSos: false,
+  },
+} as any;
+
 type ActiveView = 'Splash' | 'Home' | 'LiveLocation' | 'SafeRoutes' | 'Settings' | 'Contacts' | 'FakeCall' | 'Helplines';
 
 function HeimdalMain() {
   const { colors, isDark, mode, setMode } = useTheme();
   const [currentView, setCurrentView] = useState<ActiveView>('Splash');
   const [activeTab, setActiveTab] = useState<TabKey>('Home');
-  // undefined while the stored session loads; null means signed out
-  const [session, setSession] = useState<Session | null | undefined>(undefined);
+  // Default to guest session so login page is removed for now
+  const [session, setSession] = useState<Session | null | undefined>(DEFAULT_GUEST_SESSION);
   // Calculator disguise: shown at launch and whenever the app returns from the background
   const [disguised, setDisguised] = useState(false);
   const [pendingInviteId, setPendingInviteId] = useState<string | undefined>(undefined);
@@ -113,17 +134,16 @@ function HeimdalMain() {
     } catch (_) {}
   }, [session]);
 
-  // Every screen except the splash needs an account: SOS, guardians and routes all act for a signed-in user
-  const signedOut = currentView !== 'Splash' && session === null;
+  // Login page disabled for now per user request
+  const signedOut = false;
   const hidden = disguised && !!session;
-  // One navbar for the whole app shell: every signed-in screen gets it, the disguise and
-  // the sign-in/splash screens do not.
-  const showBottomNav = !!session && !disguised && !signedOut && currentView !== 'Splash' && !callActive;
+  // One navbar for the whole app shell
+  const showBottomNav = !disguised && currentView !== 'Splash' && !callActive;
 
   // The microphone is released while any SOS is on screen, during a fake call (it records
   // its own audio) and while the app is in the background.
   const listenForScreams =
-    screamDetection && !!session && !signedOut && appActive &&
+    screamDetection && appActive &&
     !sosVisible && !screamSosVisible && !callActive && currentView !== 'FakeCall';
 
   const handleTabPress = (tab: TabKey) => {
@@ -272,8 +292,6 @@ function HeimdalMain() {
           />
         )}
 
-        {signedOut && <AuthScreen />}
-
         {!hidden && currentView === 'Splash' && (
           <SplashScreen
             onContinue={() => {
@@ -284,11 +302,11 @@ function HeimdalMain() {
           />
         )}
 
-        {!hidden && !signedOut && session && currentView === 'Home' && (
+        {!hidden && currentView === 'Home' && (
           <HomeScreen onNavigate={handleNavigate} />
         )}
 
-        {!hidden && !signedOut && session && currentView === 'LiveLocation' && (
+        {!hidden && currentView === 'LiveLocation' && (
           <LiveLocationScreen
             onBack={() => {
               setCurrentView('Home');
@@ -301,11 +319,11 @@ function HeimdalMain() {
           />
         )}
 
-        {!hidden && !signedOut && session && currentView === 'SafeRoutes' && (
+        {!hidden && currentView === 'SafeRoutes' && (
           <NavigationScreen />
         )}
 
-        {!hidden && !signedOut && session && currentView === 'Settings' && (
+        {!hidden && currentView === 'Settings' && (
           <SettingsScreen
             onNavigateToContacts={() => {
               setCurrentView('Contacts');
@@ -314,7 +332,7 @@ function HeimdalMain() {
           />
         )}
 
-        {!hidden && !signedOut && session && currentView === 'FakeCall' && (
+        {!hidden && currentView === 'FakeCall' && (
           <FakeCallScreen
             onBack={() => {
               setCurrentView('Home');
@@ -324,7 +342,7 @@ function HeimdalMain() {
           />
         )}
 
-        {!hidden && !signedOut && session && currentView === 'Helplines' && (
+        {!hidden && currentView === 'Helplines' && (
           <HelplinesScreen
             onBack={() => {
               setCurrentView('Home');
@@ -333,7 +351,7 @@ function HeimdalMain() {
           />
         )}
 
-        {!hidden && !signedOut && session && currentView === 'Contacts' && (
+        {!hidden && currentView === 'Contacts' && (
           <ContactsScreen
             onBack={() => {
               setCurrentView('Home');
