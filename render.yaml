@@ -36,9 +36,9 @@ services:
       - key: ERSS_MODE
         value: "off"
       - key: CORS_ORIGINS
-        value: https://shield-api.onrender.com
+        value: https://shield-api-pz6b.onrender.com
       - key: PUBLIC_APP_URL
-        value: https://shield-api.onrender.com
+        value: https://shield-api-pz6b.onrender.com
       - key: LOG_LEVEL
         value: INFO
       # Optional, add in the Render dashboard (Environment) when you have them:

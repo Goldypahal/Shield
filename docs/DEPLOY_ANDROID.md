@@ -5,17 +5,15 @@ About 1–2 hours, mostly waiting for builds. Everything below is free; no card 
 ## 1. Backend online (Render), ~15 min
 
 1. Sign in at <https://render.com> with your GitHub account.
-2. **New → Blueprint**, pick the `Goldypahal/Shield` repo, branch `main` (after PR #3 is merged).
+2. **New → Blueprint**, pick the `Goldypahal/Shield` repo, branch `main`.
    Render reads `render.yaml` and creates the `shield-api` web service. Click **Apply**.
 3. Wait for the first deploy (Docker build, ~5–10 min). Open the service; its URL is at the
-   top, e.g. `https://shield-api.onrender.com` (Render adds a suffix like `-a1b2` if the
-   name is taken).
+   top. This project's is `https://shield-api-pz6b.onrender.com` (Render adds a random suffix
+   when the name is taken).
 4. Check it: open `<URL>/ready` in a browser. You should see `"status":"ready"`.
-5. If your URL is **not** exactly `https://shield-api.onrender.com`:
-   - in `app/eas.json` replace `https://shield-api.onrender.com` (two places) with your URL;
-   - in Render → shield-api → Environment, set `CORS_ORIGINS` and `PUBLIC_APP_URL` to your URL;
-   - in GitHub → repo Settings → Secrets and variables → Actions → **Variables**, add
-     `SHIELD_API_URL` = your URL (used by the keep-awake ping).
+5. If you ever deploy it under a different URL, replace `https://shield-api-pz6b.onrender.com`
+   everywhere it appears (`app/eas.json`, `render.yaml`, `.github/workflows/keepalive.yml`)
+   and rebuild the APK.
 
 ### What the free plan means
 - **Sleeps after 15 min idle.** `.github/workflows/keepalive.yml` pings `/health` every
