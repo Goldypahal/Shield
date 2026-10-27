@@ -1,170 +1,278 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  View,
-  StyleSheet,
-  SafeAreaView,
-  StatusBar,
-  Animated,
-  Text,
-  Platform,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, StatusBar,
 } from 'react-native';
-import { TOKENS } from '../theme/tokens';
-import HeimdalHeader from '../components/home/HeimdalHeader';
-import SearchCard from '../components/home/SearchCard';
-import ModeTabs from '../components/home/ModeTabs';
-import SafetyMap from '../components/home/SafetyMap';
-import RoutePanel from '../components/home/RoutePanel';
-import ActionRow from '../components/home/ActionRow';
-import { useJourneyStore } from '../store/useJourneyStore';
-
-import NavigationHUD from '../components/home/NavigationHUD';
+import * as Location from 'expo-location';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../theme';
+import { useI18n } from '../i18n';
+import AuthService from '../services/authService';
+import ContactService from '../services/contactService';
+import { getDiscreetSettings, onDiscreetSettingsChange, DiscreetSettings } from '../services/discreetSettings';
+import { getActiveSos, stopActiveSos } from '../services/sosSession';
+import { EmergencyContact } from '../types';
+import { HELPLINES, HOME_HELPLINE_IDS } from '../data/helplines';
+import HelplineRow from '../components/common/HelplineRow';
+import LanguagePicker from '../components/common/LanguagePicker';
+import PinPromptModal from '../components/common/PinPromptModal';
+import CheckinCard from '../components/home/CheckinCard';
 
 interface HomeScreenProps {
   onNavigate: (destination: string) => void;
 }
 
+type IconName = keyof typeof Ionicons.glyphMap;
+
+/**
+ * Safety dashboard. Maps and route planning live on the Routes tab; Home answers
+ * "am I protected?" and puts help (SOS state, helplines, guardians, tools) one tap away.
+ */
 export default function HomeScreen({ onNavigate }: HomeScreenProps) {
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const toastOpacity = useState(new Animated.Value(0))[0];
+  const { colors, typography, radii, isDark } = useTheme();
+  const { t, language, textAlign } = useI18n();
+  const [name, setName] = useState<string | null>(null);
+  const [contacts, setContacts] = useState<EmergencyContact[] | null>(null);
+  const [discreet, setDiscreet] = useState<DiscreetSettings | null>(null);
+  const [locationOk, setLocationOk] = useState<boolean | null>(null);
+  const [sosActive, setSosActive] = useState(false);
+  const [pinVisible, setPinVisible] = useState(false);
+  const [langVisible, setLangVisible] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const checkinY = useRef(0);
 
-  const showToast = (message: string) => {
-    setToastMessage(message);
-    Animated.sequence([
-      Animated.timing(toastOpacity, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.delay(2200),
-      Animated.timing(toastOpacity, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => setToastMessage(null));
-  };
-
-  const { detectAndSetCurrentLocation, isJourneyActive } = useJourneyStore();
-
-  useEffect(() => {
-    // Automatically detect real GPS location on launch
-    detectAndSetCurrentLocation()
-      .then((loc) => {
-        if (loc) {
-          showToast(`Located at ${loc.label.split(',')[0]}`);
-        }
-      })
-      .catch(() => undefined);
+  const refreshSos = useCallback(() => {
+    getActiveSos().then((a) => setSosActive(!!a && !a.silent)).catch(() => undefined);
   }, []);
 
-  const handleManualRecenter = async () => {
-    showToast('Locating your accurate GPS position...');
-    const loc = await detectAndSetCurrentLocation();
-    if (loc) {
-      showToast(`Updated location: ${loc.label.split(',')[0]}`);
-    }
-  };
+  useEffect(() => {
+    AuthService.ensureSession().then((s) => setName(s?.name?.split(' ')[0] || null)).catch(() => undefined);
+    ContactService.listContacts().then(setContacts).catch(() => setContacts([]));
+    getDiscreetSettings().then(setDiscreet).catch(() => undefined);
+    Location.getForegroundPermissionsAsync().then((p) => setLocationOk(p.granted)).catch(() => setLocationOk(null));
+    refreshSos();
+    const unsub = onDiscreetSettingsChange(setDiscreet);
+    const poll = setInterval(refreshSos, 5000); // an SOS can start from scream, shake or the navbar
+    return () => { unsub(); clearInterval(poll); };
+  }, [refreshSos]);
+
+  const guardianCount = contacts?.length ?? 0;
+  // on: true = good, false = needs attention, null = unknown or optional-and-off (grey)
+  const statusItems: { label: string; on: boolean | null; value: string }[] = [
+    { label: t('home.status.scream'), on: discreet ? discreet.screamToSos : null, value: discreet?.screamToSos ? t('common.on') : t('common.off') },
+    { label: t('home.status.location'), on: locationOk, value: locationOk ? t('home.status.allowed') : t('home.status.blocked') },
+    { label: t('home.status.guardians'), on: contacts ? guardianCount > 0 : null, value: String(guardianCount) },
+    { label: t('home.status.shake'), on: discreet?.shakeToSos ? true : null, value: discreet?.shakeToSos ? t('common.on') : t('common.off') },
+  ];
+  // Shake is optional, so it does not count against "all on"
+  const allOn = statusItems.slice(0, 3).every((s) => s.on);
+
+  const actions: { icon: IconName; title: string; sub: string; tint: string; onPress: () => void }[] = [
+    { icon: 'navigate', title: t('home.actions.route'), sub: t('home.actions.routeSub'), tint: '#2563EB', onPress: () => onNavigate('SafeRoutes') },
+    { icon: 'location', title: t('home.actions.share'), sub: t('home.actions.shareSub'), tint: '#059669', onPress: () => onNavigate('LiveLocation') },
+    { icon: 'call', title: t('home.actions.fakeCall'), sub: t('home.actions.fakeCallSub'), tint: '#7C3AED', onPress: () => onNavigate('FakeCall') },
+    { icon: 'timer', title: t('home.actions.checkin'), sub: t('home.actions.checkinSub'), tint: '#D97706',
+      onPress: () => scrollRef.current?.scrollTo({ y: checkinY.current - 12, animated: true }) },
+  ];
+
+  const card = { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radii.lg };
+  const sectionTitle = (text: string, right?: React.ReactNode) => (
+    <View style={styles.sectionHeader}>
+      <Text style={[typography.h4, { color: colors.textPrimary, textAlign }]}>{text}</Text>
+      {right}
+    </View>
+  );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor={TOKENS.colors.surface.bg} />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-      <View style={styles.appContainer}>
-        {/* ACTIVE NAVIGATION HUD MODE */}
-        {isJourneyActive ? (
-          <View style={styles.navigationHUDContainer}>
-            <View style={styles.mapContainerNav}>
-              <SafetyMap onShowToast={showToast} />
-            </View>
-            <NavigationHUD onShowToast={showToast} />
+        {/* Greeting + language */}
+        <View style={styles.header}>
+          <View style={{ flex: 1 }}>
+            <Text style={[typography.h2, { color: colors.textPrimary, textAlign }]} numberOfLines={1}>
+              {name ? t('home.greeting', { name }) : t('home.greetingNoName')}
+            </Text>
+            <Text style={[typography.bodyMedium, { color: colors.textSecondary, textAlign }]}>{t('home.subtitle')}</Text>
           </View>
-        ) : (
-          /* STANDARD PRE-JOURNEY HOME VIEW */
-          <>
-            {/* 1. Header (Height 64px) */}
-            <HeimdalHeader onProfilePress={() => onNavigate('Settings')} />
+          <TouchableOpacity
+            onPress={() => setLangVisible(true)}
+            style={[styles.langButton, { borderColor: colors.border, backgroundColor: colors.surfaceSecondary }]}
+            accessibilityRole="button"
+            accessibilityLabel={`${t('lang.title')}: ${language.english}`}
+          >
+            <Ionicons name="language" size={18} color={colors.brandAccent} />
+            <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '700' }]}>{language.native}</Text>
+          </TouchableOpacity>
+        </View>
 
-            {/* 2. SearchCard (floating inputs + swap) */}
-            <SearchCard onRecenter={handleManualRecenter} />
-
-            {/* 3. ModeTabs (Drive, Bike, Walk, Transit) */}
-            <ModeTabs />
-
-            {/* 4. SafetyMap (Dark theme, 3 routes, live user beacon, hazard markers) */}
-            <View style={styles.mapContainer}>
-              <SafetyMap onShowToast={showToast} />
+        {/* Active SOS */}
+        {sosActive && (
+          <View style={[styles.sosBanner, { backgroundColor: colors.sosPrimary, borderRadius: radii.lg }]}>
+            <Ionicons name="warning" size={26} color="#FFFFFF" />
+            <View style={{ flex: 1 }}>
+              <Text style={[typography.h4, { color: '#FFFFFF' }]}>{t('home.sosActive.title')}</Text>
+              <Text style={[typography.bodySmall, { color: 'rgba(255,255,255,0.9)' }]}>{t('home.sosActive.body')}</Text>
             </View>
-
-            {/* 5. RoutePanel (Bottom sheet look with 3 route cards + Start Journey button) */}
-            <RoutePanel onShowToast={showToast} />
-
-            {/* 6. ActionRow (Share Journey + Avatar stack, Center Pulsing SOS, Add Stop) */}
-            <ActionRow onShowToast={showToast} />
-
-          </>
+            <TouchableOpacity onPress={() => setPinVisible(true)} style={styles.sosBannerButton} accessibilityRole="button">
+              <Text style={[typography.button, { color: colors.sosPrimary }]}>{t('home.sosActive.stop')}</Text>
+            </TouchableOpacity>
+          </View>
         )}
 
-        {/* Floating Toast Notification */}
-        {toastMessage && (
-          <Animated.View style={[styles.toastContainer, { opacity: toastOpacity }]}>
-            <Text style={styles.toastText}>{toastMessage}</Text>
-          </Animated.View>
-        )}
-      </View>
+        {/* Protection status */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => onNavigate('Settings')}
+          style={[styles.statusCard, card, { borderWidth: 1 }]}
+          accessibilityRole="button"
+        >
+          <View style={styles.statusTop}>
+            <View style={[styles.statusIcon, { backgroundColor: allOn ? colors.statusSuccessBg : colors.statusWarningBg }]}>
+              <Ionicons name={allOn ? 'shield-checkmark' : 'shield-outline'} size={26} color={allOn ? colors.statusSuccess : colors.statusWarning} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[typography.caption, { color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.6 }]}>
+                {t('home.status.title')}
+              </Text>
+              <Text style={[typography.h4, { color: colors.textPrimary, textAlign }]}>
+                {allOn ? t('home.status.allOn') : t('home.status.someOff')}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          </View>
+          <View style={styles.statusGrid}>
+            {statusItems.map((s) => (
+              <View key={s.label} style={[styles.statusItem, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.md }]}>
+                <View style={[styles.dot, { backgroundColor: s.on === null ? colors.textMuted : s.on ? colors.statusSuccess : colors.statusWarning }]} />
+                <Text style={[typography.bodySmall, { color: colors.textSecondary, flex: 1 }]} numberOfLines={1}>{s.label}</Text>
+                <Text style={[typography.bodySmall, { color: colors.textPrimary, fontWeight: '700' }]}>{s.value}</Text>
+              </View>
+            ))}
+          </View>
+        </TouchableOpacity>
+
+        {/* Quick actions */}
+        {sectionTitle(t('home.actions.title'))}
+        <View style={styles.actionsGrid}>
+          {actions.map((a) => (
+            <TouchableOpacity
+              key={a.title}
+              onPress={a.onPress}
+              style={[styles.action, card, { borderWidth: 1 }]}
+              accessibilityRole="button"
+              accessibilityLabel={`${a.title}. ${a.sub}`}
+            >
+              <View style={[styles.actionIcon, { backgroundColor: `${a.tint}1A` }]}>
+                <Ionicons name={a.icon} size={22} color={a.tint} />
+              </View>
+              <Text style={[typography.bodyLarge, { color: colors.textPrimary, fontWeight: '700', textAlign }]} numberOfLines={1}>{a.title}</Text>
+              <Text style={[typography.bodySmall, { color: colors.textSecondary, textAlign }]} numberOfLines={2}>{a.sub}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Helplines */}
+        {sectionTitle(t('home.helplines.title'))}
+        <View style={[styles.listCard, card, { borderWidth: 1 }]}>
+          {HOME_HELPLINE_IDS.map((id, i) => {
+            const h = HELPLINES.find((x) => x.id === id)!;
+            return <HelplineRow key={id} helpline={h} compact last={i === HOME_HELPLINE_IDS.length - 1} />;
+          })}
+        </View>
+        <TouchableOpacity
+          onPress={() => onNavigate('Helplines')}
+          style={[styles.allButton, { borderColor: colors.brandAccent, borderRadius: radii.md }]}
+          accessibilityRole="button"
+        >
+          <Ionicons name="list" size={18} color={colors.brandAccent} />
+          <Text style={[typography.button, { color: colors.brandAccent }]}>
+            {t('home.helplines.all', { count: new Set(HELPLINES.map((h) => h.number)).size })}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Guardians */}
+        {sectionTitle(t('home.guardians.title'), guardianCount > 0 ? (
+          <TouchableOpacity onPress={() => onNavigate('Contacts')} accessibilityRole="button">
+            <Text style={[typography.button, { color: colors.brandAccent }]}>{t('home.guardians.manage')}</Text>
+          </TouchableOpacity>
+        ) : undefined)}
+        {guardianCount > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.guardians}>
+            {contacts!.map((c) => (
+              <View key={c.id} style={styles.guardian}>
+                <View style={[styles.avatar, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
+                  <Text style={[typography.h4, { color: colors.brandAccent }]}>{c.name.trim().charAt(0).toUpperCase()}</Text>
+                </View>
+                <Text style={[typography.bodySmall, { color: colors.textPrimary, maxWidth: 72 }]} numberOfLines={1}>{c.name}</Text>
+              </View>
+            ))}
+            <TouchableOpacity onPress={() => onNavigate('Contacts')} style={styles.guardian} accessibilityRole="button" accessibilityLabel={t('home.guardians.add')}>
+              <View style={[styles.avatar, styles.addAvatar, { borderColor: colors.brandAccent }]}>
+                <Ionicons name="add" size={24} color={colors.brandAccent} />
+              </View>
+              <Text style={[typography.bodySmall, { color: colors.brandAccent, textAlign: 'center' }]} numberOfLines={2}>{t('home.guardians.add')}</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        ) : contacts ? (
+          <View style={[styles.emptyGuardians, { backgroundColor: colors.statusWarningBg, borderRadius: radii.lg }]}>
+            <Ionicons name="people" size={22} color={colors.statusWarning} />
+            <Text style={[typography.bodyMedium, { color: colors.textPrimary, flex: 1, textAlign }]}>{t('home.guardians.empty')}</Text>
+            <TouchableOpacity onPress={() => onNavigate('Contacts')} style={[styles.smallButton, { backgroundColor: colors.brandAccent }]} accessibilityRole="button">
+              <Text style={[typography.button, { color: '#FFFFFF' }]}>{t('home.guardians.add')}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
+        {/* Check-in timer */}
+        <View onLayout={(e) => { checkinY.current = e.nativeEvent.layout.y; }} style={{ marginTop: 24 }}>
+          <CheckinCard style={{ marginHorizontal: 0, marginTop: 0 }} />
+        </View>
+      </ScrollView>
+
+      <LanguagePicker visible={langVisible} onClose={() => setLangVisible(false)} />
+      <PinPromptModal
+        visible={pinVisible}
+        title={t('sos.pinTitleActive')}
+        message={t('sos.pinMsgActive')}
+        confirmLabel={t('sos.stopSos')}
+        dismissLabel={t('sos.back')}
+        onSubmit={async (pin) => {
+          const r = await stopActiveSos(pin);
+          if ('message' in r) return r.message;
+          setPinVisible(false);
+          refreshSos();
+          return null;
+        }}
+        onDismiss={() => setPinVisible(false)}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: TOKENS.colors.surface.bg,
-  },
-  appContainer: {
-    flex: 1,
-    flexDirection: 'column',
-    backgroundColor: TOKENS.colors.surface.bg,
-    maxWidth: 430,
-    width: '100%',
-    alignSelf: 'center',
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  navigationHUDContainer: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-    position: 'relative',
-  },
-  mapContainerNav: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 1,
-  },
-  mapContainer: {
-    flex: 1,
-    minHeight: 260,
-    marginTop: 10,
-    marginBottom: -20, // Negative margin so RoutePanel smoothly overlaps map by 20-24px
-    zIndex: 1,
-  },
-  toastContainer: {
-    position: 'absolute',
-    top: 75,
-    alignSelf: 'center',
-    backgroundColor: 'rgba(31, 41, 55, 0.92)',
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 20,
-    zIndex: 100,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 10,
-  },
-  toastText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '600',
-  },
+  safeArea: { flex: 1 },
+  content: { padding: 16, paddingBottom: 120 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
+  langButton: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8 },
+  sosBanner: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, marginBottom: 16 },
+  sosBannerButton: { backgroundColor: '#FFFFFF', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 },
+  statusCard: { padding: 14 },
+  statusTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  statusIcon: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  statusGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 8, marginTop: 12 },
+  statusItem: { width: '48.8%', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 8 },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 24, marginBottom: 10 },
+  actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
+  action: { width: '48.8%', padding: 12, gap: 2 },
+  actionIcon: { width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  listCard: { paddingHorizontal: 14 },
+  allButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1.5, paddingVertical: 12, marginTop: 10 },
+  guardians: { gap: 14, paddingVertical: 2 },
+  guardian: { alignItems: 'center', gap: 6, width: 76 },
+  avatar: { width: 56, height: 56, borderRadius: 28, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  addAvatar: { borderStyle: 'dashed', borderWidth: 1.5 },
+  emptyGuardians: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, flexWrap: 'wrap' },
+  smallButton: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
 });

@@ -14,7 +14,7 @@ const CHOICES = [15, 30, 45, 60, 90];
  * "I should be home by…" timer. The countdown runs on the server, so guardians are
  * alerted even if this phone dies or is taken. Stopping or extending it needs the PIN.
  */
-export default function CheckinCard() {
+export default function CheckinCard({ style }: { style?: object } = {}) {
   const { colors, typography, radii } = useTheme();
   const [timer, setTimer] = useState<Checkin | null>(null);
   const [now, setNow] = useState(Date.now());
@@ -70,7 +70,7 @@ export default function CheckinCard() {
   const urgent = timer !== null && secondsLeft < 120;
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: urgent ? colors.sosPrimary : colors.border, borderRadius: radii.lg }]}>
+    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: urgent ? colors.sosPrimary : colors.border, borderRadius: radii.lg }, style]}>
       <View style={styles.row}>
         <View style={[styles.icon, { backgroundColor: colors.surfaceSecondary }]}>
           <Ionicons name="timer-outline" size={22} color={urgent ? colors.sosPrimary : colors.brandAccent} />

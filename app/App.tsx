@@ -15,6 +15,8 @@ import SafeRoutesScreen from './src/screens/SafeRoutesScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import ContactsScreen from './src/screens/ContactsScreen';
 import FakeCallScreen from './src/screens/FakeCallScreen';
+import HelplinesScreen from './src/screens/HelplinesScreen';
+import { LanguageProvider } from './src/i18n';
 import DeviceStatusBar from './src/components/common/DeviceStatusBar';
 import BottomNavigation, { TabKey } from './src/components/common/BottomNavigation';
 import SosOverlay from './src/components/common/SosOverlay';
@@ -32,7 +34,7 @@ function ScreamListener({ enabled, onScream }: { enabled: boolean; onScream: () 
   return null;
 }
 
-type ActiveView = 'Splash' | 'Home' | 'LiveLocation' | 'SafeRoutes' | 'Settings' | 'Contacts' | 'FakeCall';
+type ActiveView = 'Splash' | 'Home' | 'LiveLocation' | 'SafeRoutes' | 'Settings' | 'Contacts' | 'FakeCall' | 'Helplines';
 
 function HeimdalMain() {
   const { colors, isDark, mode, setMode } = useTheme();
@@ -152,6 +154,9 @@ function HeimdalMain() {
       setCurrentView('Splash');
     } else if (view === 'FakeCall') {
       setCurrentView('FakeCall');
+    } else if (view === 'Helplines') {
+      setActiveTab('Home');
+      setCurrentView('Helplines');
     }
   };
 
@@ -324,6 +329,15 @@ function HeimdalMain() {
           />
         )}
 
+        {!hidden && !signedOut && session && currentView === 'Helplines' && (
+          <HelplinesScreen
+            onBack={() => {
+              setCurrentView('Home');
+              setActiveTab('Home');
+            }}
+          />
+        )}
+
         {!hidden && !signedOut && session && currentView === 'Contacts' && (
           <ContactsScreen
             onBack={() => {
@@ -350,7 +364,9 @@ function HeimdalMain() {
 export default function App() {
   return (
     <ThemeProvider>
-      <HeimdalMain />
+      <LanguageProvider>
+        <HeimdalMain />
+      </LanguageProvider>
     </ThemeProvider>
   );
 }
