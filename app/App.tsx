@@ -22,6 +22,7 @@ import BottomNavigation, { TabKey } from './src/components/common/BottomNavigati
 import SosOverlay from './src/components/common/SosOverlay';
 import ScreamSosOverlay from './src/components/common/ScreamSosOverlay';
 import { useScreamTrigger } from './src/hooks/useScreamTrigger';
+import { useFallTrigger } from './src/hooks/useFallTrigger';
 import ScreamSosController from './src/services/screamSosController';
 
 import NotificationService from './src/services/notificationService';
@@ -32,6 +33,12 @@ import NotificationService from './src/services/notificationService';
  */
 function ScreamListener({ enabled, background, onScream }: { enabled: boolean; background: boolean; onScream: () => void }) {
   useScreamTrigger(onScream, enabled, { background });
+  return null;
+}
+
+/** Owns the motion sensors for fall detection (render-less, like ScreamListener). */
+function FallListener({ enabled, onFall }: { enabled: boolean; onFall: () => void }) {
+  useFallTrigger(onFall, enabled);
   return null;
 }
 
@@ -54,12 +61,14 @@ function HeimdalMain() {
   const [screamSosPhase, setScreamSosPhase] = useState(ScreamSosController.getState().phase);
   const [screamDetection, setScreamDetection] = useState(true);
   const [screamInBackground, setScreamInBackground] = useState(true);
+  const [fallDetection, setFallDetection] = useState(true);
   const [appActive, setAppActive] = useState(AppState.currentState === 'active' || Platform.OS === 'web');
 
   useEffect(() => {
-    const apply = (d: { screamToSos: boolean; screamInBackground: boolean }) => {
+    const apply = (d: { screamToSos: boolean; screamInBackground: boolean; fallToSos: boolean }) => {
       setScreamDetection(d.screamToSos);
       setScreamInBackground(d.screamInBackground);
+      setFallDetection(d.fallToSos);
     };
     getDiscreetSettings().then(apply).catch(() => undefined);
     const unsubscribe = onDiscreetSettingsChange(apply);
@@ -140,6 +149,11 @@ function HeimdalMain() {
   const listenForScreams =
     screamDetection && !!session && (appActive || screamInBackground) &&
     !sosVisible && !screamSosBusy && !callActive && currentView !== 'FakeCall';
+
+  // Fall detection: motion sensors only reach the app while it is open, so it runs then.
+  const watchForFalls =
+    fallDetection && !!session && appActive && screamSosPhase === 'idle' &&
+    !sosVisible && !callActive && currentView !== 'FakeCall';
 
   const handleTabPress = (tab: TabKey) => {
     setActiveTab(tab);
@@ -366,7 +380,8 @@ function HeimdalMain() {
 
       <SosOverlay visible={sosVisible} onClose={() => setSosVisible(false)} />
       <ScreamSosOverlay />
-      <ScreamListener enabled={listenForScreams} background={screamInBackground} onScream={() => ScreamSosController.start()} />
+      <ScreamListener enabled={listenForScreams} background={screamInBackground} onScream={() => ScreamSosController.start('AUDIO_DISTRESS')} />
+      <FallListener enabled={watchForFalls} onFall={() => ScreamSosController.start('FALL')} />
     </View>
   );
 }

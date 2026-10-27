@@ -16,7 +16,8 @@ import ScreamSosController, { ScreamSosState } from '../../services/screamSosCon
 export { SCREAM_SOS_COUNTDOWN_S } from '../../services/screamSosController';
 
 /**
- * Shown when the scream model has heard a scream for ~3 seconds.
+ * Shown when the scream model has heard a scream for ~3 seconds, or the fall model saw a
+ * fall followed by the phone lying still.
  *
  * 1. 10-second countdown, then the SOS goes out: live location to the guardians (parents)
  *    and, if the walker consented at sign-up, to the police.
@@ -92,9 +93,9 @@ export default function ScreamSosOverlay() {
         {phase === 'countdown' && (
           <View style={styles.content}>
             <View style={styles.iconCircle}>
-              <Ionicons name="mic" size={44} color="#FFFFFF" />
+              <Ionicons name={s.trigger === 'FALL' ? 'body' : 'mic'} size={44} color="#FFFFFF" />
             </View>
-            <Text style={styles.kicker}>{t('sos.screamDetected')}</Text>
+            <Text style={styles.kicker}>{s.trigger === 'FALL' ? t('sos.fallDetected') : t('sos.screamDetected')}</Text>
             <Text style={styles.countdown}>{secondsLeft}</Text>
             <Text style={styles.title}>{t('sos.title')}</Text>
             <Text style={styles.body}>{t('sos.countdown', { seconds: secondsLeft })}</Text>

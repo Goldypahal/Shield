@@ -123,6 +123,7 @@ const en = {
 
   // Scream SOS overlay
   'sos.screamDetected': 'SCREAM DETECTED',
+  'sos.fallDetected': 'FALL DETECTED',
   'sos.title': 'Emergency SOS',
   'sos.countdown': 'Sharing your live location with your parents and the police in {seconds} seconds.',
   'sos.imSafe': "I'M SAFE – ENTER PIN",
@@ -174,6 +175,8 @@ const en = {
   'settings.screamOn': 'On: a 3-second scream starts a 10-second SOS countdown',
   'settings.screamBg': 'Listen in background',
   'settings.screamBgOn': 'On: keeps listening with the screen off; a notification shows it',
+  'settings.fall': 'Fall detection',
+  'settings.fallOn': 'On: a fall, then lying still, starts a 10-second SOS countdown while the app is open',
 
   // Navigation page
   'nav.from': 'From',

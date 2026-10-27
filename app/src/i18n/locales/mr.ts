@@ -114,6 +114,8 @@ const mr: Translation = {
   'hl.1363.desc': 'पर्यटकांसाठी अनेक भाषांमध्ये मदत',
 
   'sos.screamDetected': 'किंचाळी ऐकू आली',
+
+  'sos.fallDetected': 'पडणे ओळखले',
   'sos.title': 'आपत्कालीन SOS',
   'sos.countdown': '{seconds} सेकंदांत तुमचे लाइव्ह लोकेशन तुमचे आई-वडील आणि पोलिसांना पाठवले जाईल.',
   'sos.imSafe': 'मी सुरक्षित आहे – PIN टाका',
@@ -163,6 +165,10 @@ const mr: Translation = {
   'settings.screamOn': 'चालू: 3 सेकंदांच्या किंचाळीवर 10 सेकंदांचे SOS काउंटडाउन सुरू होते',
   'settings.screamBg': 'पार्श्वभूमीत ऐका',
   'settings.screamBgOn': 'चालू: स्क्रीन बंद असतानाही ऐकते; एक सूचना दिसते',
+
+  'settings.fall': 'पडणे ओळख',
+
+  'settings.fallOn': 'चालू: पडल्यानंतर स्थिर राहिल्यास 10 सेकंदांचे SOS काउंटडाउन सुरू होते (अ‍ॅप उघडे असताना)',
 
   'nav.from': 'कोठून',
   'nav.to': 'कोठे जायचे?',

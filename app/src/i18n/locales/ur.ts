@@ -114,6 +114,8 @@ const ur: Translation = {
   'hl.1363.desc': 'سیاحوں کے لیے کئی زبانوں میں مدد',
 
   'sos.screamDetected': 'چیخ سنائی دی',
+
+  'sos.fallDetected': 'گرنے کا پتہ چلا',
   'sos.title': 'ایمرجنسی SOS',
   'sos.countdown': '{seconds} سیکنڈ میں آپ کی لائیو لوکیشن آپ کے والدین اور پولیس کو بھیج دی جائے گی۔',
   'sos.imSafe': 'میں محفوظ ہوں – PIN درج کریں',
@@ -163,6 +165,10 @@ const ur: Translation = {
   'settings.screamOn': 'آن: 3 سیکنڈ کی چیخ پر 10 سیکنڈ کا SOS کاؤنٹ ڈاؤن شروع ہوتا ہے',
   'settings.screamBg': 'پس منظر میں سنیں',
   'settings.screamBgOn': 'آن: اسکرین بند ہونے پر بھی سنتا ہے؛ ایک اطلاع دکھائی دیتی ہے',
+
+  'settings.fall': 'گرنے کی شناخت',
+
+  'settings.fallOn': 'آن: گرنے کے بعد ساکت رہنے پر 10 سیکنڈ کا SOS کاؤنٹ ڈاؤن شروع ہوتا ہے (ایپ کھلی ہو تو)',
 
   'nav.from': 'کہاں سے',
   'nav.to': 'کہاں جانا ہے؟',

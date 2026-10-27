@@ -114,6 +114,8 @@ const asm: Translation = {
   'hl.1363.desc': 'পৰ্যটকৰ বাবে বহু ভাষাত সহায়',
 
   'sos.screamDetected': 'চিঞৰ শুনা গ’ল',
+
+  'sos.fallDetected': 'পৰি যোৱা ধৰা পৰিল',
   'sos.title': 'জৰুৰীকালীন SOS',
   'sos.countdown': '{seconds} ছেকেণ্ডত আপোনাৰ লাইভ লোকেশ্বন আপোনাৰ মাক-দেউতাক আৰু আৰক্ষীলৈ পঠোৱা হ’ব।',
   'sos.imSafe': 'মই সুৰক্ষিত – PIN দিয়ক',
@@ -163,6 +165,10 @@ const asm: Translation = {
   'settings.screamOn': 'অন: 3 ছেকেণ্ডৰ চিঞৰত 10 ছেকেণ্ডৰ SOS কাউণ্টডাউন আৰম্ভ হয়',
   'settings.screamBg': 'পটভূমিত শুনক',
   'settings.screamBgOn': 'অন: স্ক্ৰীণ বন্ধ থাকিলেও শুনে; এটা জাননী দেখুৱায়',
+
+  'settings.fall': 'পৰি যোৱা চিনাক্তকৰণ',
+
+  'settings.fallOn': 'অন: পৰি গৈ স্থিৰ হৈ থাকিলে 10 ছেকেণ্ডৰ SOS কাউণ্টডাউন আৰম্ভ হয় (এপ খোলা থাকিলে)',
 
   'nav.from': 'ক’ৰ পৰা',
   'nav.to': 'ক’লৈ যাব?',

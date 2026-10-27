@@ -114,6 +114,8 @@ const hi: Translation = {
   'hl.1363.desc': 'पर्यटकों के लिए कई भाषाओं में सहायता',
 
   'sos.screamDetected': 'चीख सुनाई दी',
+
+  'sos.fallDetected': 'गिरना पहचाना गया',
   'sos.title': 'आपातकालीन SOS',
   'sos.countdown': '{seconds} सेकंड में आपकी लाइव लोकेशन आपके माता-पिता और पुलिस को भेजी जाएगी।',
   'sos.imSafe': 'मैं सुरक्षित हूं – PIN डालें',
@@ -163,6 +165,10 @@ const hi: Translation = {
   'settings.screamOn': 'चालू: 3 सेकंड की चीख पर 10 सेकंड का SOS काउंटडाउन शुरू होता है',
   'settings.screamBg': 'बैकग्राउंड में सुनें',
   'settings.screamBgOn': 'चालू: स्क्रीन बंद होने पर भी सुनता है; एक सूचना दिखती है',
+
+  'settings.fall': 'गिरने की पहचान',
+
+  'settings.fallOn': 'चालू: गिरने के बाद स्थिर पड़े रहने पर 10 सेकंड का SOS काउंटडाउन शुरू होता है (ऐप खुला हो तब)',
 
   'nav.from': 'कहां से',
   'nav.to': 'कहां जाना है?',

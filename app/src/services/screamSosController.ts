@@ -3,8 +3,11 @@ import * as Notifications from 'expo-notifications';
 import { sendSos, stopActiveSos, cancelCountdownWithPin, StopResult } from './sosSession';
 import type { SosResult } from './sosService';
 
+/** What started the automatic SOS: the scream model or the fall model. */
+export type AutoSosTrigger = 'AUDIO_DISTRESS' | 'FALL';
+
 /**
- * The scream SOS, independent of what is on screen.
+ * The automatic SOS (scream or fall), independent of what is on screen.
  *
  * In the foreground the overlay shows it. With the app in the background (screen off, phone
  * in a bag) JavaScript timers are paused on Android, so the countdown is also advanced by
@@ -18,6 +21,7 @@ export type ScreamSosPhase = 'idle' | 'countdown' | 'sending' | 'sent' | 'stoppe
 
 export interface ScreamSosState {
   phase: ScreamSosPhase;
+  trigger: AutoSosTrigger;
   /** ms epoch at which the countdown ends (countdown phase) */
   deadline: number;
   result: SosResult | null;
@@ -25,7 +29,7 @@ export interface ScreamSosState {
   stoppedBeforeSend: boolean;
 }
 
-const IDLE: ScreamSosState = { phase: 'idle', deadline: 0, result: null, failure: null, stoppedBeforeSend: false };
+const IDLE: ScreamSosState = { phase: 'idle', trigger: 'AUDIO_DISTRESS', deadline: 0, result: null, failure: null, stoppedBeforeSend: false };
 
 const CHANNEL_ID = 'scream-sos';
 const NOTIFICATION_ID = 'scream-sos';
@@ -83,7 +87,7 @@ function clearNotification() {
 function send() {
   stopTimer();
   set({ phase: 'sending' });
-  sendSos('AUDIO_DISTRESS')
+  sendSos(state.trigger)
     .then((result) => {
       if (state.phase !== 'sending') return; // stopped meanwhile
       set({ phase: 'sent', result });
@@ -107,15 +111,18 @@ const ScreamSosController = {
     return () => { listeners.delete(listener); };
   },
 
-  /** The scream model heard ~3 s of screaming. Ignored while a scream SOS is already running. */
-  start() {
+  /**
+   * The scream model heard ~3 s of screaming, or the fall model saw a fall followed by
+   * stillness. Ignored while an automatic SOS is already running.
+   */
+  start(trigger: AutoSosTrigger = 'AUDIO_DISTRESS') {
     if (state.phase === 'countdown' || state.phase === 'sending' || state.phase === 'sent') return;
-    set({ ...IDLE, phase: 'countdown', deadline: Date.now() + SCREAM_SOS_COUNTDOWN_S * 1000 });
+    set({ ...IDLE, trigger, phase: 'countdown', deadline: Date.now() + SCREAM_SOS_COUNTDOWN_S * 1000 });
     if (Platform.OS !== 'web') {
       try { Vibration.vibrate([0, 400, 200, 400]); } catch (_) {}
     }
     if (inBackground()) {
-      notify('Scream detected: SOS in 10 seconds',
+      notify(trigger === 'FALL' ? 'Fall detected: SOS in 10 seconds' : 'Scream detected: SOS in 10 seconds',
         'Open SHIELD and enter your PIN if you are safe. Otherwise your location goes to your guardians.');
     }
     stopTimer();
@@ -133,7 +140,7 @@ const ScreamSosController = {
 
   /** PIN during the countdown: nothing has left the phone yet. */
   async cancelWithPin(pin: string): Promise<StopResult> {
-    const outcome = await cancelCountdownWithPin(pin, 'AUDIO_DISTRESS');
+    const outcome = await cancelCountdownWithPin(pin, state.trigger);
     if ('message' in outcome) return outcome;
     if (state.phase !== 'countdown') {
       return { ok: false, message: 'The SOS was already sent. Enter your PIN again to stop it.' };
