@@ -21,23 +21,23 @@ export type AudioEngine = 'tflite' | 'heuristic';
  */
 export class AudioClassifier {
   public static readonly SAMPLE_RATE = 16000;
-  /** Samples the model sees (5 s). */
+  /** Samples of the v1 CNN (5 s); v2 (YAMNet + scream head) takes 15600 (0.975 s). */
   public static readonly MODEL_INPUT_SAMPLES = 80000;
-  /** Recent audio classified per hop (1 s); padded to MODEL_INPUT_SAMPLES. */
+  /** Recent audio kept per hop (1 s). */
   public static readonly SAMPLES_PER_WINDOW = 16000;
   /**
-   * Model score that counts as a scream. The model was validated at 0.5, but on 800
-   * everyday non-scream sounds from ESC-50 (sirens, dogs, crying babies, bells...) this
-   * exact pipeline would start an SOS on 25% of 5 s clips at 0.5, 5.4% at 0.9 and 3.2%
-   * at 0.95 (mostly sirens). Check missed screams on real scream recordings with
-   * backend/ml/models/scream_detection/calibrate_threshold.py before changing it.
+   * Score that counts as a scream for the bundled model, chosen on held-out data as the
+   * most recall at <= 1 false SOS per hour (see backend/ml/models/scream_detection/
+   * scream_report.json, train_yamnet_scream.py).
    */
   public static readonly MODEL_THRESHOLD = 0.95;
   public static readonly HEURISTIC_THRESHOLD = 0.8;
 
   private model: TfliteModel | null = null;
   private loading: Promise<void> | null = null;
-  private readonly input = new Float32Array(AudioClassifier.MODEL_INPUT_SAMPLES);
+  /** Read from the model file, so v1 (80000) and v2 (15600) models both work. */
+  private inputSamples = AudioClassifier.MODEL_INPUT_SAMPLES;
+  private input = new Float32Array(AudioClassifier.MODEL_INPUT_SAMPLES);
 
   get engine(): AudioEngine {
     return this.model ? 'tflite' : 'heuristic';
@@ -57,7 +57,13 @@ export class AudioClassifier {
           // Required lazily: the native module only exists in a development/production build
           const { loadTensorflowModel } = require('react-native-fast-tflite');
           this.model = await loadTensorflowModel(require('../../assets/models/scream_detection.tflite'), []);
-          console.log('[AudioClassifier] Scream TFLite model loaded');
+          const shape: number[] = (this.model as any)?.inputs?.[0]?.shape ?? [];
+          const n = shape.reduce((acc, d) => acc * (d > 0 ? d : 1), 1);
+          if (n > 1000) {
+            this.inputSamples = n;
+            this.input = new Float32Array(n);
+          }
+          console.log('[AudioClassifier] Scream TFLite model loaded, input samples:', this.inputSamples);
         } catch (err) {
           this.model = null;
           console.warn('[AudioClassifier] TFLite unavailable, using acoustic heuristic:', err);
@@ -77,9 +83,9 @@ export class AudioClassifier {
 
     if (this.model) {
       try {
-        const n = Math.min(pcmSamples.length, AudioClassifier.MODEL_INPUT_SAMPLES);
+        const n = Math.min(pcmSamples.length, this.inputSamples);
         this.input.fill(0);
-        this.input.set(pcmSamples.subarray(pcmSamples.length - n)); // most recent audio, padded at the end
+        this.input.set(pcmSamples.subarray(pcmSamples.length - n)); // most recent audio, padded at the end if short
         const [out] = await this.model.run([this.input.buffer as ArrayBuffer]);
         const p = new Float32Array(out)[0];
         return Number.isFinite(p) ? Math.max(0, Math.min(1, p)) : 0;
