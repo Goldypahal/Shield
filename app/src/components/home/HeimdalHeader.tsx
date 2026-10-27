@@ -1,9 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { TOKENS } from '../../theme/tokens';
 import { useJourneyStore } from '../../store/useJourneyStore';
-import { triggerVoiceSos, getVoiceSupportInfo, requestWebMicrophonePermission } from '../../services/voiceTriggerHelper';
+import {
+  triggerVoiceSos,
+  getVoiceSupportInfo,
+  requestWebMicrophonePermission,
+  onVoiceListeningChange,
+  isVoiceListening,
+} from '../../services/voiceTriggerHelper';
 
 interface HeimdalHeaderProps {
   onProfilePress?: () => void;
@@ -13,8 +19,16 @@ export default function HeimdalHeader({ onProfilePress }: HeimdalHeaderProps) {
   const { unreadNotifications, markNotificationsRead } = useJourneyStore();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const [micActive, setMicActive] = useState(isVoiceListening());
   const [micState, setMicState] = useState<'idle' | 'granted' | 'denied'>('idle');
   const voiceInfo = getVoiceSupportInfo();
+
+  useEffect(() => {
+    return onVoiceListeningChange((active) => {
+      setMicActive(active);
+      if (active) setMicState('granted');
+    });
+  }, []);
 
   const handleRequestMic = async () => {
     const res = await requestWebMicrophonePermission();
@@ -65,13 +79,22 @@ export default function HeimdalHeader({ onProfilePress }: HeimdalHeaderProps) {
       {/* Right: Notification Bell, Mic & Profile Buttons */}
       <View style={styles.rightGroup}>
         <TouchableOpacity
-          style={[styles.iconButton, { backgroundColor: '#FEE2E2', borderColor: '#FCA5A5' }]}
+          style={[
+            styles.iconButton,
+            micActive
+              ? { backgroundColor: '#ECFDF5', borderColor: '#6EE7B7' }
+              : { backgroundColor: '#FEE2E2', borderColor: '#FCA5A5' },
+          ]}
           onPress={() => setShowVoiceModal(true)}
           accessibilityRole="button"
           accessibilityLabel="Voice SOS Status & Test"
           activeOpacity={0.7}
         >
-          <Ionicons name="mic" size={18} color="#EF4444" />
+          <Ionicons
+            name={micActive ? 'mic' : 'mic-off'}
+            size={18}
+            color={micActive ? '#059669' : '#EF4444'}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity

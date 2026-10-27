@@ -5,14 +5,20 @@ import { optionalNative } from '../utils/nativeModules';
 import audioClassifier, { AudioClassifier } from '../ml/AudioClassifier';
 import { ScreamDurationDetector } from '../ml/ScreamDurationDetector';
 import ScreamSosController from '../services/screamSosController';
-import { onVoiceSosTrigger, getVoiceSupportInfo } from '../services/voiceTriggerHelper';
+import {
+  onVoiceSosTrigger,
+  getVoiceSupportInfo,
+  reportHeardPhrase,
+  getActiveMediaStream,
+  onActiveMediaStream,
+} from '../services/voiceTriggerHelper';
 
 // The microphone stream needs native code that Expo Go lacks; without it scream detection is off.
 const audioStudio = optionalNative(
   () => require('@siteed/audio-studio') as typeof import('@siteed/audio-studio'),
   'Microphone streaming (@siteed/audio-studio)',
 );
-export const screamDetectionAvailable = audioStudio !== null;
+export const screamDetectionAvailable = audioStudio !== null || (Platform.OS as string) === 'web';
 
 const noRecorder = (): Pick<UseAudioRecorderState, 'startRecording' | 'stopRecording'> => ({
   startRecording: async () => { throw new Error('Microphone streaming needs a development build'); },
@@ -132,9 +138,15 @@ export function useScreamTrigger(
               for (let i = event.resultIndex; i < event.results.length; ++i) {
                 const transcript = String(event.results[i][0]?.transcript || '').toLowerCase().trim();
                 console.log('[SpeechRecognition] Heard:', transcript);
-                const matched = EMERGENCY_KEYWORDS.some((kw) => transcript.includes(kw));
+                const clean = transcript.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, ' ');
+                const matched = EMERGENCY_KEYWORDS.some((kw) => {
+                  return clean.includes(kw) || transcript.includes(kw);
+                });
+
+                reportHeardPhrase(transcript, matched);
+
                 if (matched) {
-                  console.log('[SpeechRecognition] Emergency keyword matched! Triggering SOS.');
+                  console.log(`[SpeechRecognition] Emergency keyword matched for "${transcript}"! Triggering SOS.`);
                   onScreamRef.current();
                   break;
                 }
@@ -149,9 +161,13 @@ export function useScreamTrigger(
 
             speechRec.onend = () => {
               if (!stopped && enabled) {
-                try {
-                  speechRec.start();
-                } catch (_) {}
+                setTimeout(() => {
+                  if (!stopped && enabled) {
+                    try {
+                      speechRec?.start();
+                    } catch (_) {}
+                  }
+                }, 250);
               }
             };
 
@@ -163,58 +179,68 @@ export function useScreamTrigger(
         }
       }
 
-      // 2. Web Audio Acoustic Level / Scream fallback (if navigator.mediaDevices is permitted)
-      if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+      const connectAudioAnalyzer = (stream: any) => {
+        if (stopped || !stream) return;
+        mediaStream = stream;
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioCtx) return;
+        try {
+          webAudioContext = new AudioCtx();
+          const source = webAudioContext.createMediaStreamSource(stream);
+          const analyser = webAudioContext.createAnalyser();
+          analyser.fftSize = 512;
+          source.connect(analyser);
+
+          const buffer = new Float32Array(analyser.frequencyBinCount);
+          let screamCount = 0;
+
+          const checkAudio = () => {
+            if (stopped) return;
+            analyser.getFloatTimeDomainData(buffer);
+            let sum = 0;
+            for (let i = 0; i < buffer.length; i++) {
+              sum += buffer[i] * buffer[i];
+            }
+            const rms = Math.sqrt(sum / buffer.length);
+
+            // Shouting / loud distress sound threshold (~ -24 dB)
+            if (rms > 0.05) {
+              screamCount += 1;
+              onProgressRef.current?.(screamCount * 250);
+              if (screamCount >= 2) { // ~200ms of shouting or loud voice
+                console.log('[WebAudio] Loud distress voice detected! Triggering SOS.');
+                screamCount = 0;
+                onScreamRef.current();
+              }
+            } else {
+              screamCount = Math.max(0, screamCount - 1);
+              onProgressRef.current?.(screamCount * 250);
+            }
+
+            requestAnimationFrame(checkAudio);
+          };
+
+          requestAnimationFrame(checkAudio);
+        } catch (e) {
+          console.warn('[WebAudio] AudioContext error:', e);
+        }
+      };
+
+      // Connect existing active stream or listen for when user grants mic permission
+      const currentStream = getActiveMediaStream();
+      if (currentStream) {
+        connectAudioAnalyzer(currentStream);
+      }
+      const unsubStream = onActiveMediaStream((s) => connectAudioAnalyzer(s));
+
+      // Also attempt automatic acquisition if browser allows
+      if (!currentStream && typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
         navigator.mediaDevices
           .getUserMedia({ audio: true })
           .then((stream) => {
-            if (stopped) {
-              stream.getTracks().forEach((t) => t.stop());
-              return;
-            }
-            mediaStream = stream;
-            const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-            if (!AudioCtx) return;
-            webAudioContext = new AudioCtx();
-            const source = webAudioContext.createMediaStreamSource(stream);
-            const analyser = webAudioContext.createAnalyser();
-            analyser.fftSize = 512;
-            source.connect(analyser);
-
-            const buffer = new Float32Array(analyser.frequencyBinCount);
-            let screamCount = 0;
-
-            const checkAudio = () => {
-              if (stopped) return;
-              analyser.getFloatTimeDomainData(buffer);
-              let sum = 0;
-              for (let i = 0; i < buffer.length; i++) {
-                sum += buffer[i] * buffer[i];
-              }
-              const rms = Math.sqrt(sum / buffer.length);
-              
-              // If volume exceeds loud distress threshold (~ -15 dB)
-              if (rms > 0.12) {
-                screamCount += 1;
-                onProgressRef.current?.(screamCount * 250);
-                if (screamCount >= 5) { // ~1.25s of sustained shouting/screaming
-                  console.log('[WebAudio] Loud distress sound detected! Triggering SOS.');
-                  screamCount = 0;
-                  onScreamRef.current();
-                }
-              } else {
-                screamCount = Math.max(0, screamCount - 1);
-                onProgressRef.current?.(screamCount * 250);
-              }
-
-              requestAnimationFrame(checkAudio);
-            };
-
-            requestAnimationFrame(checkAudio);
+            connectAudioAnalyzer(stream);
           })
-          .catch((err) => {
-            console.warn('[WebAudio] MediaDevices access not granted or unavailable:', err?.message || err);
-          });
+          .catch(() => undefined);
       }
 
       return () => {

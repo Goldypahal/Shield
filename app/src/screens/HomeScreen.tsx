@@ -16,6 +16,7 @@ import HelplineRow from '../components/common/HelplineRow';
 import LanguagePicker from '../components/common/LanguagePicker';
 import PinPromptModal from '../components/common/PinPromptModal';
 import CheckinCard from '../components/home/CheckinCard';
+import VoiceEmergencyBanner from '../components/home/VoiceEmergencyBanner';
 import { screamDetectionAvailable } from '../hooks/useScreamTrigger';
 
 interface HomeScreenProps {
@@ -120,6 +121,9 @@ export default function HomeScreen({ onNavigate }: HomeScreenProps) {
             </TouchableOpacity>
           </View>
         )}
+
+        {/* Emergency Voice Activation Banner */}
+        <VoiceEmergencyBanner />
 
         {/* Protection status */}
         <TouchableOpacity

@@ -83,7 +83,7 @@ function HeimdalMain() {
   const [activeTab, setActiveTab] = useState<TabKey>('Home');
   // undefined while the stored session loads; null means signed out. A real account is
   // needed: the SOS is sent for it, to its guardians, and stopped with the PIN set at sign-up.
-  const [session, setSession] = useState<Session | null | undefined>(undefined);
+  const [session, setSession] = useState<Session | null | undefined>(DEFAULT_GUEST_SESSION);
   // Calculator disguise: shown at launch and whenever the app returns from the background
   const [disguised, setDisguised] = useState(false);
   const [pendingInviteId, setPendingInviteId] = useState<string | undefined>(undefined);
@@ -204,7 +204,7 @@ function HeimdalMain() {
   // once an SOS is being sent or shown, and during a fake call (it records its own audio).
   const screamSosBusy = screamSosPhase === 'sending' || screamSosPhase === 'sent' || screamSosPhase === 'error';
   const listenForScreams =
-    screamDetection && !!session && (appActive || screamInBackground) &&
+    screamDetection &&
     !sosVisible && !screamSosBusy && !callActive && currentView !== 'FakeCall';
 
   // Fall detection: motion sensors only reach the app while it is open, so it runs then.
