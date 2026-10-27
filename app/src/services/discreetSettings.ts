@@ -3,15 +3,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 /**
  * Discreet-SOS preferences. The app can open as a working calculator (typing the SOS PIN
  * and "=" unlocks it; the duress PIN and "=" sends a silent SOS), and shaking the phone
- * can start the SOS countdown. Both are off by default.
+ * can start the SOS countdown. Both are off by default. Scream detection (a ~3 s scream
+ * starts the 10 s SOS countdown) is on by default and can be turned off.
  */
 export interface DiscreetSettings {
   calculatorDisguise: boolean;
   shakeToSos: boolean;
+  screamToSos: boolean;
 }
 
 const KEY = '@shield_discreet_settings';
-const DEFAULTS: DiscreetSettings = { calculatorDisguise: false, shakeToSos: false };
+const DEFAULTS: DiscreetSettings = { calculatorDisguise: false, shakeToSos: false, screamToSos: true };
 const listeners = new Set<(s: DiscreetSettings) => void>();
 
 export async function getDiscreetSettings(): Promise<DiscreetSettings> {

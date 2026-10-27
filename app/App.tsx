@@ -6,7 +6,7 @@ import { ThemeProvider, useTheme } from './src/theme';
 import SplashScreen from './src/screens/SplashScreen';
 import AuthScreen from './src/screens/AuthScreen';
 import CalculatorScreen from './src/screens/CalculatorScreen';
-import { getDiscreetSettings } from './src/services/discreetSettings';
+import { getDiscreetSettings, onDiscreetSettingsChange } from './src/services/discreetSettings';
 import { sendSilentSos } from './src/services/sosSession';
 import AuthService, { Session } from './src/services/authService';
 import HomeScreen from './src/screens/HomeScreen';
@@ -18,8 +18,19 @@ import FakeCallScreen from './src/screens/FakeCallScreen';
 import DeviceStatusBar from './src/components/common/DeviceStatusBar';
 import BottomNavigation, { TabKey } from './src/components/common/BottomNavigation';
 import SosOverlay from './src/components/common/SosOverlay';
+import ScreamSosOverlay from './src/components/common/ScreamSosOverlay';
+import { useScreamTrigger } from './src/hooks/useScreamTrigger';
 
 import NotificationService from './src/services/notificationService';
+
+/**
+ * Owns the microphone for scream detection. Kept as its own render-less component because
+ * the recorder updates state on every audio chunk; this keeps those re-renders out of the shell.
+ */
+function ScreamListener({ enabled, onScream }: { enabled: boolean; onScream: () => void }) {
+  useScreamTrigger(onScream, enabled);
+  return null;
+}
 
 type ActiveView = 'Splash' | 'Home' | 'LiveLocation' | 'SafeRoutes' | 'Settings' | 'Contacts' | 'FakeCall';
 
@@ -35,6 +46,17 @@ function HeimdalMain() {
   const [sosVisible, setSosVisible] = useState(false);
   // Hidden navbar while a fake call is ringing/in progress, so the simulation holds up
   const [callActive, setCallActive] = useState(false);
+  // Scream detection: ~3 s of screaming opens the 10 s SOS countdown, then the PIN dialog
+  const [screamSosVisible, setScreamSosVisible] = useState(false);
+  const [screamDetection, setScreamDetection] = useState(true);
+  const [appActive, setAppActive] = useState(AppState.currentState === 'active' || Platform.OS === 'web');
+
+  useEffect(() => {
+    getDiscreetSettings().then((d) => setScreamDetection(d.screamToSos)).catch(() => undefined);
+    const unsubscribe = onDiscreetSettingsChange((d) => setScreamDetection(d.screamToSos));
+    const sub = AppState.addEventListener('change', (state) => setAppActive(state === 'active'));
+    return () => { unsubscribe(); sub.remove(); };
+  }, []);
 
   // Handle guardian invitation deep links (?invite=<id> or /invite/<id>)
   useEffect(() => {
@@ -95,6 +117,12 @@ function HeimdalMain() {
   // One navbar for the whole app shell: every signed-in screen gets it, the disguise and
   // the sign-in/splash screens do not.
   const showBottomNav = !!session && !disguised && !signedOut && currentView !== 'Splash' && !callActive;
+
+  // The microphone is released while any SOS is on screen, during a fake call (it records
+  // its own audio) and while the app is in the background.
+  const listenForScreams =
+    screamDetection && !!session && !signedOut && appActive &&
+    !sosVisible && !screamSosVisible && !callActive && currentView !== 'FakeCall';
 
   const handleTabPress = (tab: TabKey) => {
     setActiveTab(tab);
@@ -313,6 +341,8 @@ function HeimdalMain() {
       </View>
 
       <SosOverlay visible={sosVisible} onClose={() => setSosVisible(false)} />
+      <ScreamSosOverlay visible={screamSosVisible} onClose={() => setScreamSosVisible(false)} />
+      <ScreamListener enabled={listenForScreams} onScream={() => setScreamSosVisible(true)} />
     </View>
   );
 }

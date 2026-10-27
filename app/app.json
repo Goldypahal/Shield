@@ -17,7 +17,7 @@
       "supportsTablet": false,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "SHIELD uses your location to plan safer routes, share your walk with guardians and send it with an SOS.",
-        "NSMicrophoneUsageDescription": "SHIELD can record audio evidence during an SOS.",
+        "NSMicrophoneUsageDescription": "SHIELD listens for a sustained scream so it can start an SOS for you. Audio is analysed on your phone and is not stored unless an SOS starts.",
         "NSMotionUsageDescription": "SHIELD can start an SOS when you shake your phone, if you turn that on."
       }
     },
@@ -38,7 +38,19 @@
         }
       ],
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      [
+        "@siteed/audio-studio",
+        {
+          "enablePhoneStateHandling": false,
+          "enableNotifications": false,
+          "enableBackgroundAudio": false,
+          "enableDeviceDetection": false,
+          "iosConfig": {
+            "microphoneUsageDescription": "SHIELD listens for a sustained scream so it can start an SOS for you. Audio is analysed on your phone and is not stored unless an SOS starts."
+          }
+        }
+      ]
     ]
   }
 }
