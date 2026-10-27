@@ -17,7 +17,7 @@
       "supportsTablet": false,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "SHIELD uses your location to plan safer routes, share your walk with guardians and send it with an SOS.",
-        "NSMicrophoneUsageDescription": "SHIELD listens for a sustained scream so it can start an SOS for you, also when the app is in the background if you allow it. Audio is analysed on your phone and is not stored.",
+        "NSMicrophoneUsageDescription": "SHIELD listens for a scream or a cry for help (\"help\", \"bachao\", \"call the police\") so it can start an SOS for you.",
         "NSMotionUsageDescription": "SHIELD uses motion to detect a fall (and a shake, if you turn that on) so it can start an SOS for you.",
         "NSBluetoothAlwaysUsageDescription": "When you have no signal, SHIELD can hand your SOS to a nearby SHIELD phone over Bluetooth so it can be relayed to your guardians. It can also carry a nearby SOS to the network for someone else.",
         "NSBluetoothPeripheralUsageDescription": "SHIELD broadcasts your SOS over Bluetooth while you have no signal, so a nearby SHIELD phone can relay it.",
@@ -34,7 +34,10 @@
         "POST_NOTIFICATIONS",
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_MICROPHONE",
-        "WAKE_LOCK"
+        "WAKE_LOCK",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECORD_AUDIO"
       ],
       "versionCode": 2,
       "adaptiveIcon": {
@@ -100,6 +103,12 @@
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#0B111E"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "77d74ed2-b6e6-4268-b808-65a13bb768da"
+      }
+    },
+    "owner": "goldypahal"
   }
 }
