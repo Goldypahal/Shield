@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AxiosError } from 'axios';
+import * as Location from 'expo-location';
 import AuthService from './authService';
 import LocationTracker from './LocationTracker';
 import OfflineQueue from './OfflineQueue';
@@ -58,6 +59,32 @@ export async function sendSos(trigger: TriggerType = 'SOS_BUTTON'): Promise<SosR
     90, 'HIGH', trigger);
   await setActiveSos(result.alertId, false);
   return result;
+}
+
+/**
+ * Stands down an SOS that is still counting down (nothing has been sent yet). Same answer
+ * for both PINs: the normal PIN cancels, the duress PIN looks like a cancel but silently
+ * sends the alert. Checked on the device first; on a phone without PIN hashes the server
+ * decides and opens the silent alert itself for the duress PIN.
+ */
+export async function cancelCountdownWithPin(pin: string, trigger: TriggerType = 'AUDIO_DISTRESS'): Promise<StopResult> {
+  const local = await checkPinOffline(pin);
+  if (local === 'normal') return { ok: true };
+  if (local === 'duress') {
+    sendSilentSos(trigger).catch(() => undefined);
+    return { ok: true };
+  }
+  if (local === null) return { ok: false, message: 'Incorrect PIN. The SOS will still be sent.' };
+  try {
+    const last = await Location.getLastKnownPositionAsync().catch(() => null);
+    const valid = await AuthService.checkPinOnline(pin, last?.coords.latitude, last?.coords.longitude);
+    return valid ? { ok: true } : { ok: false, message: 'Incorrect PIN. The SOS will still be sent.' };
+  } catch (e) {
+    if ((e as AxiosError).response?.status === 423) {
+      return { ok: false, message: 'Too many wrong PINs. The SOS will be sent.' };
+    }
+    return { ok: false, message: 'No connection to check your PIN. The SOS will still be sent.' };
+  }
 }
 
 async function finish() {

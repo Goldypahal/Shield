@@ -39,7 +39,7 @@ export default function SettingsScreen({ onNavigateToContacts }: SettingsScreenP
   const [session, setSession] = useState<Session | null>(null);
   const [pinModalVisible, setPinModalVisible] = useState(false);
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
-  const [discreet, setDiscreet] = useState<DiscreetSettings>({ calculatorDisguise: false, shakeToSos: false });
+  const [discreet, setDiscreet] = useState<DiscreetSettings>({ calculatorDisguise: false, shakeToSos: false, screamToSos: true });
   const [sosRunning, setSosRunning] = useState(false);
   const [stopPinVisible, setStopPinVisible] = useState(false);
   const [policeSharing, setPoliceSharingState] = useState<boolean | null>(null);
@@ -199,6 +199,13 @@ export default function SettingsScreen({ onNavigateToContacts }: SettingsScreenP
             title="Shake to start SOS"
             subtitle={discreet.shakeToSos ? 'On: shake 3 times to start the countdown' : 'Off'}
             onPress={() => toggleDiscreet('shakeToSos')}
+          />
+
+          <SettingsRow
+            iconName="mic-outline"
+            title="Scream detection"
+            subtitle={discreet.screamToSos ? 'On: a 3-second scream starts a 10-second SOS countdown' : 'Off'}
+            onPress={() => toggleDiscreet('screamToSos')}
           />
 
           <SettingsRow
