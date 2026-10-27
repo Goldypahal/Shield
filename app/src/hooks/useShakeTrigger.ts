@@ -16,7 +16,12 @@ export function useShakeTrigger(onShake: () => void, enabled = true) {
 
     const handleShake = () => {
       const now = Date.now();
-      if (now - lastShakeTime.current < 1200) {
+      const delta = now - lastShakeTime.current;
+      if (delta < 280) {
+        // Human hand cannot reverse shake direction in under 280ms; ignore same-motion jitter
+        return;
+      }
+      if (delta <= 1400) {
         shakeCount.current += 1;
       } else {
         shakeCount.current = 1;
@@ -25,6 +30,7 @@ export function useShakeTrigger(onShake: () => void, enabled = true) {
 
       if (shakeCount.current >= 3) {
         shakeCount.current = 0;
+        console.log('[ShakeTrigger] 3 vigorous deliberate shakes detected -> Triggering SOS');
         callback.current();
       }
     };
@@ -33,13 +39,22 @@ export function useShakeTrigger(onShake: () => void, enabled = true) {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       const onDeviceMotion = (e: DeviceMotionEvent) => {
         if (cancelled) return;
-        const acc = e.accelerationIncludingGravity || e.acceleration;
-        if (!acc) return;
-        const x = (acc.x || 0) / 9.8;
-        const y = (acc.y || 0) / 9.8;
-        const z = (acc.z || 0) / 9.8;
-        const magnitude = Math.sqrt(x * x + y * y + z * z);
-        if (magnitude > 1.8) {
+        let magnitude = 0;
+        if (e.acceleration && (e.acceleration.x !== null || e.acceleration.y !== null)) {
+          const ax = e.acceleration.x || 0;
+          const ay = e.acceleration.y || 0;
+          const az = e.acceleration.z || 0;
+          magnitude = Math.sqrt(ax * ax + ay * ay + az * az) / 9.8; // in G's
+        } else if (e.accelerationIncludingGravity) {
+          const gx = (e.accelerationIncludingGravity.x || 0) / 9.8;
+          const gy = (e.accelerationIncludingGravity.y || 0) / 9.8;
+          const gz = (e.accelerationIncludingGravity.z || 0) / 9.8;
+          const totalG = Math.sqrt(gx * gx + gy * gy + gz * gz);
+          magnitude = Math.abs(totalG - 1.0); // delta from 1G stationary gravity
+        }
+
+        // Require vigorous intentional shaking (> 2.0 G above rest)
+        if (magnitude > 2.0) {
           handleShake();
         }
       };

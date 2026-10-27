@@ -95,13 +95,15 @@ function HeimdalMain() {
   const [screamDetection, setScreamDetection] = useState(true);
   const [screamInBackground, setScreamInBackground] = useState(true);
   const [fallDetection, setFallDetection] = useState(true);
+  const [shakeDetection, setShakeDetection] = useState(false);
   const [appActive, setAppActive] = useState(AppState.currentState === 'active' || Platform.OS === 'web');
 
   useEffect(() => {
-    const apply = (d: { screamToSos: boolean; screamInBackground: boolean; fallToSos: boolean }) => {
+    const apply = (d: { screamToSos: boolean; screamInBackground: boolean; fallToSos: boolean; shakeToSos?: boolean }) => {
       setScreamDetection(d.screamToSos);
       setScreamInBackground(d.screamInBackground);
       setFallDetection(d.fallToSos);
+      setShakeDetection(Boolean(d.shakeToSos));
     };
     getDiscreetSettings().then(apply).catch(() => undefined);
     const unsubscribe = onDiscreetSettingsChange(apply);
@@ -112,10 +114,12 @@ function HeimdalMain() {
 
   useEffect(() => {
     const unsub = onVoiceSosTrigger(() => {
-      ScreamSosController.start('AUDIO_DISTRESS');
+      if (screamSosPhase === 'idle' && !sosVisible) {
+        ScreamSosController.start('AUDIO_DISTRESS');
+      }
     });
     return unsub;
-  }, []);
+  }, [screamSosPhase, sosVisible]);
 
   // Handle guardian invitation deep links (?invite=<id> or /invite/<id>)
   useEffect(() => {
@@ -202,10 +206,12 @@ function HeimdalMain() {
   // notification); it can only be started while the app is open. It keeps running during
   // the scream countdown so the countdown can advance with the screen off, and is released
   // once an SOS is being sent or shown, and during a fake call (it records its own audio).
-  const screamSosBusy = screamSosPhase === 'sending' || screamSosPhase === 'sent' || screamSosPhase === 'error';
   const listenForScreams =
     screamDetection &&
-    !sosVisible && !screamSosBusy && !callActive && currentView !== 'FakeCall';
+    screamSosPhase === 'idle' &&
+    !sosVisible &&
+    !callActive &&
+    currentView !== 'FakeCall';
 
   // Fall detection: motion sensors only reach the app while it is open, so it runs then.
   const watchForFalls =
@@ -449,7 +455,7 @@ function HeimdalMain() {
       <ScreamSosOverlay />
       <ScreamListener enabled={listenForScreams} background={screamInBackground} onScream={() => ScreamSosController.start('AUDIO_DISTRESS')} />
       <FallListener enabled={watchForFalls} onFall={() => ScreamSosController.start('FALL')} />
-      <ShakeListener enabled={!sosVisible && screamSosPhase === 'idle'} onShake={() => setSosVisible(true)} />
+      <ShakeListener enabled={shakeDetection && !sosVisible && screamSosPhase === 'idle'} onShake={() => setSosVisible(true)} />
     </View>
   );
 }

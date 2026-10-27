@@ -105,13 +105,21 @@ export default function VoiceEmergencyBanner() {
     } catch (_) {}
   }, [listening]);
 
+  const [micError, setMicError] = useState<string | null>(null);
+
   const handleActivateMic = async () => {
     setRequesting(true);
+    setMicError(null);
     try {
       const res = await requestWebMicrophonePermission();
       if (res.granted) {
         setListening(true);
+        setMicError(null);
+      } else {
+        setMicError(res.error || 'Permission was denied. Please allow microphone in your browser settings.');
       }
+    } catch (err: any) {
+      setMicError(err?.message || 'Failed to request microphone.');
     } finally {
       setRequesting(false);
     }
@@ -208,6 +216,17 @@ export default function VoiceEmergencyBanner() {
               {requesting ? 'Requesting Permission...' : '🎙️ Tap to Enable Voice Listening'}
             </Text>
           </TouchableOpacity>
+
+          {micError && (
+            <View style={{ backgroundColor: '#FEE2E2', borderColor: '#EF4444', borderWidth: 1, padding: 8, borderRadius: 8, marginTop: 4 }}>
+              <Text style={{ color: '#DC2626', fontSize: 12, fontWeight: '600' }}>
+                ⚠️ {micError}
+              </Text>
+              <Text style={{ color: '#7F1D1D', fontSize: 11, marginTop: 2 }}>
+                Check if your browser's site settings have microphone blocked (tap the tune/lock icon next to the URL).
+              </Text>
+            </View>
+          )}
         </View>
       ) : (
         <View style={styles.activeBox}>

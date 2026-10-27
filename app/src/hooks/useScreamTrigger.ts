@@ -92,14 +92,24 @@ export function useScreamTrigger(
   const onScreamRef = useRef(onScream);
   const onProgressRef = useRef(options.onProgress);
   onScreamRef.current = onScream;
-  onProgressRef.current = options.onProgress;
+  const lastTriggerTime = useRef(0);
+  const safeTriggerScream = (reason: string) => {
+    const now = Date.now();
+    if (now - lastTriggerTime.current < 5000) {
+      console.log(`[ScreamTrigger] Cooldown active (ignoring ${reason})`);
+      return;
+    }
+    lastTriggerTime.current = now;
+    console.log(`[ScreamTrigger] Triggering SOS: ${reason}`);
+    onScreamRef.current();
+  };
 
   // Listen for synthetic or test triggers
   useEffect(() => {
     if (!enabled) return;
     const unsub = onVoiceSosTrigger(() => {
       console.log('[ScreamTrigger] Voice SOS triggered via event!');
-      onScreamRef.current();
+      safeTriggerScream('voice_sos_event');
     });
     return unsub;
   }, [enabled]);
@@ -147,7 +157,7 @@ export function useScreamTrigger(
 
                 if (matched) {
                   console.log(`[SpeechRecognition] Emergency keyword matched for "${transcript}"! Triggering SOS.`);
-                  onScreamRef.current();
+                  safeTriggerScream(`keyword_${transcript}`);
                   break;
                 }
               }
@@ -192,7 +202,6 @@ export function useScreamTrigger(
           source.connect(analyser);
 
           const buffer = new Float32Array(analyser.frequencyBinCount);
-          let screamCount = 0;
 
           const checkAudio = () => {
             if (stopped) return;
@@ -202,20 +211,8 @@ export function useScreamTrigger(
               sum += buffer[i] * buffer[i];
             }
             const rms = Math.sqrt(sum / buffer.length);
-
-            // Shouting / loud distress sound threshold (~ -24 dB)
-            if (rms > 0.05) {
-              screamCount += 1;
-              onProgressRef.current?.(screamCount * 250);
-              if (screamCount >= 2) { // ~200ms of shouting or loud voice
-                console.log('[WebAudio] Loud distress voice detected! Triggering SOS.');
-                screamCount = 0;
-                onScreamRef.current();
-              }
-            } else {
-              screamCount = Math.max(0, screamCount - 1);
-              onProgressRef.current?.(screamCount * 250);
-            }
+            // Visual meter update only: volume alone will NEVER falsely trigger SOS!
+            onProgressRef.current?.(Math.min(100, Math.round(rms * 100)));
 
             requestAnimationFrame(checkAudio);
           };

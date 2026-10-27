@@ -37,10 +37,18 @@ type MediaStreamListener = (stream: any) => void;
 const streamListeners: Set<MediaStreamListener> = new Set();
 let activeMediaStream: any = null;
 
+let lastVoiceSosTriggerTime = 0;
+
 /**
  * Dispatches a voice SOS trigger to all listeners.
  */
 export function triggerVoiceSos(source: string = 'test'): void {
+  const now = Date.now();
+  if (now - lastVoiceSosTriggerTime < 5000) {
+    console.log(`[VoiceTrigger] Cooldown active, ignoring trigger from ${source}`);
+    return;
+  }
+  lastVoiceSosTriggerTime = now;
   console.log(`[VoiceTrigger] Triggered by: ${source}`);
   listeners.forEach((listener) => {
     try {
