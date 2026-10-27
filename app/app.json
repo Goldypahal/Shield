@@ -17,8 +17,8 @@
       "supportsTablet": false,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "SHIELD uses your location to plan safer routes, share your walk with guardians and send it with an SOS.",
-        "NSMicrophoneUsageDescription": "SHIELD listens for a sustained scream so it can start an SOS for you. Audio is analysed on your phone and is not stored unless an SOS starts.",
-        "NSMotionUsageDescription": "SHIELD can start an SOS when you shake your phone, if you turn that on."
+        "NSMicrophoneUsageDescription": "SHIELD listens for a sustained scream so it can start an SOS for you, also when the app is in the background if you allow it. Audio is analysed on your phone and is not stored.",
+        "NSMotionUsageDescription": "SHIELD uses motion to detect a fall (and a shake, if you turn that on) so it can start an SOS for you."
       }
     },
     "android": {
@@ -27,7 +27,21 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "VIBRATE",
-        "RECORD_AUDIO"
+        "RECORD_AUDIO",
+        "POST_NOTIFICATIONS",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_MICROPHONE",
+        "WAKE_LOCK"
+      ],
+      "versionCode": 2,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#0B111E"
+      },
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
       ]
     },
     "plugins": [
@@ -57,6 +71,12 @@
       ],
       "react-native-fast-tflite",
       "@maplibre/maplibre-react-native"
-    ]
+    ],
+    "icon": "./assets/images/icon.png",
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0B111E"
+    }
   }
 }
