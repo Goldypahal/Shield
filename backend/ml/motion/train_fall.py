@@ -3,6 +3,7 @@ SHIELD fall detector: trains a small 1D-CNN on REAL fall recordings and exports 
 
 Datasets (any subset; folders are found automatically under --data):
   * MobiAct v2.0  - smartphone in the trouser pocket (closest to SHIELD), accel m/s^2 + gyro rad/s
+  * MobiFall v2.0 - same phone placement, raw *_acc_* / *_gyro_* text files (irregular rate)
   * SisFall       - waist-worn ADXL345 + ITG3200 at 200 Hz (raw counts, converted here)
 
 Model input matches app/src/ml/MotionClassifier.ts: float32 [1, 100, 6] = 2 s at 50 Hz of
@@ -93,6 +94,57 @@ def load_mobiact(root):
         x = resample(t[order], x[order])
         if len(x) >= WIN:
             out.append((subj, "fall" if code in MOBI_FALLS else "adl", code, x))
+    return out
+
+
+def _read_mobifall_txt(f):
+    """MobiFall v2.0 raw file: '#' header, '@DATA', then 'timestamp_ns, x, y, z' rows."""
+    rows, data = [], False
+    with open(f, errors="ignore") as fh:
+        for line in fh:
+            line = line.strip()
+            if not data:
+                data = line.startswith("@DATA")
+                continue
+            parts = line.split(",")
+            if len(parts) >= 4:
+                try:
+                    rows.append([float(v) for v in parts[:4]])
+                except ValueError:
+                    pass
+    a = np.asarray(rows, float)
+    if len(a) < 4:
+        return None, None
+    t = a[:, 0] / 1e9
+    order = np.argsort(t)
+    t, a = t[order], a[order]
+    keep = np.concatenate([[True], np.diff(t) > 0])
+    return t[keep], a[keep, 1:4]
+
+
+def load_mobifall(root):
+    """MobiFall v2.0 raw recordings: <CODE>_acc_<subj>_<trial>.txt + matching _gyro_ file
+    (Samsung Galaxy S3 in the trouser pocket; acc m/s^2, gyro rad/s, ~87-200 Hz irregular)."""
+    out = []
+    for fa in glob.glob(os.path.join(root, "**", "*_acc_*_*.txt"), recursive=True):
+        m = re.match(r"([A-Z]{3})_acc_(\d+)_(\d+)\.txt", os.path.basename(fa))
+        if not m:
+            continue
+        fg = os.path.join(os.path.dirname(fa), os.path.basename(fa).replace("_acc_", "_gyro_"))
+        if not os.path.exists(fg):
+            continue
+        code, subj = m.group(1), "mobi_" + m.group(2)
+        ta, xa = _read_mobifall_txt(fa)
+        tg, xg = _read_mobifall_txt(fg)
+        if ta is None or tg is None:
+            continue
+        t0, t1 = max(ta[0], tg[0]), min(ta[-1], tg[-1])
+        if t1 - t0 < WIN / FS:
+            continue
+        grid = np.arange(t0, t1, 1.0 / FS)
+        x = np.stack([np.interp(grid, ta, xa[:, c]) for c in range(3)]
+                     + [np.interp(grid, tg, xg[:, c]) for c in range(3)], 1).astype(np.float32)
+        out.append((subj, "fall" if code in MOBI_FALLS else "adl", code, x))
     return out
 
 
@@ -209,7 +261,7 @@ def main():
     import tensorflow as tf
     tf.random.set_seed(7)
 
-    recs = load_mobiact(a.data) + load_sisfall(a.data)
+    recs = load_mobiact(a.data) + load_mobifall(a.data) + load_sisfall(a.data)
     by_set = defaultdict(lambda: [0, 0])
     for s, k, _, _ in recs:
         by_set[s.split("_")[0]][k == "fall"] += 1
