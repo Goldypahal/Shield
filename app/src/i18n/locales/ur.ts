@@ -161,6 +161,8 @@ const ur: Translation = {
 
   'settings.scream': 'چیخ کی شناخت',
   'settings.screamOn': 'آن: 3 سیکنڈ کی چیخ پر 10 سیکنڈ کا SOS کاؤنٹ ڈاؤن شروع ہوتا ہے',
+  'settings.screamBg': 'پس منظر میں سنیں',
+  'settings.screamBgOn': 'آن: اسکرین بند ہونے پر بھی سنتا ہے؛ ایک اطلاع دکھائی دیتی ہے',
 
   'nav.from': 'کہاں سے',
   'nav.to': 'کہاں جانا ہے؟',

@@ -161,6 +161,8 @@ const mr: Translation = {
 
   'settings.scream': 'किंचाळी ओळख',
   'settings.screamOn': 'चालू: 3 सेकंदांच्या किंचाळीवर 10 सेकंदांचे SOS काउंटडाउन सुरू होते',
+  'settings.screamBg': 'पार्श्वभूमीत ऐका',
+  'settings.screamBgOn': 'चालू: स्क्रीन बंद असतानाही ऐकते; एक सूचना दिसते',
 
   'nav.from': 'कोठून',
   'nav.to': 'कोठे जायचे?',

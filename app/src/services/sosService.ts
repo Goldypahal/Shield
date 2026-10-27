@@ -1,6 +1,7 @@
 import 'react-native-get-random-values'; // must load before uuid
 import { v4 as uuidv4 } from 'uuid';
 import * as Location from 'expo-location';
+import { AppState, Platform } from 'react-native';
 import { httpsCallable } from 'firebase/functions';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { functions, storage, isFirebaseConfigured } from '../firebase/config';
@@ -31,16 +32,24 @@ async function uploadAudio(uri: string, userId: string) {
   return getDownloadURL(storageRef);
 }
 
-/** Best available fix: a fresh one if it comes quickly, else the last known one, else none. */
+/**
+ * Best available fix: a fresh one if it comes quickly, else the last known one, else none.
+ * In the background (a scream SOS with the screen off) a fresh fix is not attempted:
+ * Android pauses JS timers there, so the 8 s timeout could never fire, and location
+ * "while in use" is not granted to a backgrounded app anyway. The last known fix is sent.
+ */
 async function bestEffortLocation(): Promise<{ latitude: number; longitude: number } | null> {
-  try {
-    const fresh = await Promise.race([
-      Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }),
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), GPS_TIMEOUT_MS))
-    ]);
-    if (fresh) return fresh.coords;
-  } catch {
-    // fall through to last known
+  const backgrounded = Platform.OS !== 'web' && AppState.currentState !== 'active';
+  if (!backgrounded) {
+    try {
+      const fresh = await Promise.race([
+        Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), GPS_TIMEOUT_MS))
+      ]);
+      if (fresh) return fresh.coords;
+    } catch {
+      // fall through to last known
+    }
   }
   try {
     const last = await Location.getLastKnownPositionAsync();

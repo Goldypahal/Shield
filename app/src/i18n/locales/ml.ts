@@ -161,6 +161,8 @@ const ml: Translation = {
 
   'settings.scream': 'നിലവിളി തിരിച്ചറിയൽ',
   'settings.screamOn': 'ഓൺ: 3 സെക്കൻഡ് നിലവിളി 10 സെക്കൻഡ് SOS കൗണ്ട്‌ഡൗൺ ആരംഭിക്കുന്നു',
+  'settings.screamBg': 'പശ്ചാത്തലത്തിൽ കേൾക്കുക',
+  'settings.screamBgOn': 'ഓൺ: സ്ക്രീൻ ഓഫായാലും കേൾക്കും; ഒരു അറിയിപ്പ് കാണിക്കും',
 
   'nav.from': 'എവിടെ നിന്ന്',
   'nav.to': 'എവിടേക്ക്?',

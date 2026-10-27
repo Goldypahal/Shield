@@ -161,6 +161,8 @@ const bn: Translation = {
 
   'settings.scream': 'চিৎকার শনাক্তকরণ',
   'settings.screamOn': 'চালু: 3 সেকেন্ডের চিৎকারে 10 সেকেন্ডের SOS কাউন্টডাউন শুরু হয়',
+  'settings.screamBg': 'ব্যাকগ্রাউন্ডে শুনুন',
+  'settings.screamBgOn': 'চালু: স্ক্রিন বন্ধ থাকলেও শোনে; একটি বিজ্ঞপ্তি দেখায়',
 
   'nav.from': 'কোথা থেকে',
   'nav.to': 'কোথায় যাবেন?',

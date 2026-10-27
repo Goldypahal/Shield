@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,24 +6,14 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Vibration,
-  Platform,
   Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import PinPromptModal from './PinPromptModal';
 import { useI18n } from '../../i18n';
-import { sendSos, stopActiveSos, cancelCountdownWithPin } from '../../services/sosSession';
-import { SosResult } from '../../services/sosService';
+import ScreamSosController, { ScreamSosState } from '../../services/screamSosController';
 
-interface ScreamSosOverlayProps {
-  visible: boolean;
-  onClose: () => void;
-}
-
-type Phase = 'countdown' | 'sending' | 'sent' | 'stopped' | 'error';
-
-export const SCREAM_SOS_COUNTDOWN_S = 10;
+export { SCREAM_SOS_COUNTDOWN_S } from '../../services/screamSosController';
 
 /**
  * Shown when the scream model has heard a scream for ~3 seconds.
@@ -34,89 +24,49 @@ export const SCREAM_SOS_COUNTDOWN_S = 10;
  *    Only that PIN stops the SOS; the duress PIN looks the same but keeps it running.
  *
  * A false alarm can be stopped during the countdown too, but only with the PIN, so
- * someone else cannot simply tap it away.
+ * someone else cannot simply tap it away. The countdown itself lives in
+ * ScreamSosController, so it also runs (and sends) while the app is in the background.
  */
-export default function ScreamSosOverlay({ visible, onClose }: ScreamSosOverlayProps) {
+export default function ScreamSosOverlay() {
   const { t } = useI18n();
-  const [phase, setPhase] = useState<Phase>('countdown');
-  const [secondsLeft, setSecondsLeft] = useState(SCREAM_SOS_COUNTDOWN_S);
-  const [result, setResult] = useState<SosResult | null>(null);
-  const [failure, setFailure] = useState<string | null>(null);
+  const [s, setS] = useState<ScreamSosState>(ScreamSosController.getState());
+  const [secondsLeft, setSecondsLeft] = useState(ScreamSosController.secondsLeft());
   const [pinVisible, setPinVisible] = useState(false);
-  const [stoppedBeforeSend, setStoppedBeforeSend] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const cancelledRef = useRef(false);
+  const { phase, result, failure, stoppedBeforeSend } = s;
+  const visible = phase !== 'idle';
 
-  const clearTimer = () => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = null;
-  };
+  useEffect(() => ScreamSosController.subscribe((next) => {
+    setS(next);
+    // ask for the setup PIN as soon as the alert is out
+    if (next.phase === 'sent') setPinVisible(true);
+    if (next.phase === 'countdown') setPinVisible(false);
+  }), []);
 
   useEffect(() => {
-    if (!visible) return;
-    cancelledRef.current = false;
-    setPhase('countdown');
-    setSecondsLeft(SCREAM_SOS_COUNTDOWN_S);
-    setResult(null);
-    setFailure(null);
+    if (phase !== 'countdown') return;
+    setSecondsLeft(ScreamSosController.secondsLeft());
+    const id = setInterval(() => setSecondsLeft(ScreamSosController.secondsLeft()), 250);
+    return () => clearInterval(id);
+  }, [phase]);
+
+  const onClose = () => {
     setPinVisible(false);
-    setStoppedBeforeSend(false);
-
-    if (Platform.OS !== 'web') {
-      try { Vibration.vibrate([0, 400, 200, 400]); } catch (_) {}
-    }
-
-    let left = SCREAM_SOS_COUNTDOWN_S;
-    timerRef.current = setInterval(() => {
-      left -= 1;
-      setSecondsLeft(left);
-      if (left > 0) return;
-      clearTimer();
-      setPinVisible(false);
-      setPhase('sending');
-      sendSos('AUDIO_DISTRESS')
-        .then((r) => {
-          if (cancelledRef.current) return;
-          setResult(r);
-          setPhase('sent');
-          setPinVisible(true); // ask for the setup PIN as soon as the alert is out
-        })
-        .catch((e: any) => {
-          if (cancelledRef.current) return;
-          setFailure(e?.message ?? 'The alert could not be sent.');
-          setPhase('error');
-        });
-    }, 1000);
-
-    return () => {
-      cancelledRef.current = true;
-      clearTimer();
-    };
-  }, [visible]);
+    ScreamSosController.dismiss();
+  };
 
   /** PIN during the countdown: nothing has left the phone yet. */
   const submitDuringCountdown = async (pin: string): Promise<string | null> => {
-    const outcome = await cancelCountdownWithPin(pin, 'AUDIO_DISTRESS');
+    const outcome = await ScreamSosController.cancelWithPin(pin);
     if ('message' in outcome) return outcome.message;
-    if (timerRef.current === null) {
-      // The countdown ran out while the PIN was being checked; the SOS is already going out
-      return 'The SOS was already sent. Enter your PIN again to stop it.';
-    }
-    clearTimer();
-    cancelledRef.current = true;
     setPinVisible(false);
-    setStoppedBeforeSend(true);
-    setPhase('stopped');
     return null;
   };
 
   /** PIN after sending: the server decides (and handles a duress PIN silently). */
   const submitAfterSend = async (pin: string): Promise<string | null> => {
-    const outcome = await stopActiveSos(pin);
+    const outcome = await ScreamSosController.stopWithPin(pin);
     if ('message' in outcome) return outcome.message;
     setPinVisible(false);
-    setStoppedBeforeSend(false);
-    setPhase('stopped');
     return null;
   };
 

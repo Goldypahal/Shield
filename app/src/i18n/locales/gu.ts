@@ -161,6 +161,8 @@ const gu: Translation = {
 
   'settings.scream': 'ચીસ ઓળખ',
   'settings.screamOn': 'ચાલુ: 3 સેકન્ડની ચીસથી 10 સેકન્ડનું SOS કાઉન્ટડાઉન શરૂ થાય છે',
+  'settings.screamBg': 'બેકગ્રાઉન્ડમાં સાંભળો',
+  'settings.screamBgOn': 'ચાલુ: સ્ક્રીન બંધ હોય ત્યારે પણ સાંભળે છે; એક સૂચના દેખાય છે',
 
   'nav.from': 'ક્યાંથી',
   'nav.to': 'ક્યાં જવું છે?',

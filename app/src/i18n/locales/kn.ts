@@ -161,6 +161,8 @@ const kn: Translation = {
 
   'settings.scream': 'ಕಿರುಚಾಟ ಪತ್ತೆ',
   'settings.screamOn': 'ಆನ್: 3 ಸೆಕೆಂಡುಗಳ ಕಿರುಚಾಟ 10 ಸೆಕೆಂಡುಗಳ SOS ಕೌಂಟ್‌ಡೌನ್ ಪ್ರಾರಂಭಿಸುತ್ತದೆ',
+  'settings.screamBg': 'ಹಿನ್ನೆಲೆಯಲ್ಲಿ ಆಲಿಸಿ',
+  'settings.screamBgOn': 'ಆನ್: ಪರದೆ ಆಫ್ ಆಗಿದ್ದರೂ ಆಲಿಸುತ್ತದೆ; ಒಂದು ಅಧಿಸೂಚನೆ ಕಾಣಿಸುತ್ತದೆ',
 
   'nav.from': 'ಎಲ್ಲಿಂದ',
   'nav.to': 'ಎಲ್ಲಿಗೆ?',

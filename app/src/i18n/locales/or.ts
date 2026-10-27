@@ -161,6 +161,8 @@ const or: Translation = {
 
   'settings.scream': 'ଚିତ୍କାର ଚିହ୍ନଟ',
   'settings.screamOn': 'ଚାଲୁ: 3 ସେକେଣ୍ଡର ଚିତ୍କାରରେ 10 ସେକେଣ୍ଡର SOS କାଉଣ୍ଟଡାଉନ୍ ଆରମ୍ଭ ହୁଏ',
+  'settings.screamBg': 'ପୃଷ୍ଠଭୂମିରେ ଶୁଣନ୍ତୁ',
+  'settings.screamBgOn': 'ଚାଲୁ: ସ୍କ୍ରିନ୍ ବନ୍ଦ ଥିଲେ ମଧ୍ୟ ଶୁଣେ; ଏକ ବିଜ୍ଞପ୍ତି ଦେଖାଯାଏ',
 
   'nav.from': 'କେଉଁଠାରୁ',
   'nav.to': 'କେଉଁଠିକି?',

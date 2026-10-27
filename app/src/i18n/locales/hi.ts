@@ -161,6 +161,8 @@ const hi: Translation = {
 
   'settings.scream': 'चीख पहचान',
   'settings.screamOn': 'चालू: 3 सेकंड की चीख पर 10 सेकंड का SOS काउंटडाउन शुरू होता है',
+  'settings.screamBg': 'बैकग्राउंड में सुनें',
+  'settings.screamBgOn': 'चालू: स्क्रीन बंद होने पर भी सुनता है; एक सूचना दिखती है',
 
   'nav.from': 'कहां से',
   'nav.to': 'कहां जाना है?',

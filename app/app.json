@@ -43,11 +43,15 @@
         "@siteed/audio-studio",
         {
           "enablePhoneStateHandling": false,
-          "enableNotifications": false,
-          "enableBackgroundAudio": false,
+          "enableNotifications": true,
+          "enableBackgroundAudio": true,
           "enableDeviceDetection": false,
           "iosConfig": {
-            "microphoneUsageDescription": "SHIELD listens for a sustained scream so it can start an SOS for you. Audio is analysed on your phone and is not stored unless an SOS starts."
+            "microphoneUsageDescription": "SHIELD listens for a sustained scream so it can start an SOS for you, also when the app is in the background if you allow it. Audio is analysed on your phone and is not stored.",
+            "notificationUsageDescription": "SHIELD tells you when it heard a scream and is about to send, or has sent, an SOS."
+          },
+          "iosBackgroundModes": {
+            "useAudio": true
           }
         }
       ],

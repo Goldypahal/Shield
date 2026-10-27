@@ -161,6 +161,8 @@ const te: Translation = {
 
   'settings.scream': 'అరుపు గుర్తింపు',
   'settings.screamOn': 'ఆన్: 3 సెకన్ల అరుపుతో 10 సెకన్ల SOS కౌంట్‌డౌన్ మొదలవుతుంది',
+  'settings.screamBg': 'బ్యాక్‌గ్రౌండ్‌లో వినండి',
+  'settings.screamBgOn': 'ఆన్: స్క్రీన్ ఆఫ్‌లో ఉన్నా వింటుంది; ఒక నోటిఫికేషన్ కనిపిస్తుంది',
 
   'nav.from': 'ఎక్కడి నుండి',
   'nav.to': 'ఎక్కడికి?',

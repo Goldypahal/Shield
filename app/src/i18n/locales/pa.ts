@@ -161,6 +161,8 @@ const pa: Translation = {
 
   'settings.scream': 'ਚੀਕ ਦੀ ਪਛਾਣ',
   'settings.screamOn': 'ਚਾਲੂ: 3 ਸਕਿੰਟਾਂ ਦੀ ਚੀਕ ਤੇ 10 ਸਕਿੰਟਾਂ ਦਾ SOS ਕਾਊਂਟਡਾਊਨ ਸ਼ੁਰੂ ਹੁੰਦਾ ਹੈ',
+  'settings.screamBg': 'ਬੈਕਗ੍ਰਾਊਂਡ ਵਿੱਚ ਸੁਣੋ',
+  'settings.screamBgOn': 'ਚਾਲੂ: ਸਕ੍ਰੀਨ ਬੰਦ ਹੋਣ ਤੇ ਵੀ ਸੁਣਦਾ ਹੈ; ਇੱਕ ਸੂਚਨਾ ਦਿਖਦੀ ਹੈ',
 
   'nav.from': 'ਕਿੱਥੋਂ',
   'nav.to': 'ਕਿੱਥੇ ਜਾਣਾ ਹੈ?',

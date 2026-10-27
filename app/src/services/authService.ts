@@ -138,6 +138,23 @@ class AuthService {
     return { ...JSON.parse(profile), isOffline: false };
   }
 
+  /**
+   * Development builds only: signs in the test account from EXPO_PUBLIC_DEV_LOGIN_EMAIL /
+   * EXPO_PUBLIC_DEV_LOGIN_PASSWORD so testers skip the sign-in screen. Returns null (and the
+   * sign-in screen is shown) when they are not set, in release builds, or if sign-in fails.
+   */
+  async devAutoSignIn(): Promise<Session | null> {
+    const email = process.env.EXPO_PUBLIC_DEV_LOGIN_EMAIL;
+    const password = process.env.EXPO_PUBLIC_DEV_LOGIN_PASSWORD;
+    if (!__DEV__ || !email || !password) return null;
+    try {
+      return await this.login(email, password);
+    } catch (e) {
+      console.warn('[auth] Dev auto sign-in failed; showing the sign-in screen.', authErrorMessage(e));
+      return null;
+    }
+  }
+
   async getToken(): Promise<string | null> {
     return getSecret(this.ACCESS_KEY);
   }

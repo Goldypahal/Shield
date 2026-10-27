@@ -161,6 +161,8 @@ const asm: Translation = {
 
   'settings.scream': 'চিঞৰ চিনাক্তকৰণ',
   'settings.screamOn': 'অন: 3 ছেকেণ্ডৰ চিঞৰত 10 ছেকেণ্ডৰ SOS কাউণ্টডাউন আৰম্ভ হয়',
+  'settings.screamBg': 'পটভূমিত শুনক',
+  'settings.screamBgOn': 'অন: স্ক্ৰীণ বন্ধ থাকিলেও শুনে; এটা জাননী দেখুৱায়',
 
   'nav.from': 'ক’ৰ পৰা',
   'nav.to': 'ক’লৈ যাব?',

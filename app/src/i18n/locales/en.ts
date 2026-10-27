@@ -172,6 +172,8 @@ const en = {
   // Settings
   'settings.scream': 'Scream detection',
   'settings.screamOn': 'On: a 3-second scream starts a 10-second SOS countdown',
+  'settings.screamBg': 'Listen in background',
+  'settings.screamBgOn': 'On: keeps listening with the screen off; a notification shows it',
 
   // Navigation page
   'nav.from': 'From',
