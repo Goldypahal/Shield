@@ -20,6 +20,7 @@ import ContactService from '../services/contactService';
 import AuthService, { Session, authErrorMessage } from '../services/authService';
 import { ChangePinModal, ChangePasswordModal } from '../components/settings/SecurityModals';
 import PinPromptModal from '../components/common/PinPromptModal';
+import { keywordDetectionAvailable } from '../hooks/useKeywordTrigger';
 import { DiscreetSettings, getDiscreetSettings, updateDiscreetSettings } from '../services/discreetSettings';
 import { getActiveSos, stopActiveSos } from '../services/sosSession';
 import { getPoliceSharing, setPoliceSharing } from '../services/policeService';
@@ -44,7 +45,7 @@ export default function SettingsScreen({ onNavigateToContacts }: SettingsScreenP
   const [session, setSession] = useState<Session | null>(null);
   const [pinModalVisible, setPinModalVisible] = useState(false);
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
-  const [discreet, setDiscreet] = useState<DiscreetSettings>({ calculatorDisguise: false, shakeToSos: false, screamToSos: true, screamInBackground: true, fallToSos: true });
+  const [discreet, setDiscreet] = useState<DiscreetSettings>({ calculatorDisguise: false, shakeToSos: false, screamToSos: true, screamInBackground: true, fallToSos: true, keywordToSos: true });
   const [sosRunning, setSosRunning] = useState(false);
   const [stopPinVisible, setStopPinVisible] = useState(false);
   const [policeSharing, setPoliceSharingState] = useState<boolean | null>(null);
@@ -234,6 +235,14 @@ export default function SettingsScreen({ onNavigateToContacts }: SettingsScreenP
             title={t('settings.fall')}
             subtitle={discreet.fallToSos ? t('settings.fallOn') : t('common.off')}
             onPress={() => toggleDiscreet('fallToSos')}
+          />
+
+          <SettingsRow
+            iconName="chatbubble-ellipses-outline"
+            title={t('settings.keywords')}
+            subtitle={!keywordDetectionAvailable && Platform.OS !== 'web' ? t('settings.keywordsUnavailable')
+              : discreet.keywordToSos ? t('settings.keywordsOn') : t('common.off')}
+            onPress={() => toggleDiscreet('keywordToSos')}
           />
 
           <SettingsRow

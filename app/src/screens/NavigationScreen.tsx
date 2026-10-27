@@ -15,7 +15,7 @@ import { callNumber } from '../components/common/HelplineRow';
 import { PLACE_COLORS, PLACE_ICONS } from '../components/nav/navMapShared';
 import {
   ALL_MODES, FREE_MODES, NavPlace, NavPlan, Place247, SortKey, TravelMode, getCapabilities, planNav, sortRoutes,
-  toPlannedRoute, formatKm,
+  toPlannedRoute, formatKm, navErrorMessage,
 } from '../services/navService';
 import type { LatLon } from '../services/routeService';
 
@@ -59,6 +59,7 @@ export default function NavigationScreen({ onBack }: NavigationScreenProps) {
   const [toast, setToast] = useState<string | null>(null);
   const [hazardOpen, setHazardOpen] = useState(false);
   const [recenterKey, setRecenterKey] = useState(0);
+  const [retryKey, setRetryKey] = useState(0);
   const [topH, setTopH] = useState(150);
   const [sheetH, setSheetH] = useState(0);
   const planSeq = useRef(0);
@@ -111,12 +112,12 @@ export default function NavigationScreen({ onBack }: NavigationScreenProps) {
       .catch((e: any) => {
         if (id !== planSeq.current) return;
         setPlan(null);
-        setError(e?.response?.data?.detail ?? t('nav.error'));
+        setError(navErrorMessage(e) ?? t('nav.error'));
       })
       .finally(() => { if (id === planSeq.current) setLoading(false); });
     // Only the start that the user chose triggers a re-plan, not every GPS update
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [start?.point.lat, start?.point.lon, !!me, dest?.point.lat, dest?.point.lon, mode, lang]);
+  }, [start?.point.lat, start?.point.lon, !!me, dest?.point.lat, dest?.point.lon, mode, lang, retryKey]);
 
   const routes = useMemo(() => (plan ? sortRoutes(plan.routes, sort) : []), [plan, sort]);
   const selected = routes.find((r) => r.id === selectedId) ?? routes[0] ?? null;
@@ -292,6 +293,11 @@ export default function NavigationScreen({ onBack }: NavigationScreenProps) {
           ) : error ? (
             <View style={styles.center}>
               <Text style={[typography.bodyMedium, { color: colors.sosPrimary, textAlign: 'center' }]}>{error}</Text>
+              <TouchableOpacity onPress={() => setRetryKey((k) => k + 1)} style={[styles.retryBtn, { borderColor: colors.border }]}
+                accessibilityRole="button" accessibilityLabel="Try again">
+                <Ionicons name="refresh" size={16} color={colors.textPrimary} />
+                <Text style={[typography.bodyMedium, { color: colors.textPrimary, fontWeight: '700' }]}>Try again</Text>
+              </TouchableOpacity>
             </View>
           ) : routes.length === 0 ? (
             <View style={styles.center}>
@@ -402,6 +408,7 @@ const shadow = {
 };
 
 const styles = StyleSheet.create({
+  retryBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 8, marginTop: 10 },
   container: { flex: 1, overflow: 'hidden' },
   top: { position: 'absolute', top: 0, left: 0, right: 0, paddingTop: 10 },
   searchCard: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 12, padding: 10, gap: 6, ...shadow },

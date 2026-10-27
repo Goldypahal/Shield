@@ -11,7 +11,7 @@ const hi: Translation = {
 
   'tab.home': 'होम',
   'tab.routes': 'रास्ते',
-  'tab.safety': 'सुरक्षा जानकारी',
+  'tab.helplines': 'हेल्पलाइन',
   'tab.profile': 'प्रोफ़ाइल',
 
   'lang.title': 'भाषा',
@@ -36,8 +36,8 @@ const hi: Translation = {
   'home.actions.title': 'तुरंत करें',
   'home.actions.route': 'सुरक्षित रास्ता',
   'home.actions.routeSub': 'सुरक्षित रास्ता चुनें',
-  'home.actions.share': 'लोकेशन शेयर करें',
-  'home.actions.shareSub': 'अभिभावकों के साथ लाइव',
+  'home.actions.guardians': 'अभिभावक',
+  'home.actions.guardiansSub': 'आपका SOS किसे मिले',
   'home.actions.fakeCall': 'नकली कॉल',
   'home.actions.fakeCallSub': 'किसी स्थिति से निकलें',
   'home.actions.checkin': 'चेक-इन टाइमर',
@@ -116,6 +116,10 @@ const hi: Translation = {
   'sos.screamDetected': 'चीख सुनाई दी',
 
   'sos.fallDetected': 'गिरना पहचाना गया',
+
+  'sos.shakeDetected': 'झटका पहचाना गया',
+
+  'sos.voiceDetected': 'मदद की पुकार सुनी गई',
   'sos.title': 'आपातकालीन SOS',
   'sos.countdown': '{seconds} सेकंड में आपकी लाइव लोकेशन आपके माता-पिता और पुलिस को भेजी जाएगी।',
   'sos.imSafe': 'मैं सुरक्षित हूं – PIN डालें',
@@ -169,6 +173,12 @@ const hi: Translation = {
   'settings.fall': 'गिरने की पहचान',
 
   'settings.fallOn': 'चालू: गिरने के बाद स्थिर पड़े रहने पर 10 सेकंड का SOS काउंटडाउन शुरू होता है (ऐप खुला हो तब)',
+
+  'settings.keywords': 'आवाज़ से SOS',
+
+  'settings.keywordsOn': 'चालू: "help", "बचाओ" या "पुलिस बुलाओ" कहने पर 10 सेकंड का SOS काउंटडाउन शुरू होता है (ऐप खुला हो तब)',
+
+  'settings.keywordsUnavailable': 'Android 13 या नया फ़ोन और पूरा ऐप बिल्ड चाहिए',
 
   'nav.from': 'कहां से',
   'nav.to': 'कहां जाना है?',

@@ -70,7 +70,7 @@ export default function HomeScreen({ onNavigate }: HomeScreenProps) {
 
   const actions: { icon: IconName; title: string; sub: string; tint: string; onPress: () => void }[] = [
     { icon: 'navigate', title: t('home.actions.route'), sub: t('home.actions.routeSub'), tint: '#2563EB', onPress: () => onNavigate('SafeRoutes') },
-    { icon: 'location', title: t('home.actions.share'), sub: t('home.actions.shareSub'), tint: '#059669', onPress: () => onNavigate('LiveLocation') },
+    { icon: 'people', title: t('home.actions.guardians'), sub: t('home.actions.guardiansSub'), tint: '#059669', onPress: () => onNavigate('Contacts') },
     { icon: 'call', title: t('home.actions.fakeCall'), sub: t('home.actions.fakeCallSub'), tint: '#7C3AED', onPress: () => onNavigate('FakeCall') },
     { icon: 'timer', title: t('home.actions.checkin'), sub: t('home.actions.checkinSub'), tint: '#D97706',
       onPress: () => scrollRef.current?.scrollTo({ y: checkinY.current - 12, animated: true }) },

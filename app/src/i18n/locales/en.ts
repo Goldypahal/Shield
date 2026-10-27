@@ -15,7 +15,7 @@ const en = {
   // Bottom navigation
   'tab.home': 'Home',
   'tab.routes': 'Routes',
-  'tab.safety': 'Safety Info',
+  'tab.helplines': 'Helplines',
   'tab.profile': 'Profile',
 
   // Language
@@ -42,8 +42,8 @@ const en = {
   'home.actions.title': 'Quick actions',
   'home.actions.route': 'Safe route',
   'home.actions.routeSub': 'Plan a safer way',
-  'home.actions.share': 'Share location',
-  'home.actions.shareSub': 'Live with guardians',
+  'home.actions.guardians': 'Guardians',
+  'home.actions.guardiansSub': 'Who gets your SOS',
   'home.actions.fakeCall': 'Fake call',
   'home.actions.fakeCallSub': 'Get out of a situation',
   'home.actions.checkin': 'Check-in timer',
@@ -124,6 +124,8 @@ const en = {
   // Scream SOS overlay
   'sos.screamDetected': 'SCREAM DETECTED',
   'sos.fallDetected': 'FALL DETECTED',
+  'sos.shakeDetected': 'SHAKE DETECTED',
+  'sos.voiceDetected': 'HELP CALL DETECTED',
   'sos.title': 'Emergency SOS',
   'sos.countdown': 'Sharing your live location with your parents and the police in {seconds} seconds.',
   'sos.imSafe': "I'M SAFE – ENTER PIN",
@@ -177,6 +179,9 @@ const en = {
   'settings.screamBgOn': 'On: keeps listening with the screen off; a notification shows it',
   'settings.fall': 'Fall detection',
   'settings.fallOn': 'On: a fall, then lying still, starts a 10-second SOS countdown while the app is open',
+  'settings.keywords': 'Voice keywords',
+  'settings.keywordsOn': 'On: saying "help", "bachao" or "call the police" starts a 10-second SOS countdown (app open)',
+  'settings.keywordsUnavailable': 'Needs Android 13 or newer and the full app build',
 
   // Navigation page
   'nav.from': 'From',

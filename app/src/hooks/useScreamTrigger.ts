@@ -60,17 +60,6 @@ export interface ScreamTriggerOptions {
   background?: boolean;
 }
 
-const EMERGENCY_KEYWORDS = [
-  'help',
-  'help me',
-  'emergency',
-  'scream',
-  'bachao',
-  'save me',
-  'sos',
-  'danger',
-  'police',
-];
 
 /**
  * Listens to the microphone while `enabled` and calls `onScream` once a scream

@@ -16,10 +16,12 @@ export interface DiscreetSettings {
   screamInBackground: boolean;
   /** A fall (fall model + lying still afterwards) starts the SOS countdown; app open only. */
   fallToSos: boolean;
+  /** Spoken cries for help ("help", "bachao", "call the police") start the SOS countdown; app open only. */
+  keywordToSos: boolean;
 }
 
 const KEY = '@shield_discreet_settings';
-const DEFAULTS: DiscreetSettings = { calculatorDisguise: false, shakeToSos: false, screamToSos: true, screamInBackground: true, fallToSos: true };
+const DEFAULTS: DiscreetSettings = { calculatorDisguise: false, shakeToSos: false, screamToSos: true, screamInBackground: true, fallToSos: true, keywordToSos: true };
 const listeners = new Set<(s: DiscreetSettings) => void>();
 
 export async function getDiscreetSettings(): Promise<DiscreetSettings> {

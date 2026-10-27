@@ -10,7 +10,6 @@ import { getDiscreetSettings, onDiscreetSettingsChange } from './src/services/di
 import { sendSilentSos } from './src/services/sosSession';
 import AuthService, { Session } from './src/services/authService';
 import HomeScreen from './src/screens/HomeScreen';
-import LiveLocationScreen from './src/screens/LiveLocationScreen';
 import NavigationScreen from './src/screens/NavigationScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import ContactsScreen from './src/screens/ContactsScreen';
@@ -19,10 +18,11 @@ import HelplinesScreen from './src/screens/HelplinesScreen';
 import { LanguageProvider } from './src/i18n';
 import DeviceStatusBar from './src/components/common/DeviceStatusBar';
 import BottomNavigation, { TabKey } from './src/components/common/BottomNavigation';
-import SosOverlay from './src/components/common/SosOverlay';
 import ScreamSosOverlay from './src/components/common/ScreamSosOverlay';
 import { useScreamTrigger } from './src/hooks/useScreamTrigger';
 import { useFallTrigger } from './src/hooks/useFallTrigger';
+import { useKeywordTrigger } from './src/hooks/useKeywordTrigger';
+import { useI18n } from './src/i18n';
 import ScreamSosController from './src/services/screamSosController';
 import { useShakeTrigger } from './src/hooks/useShakeTrigger';
 import { triggerVoiceSos, onVoiceSosTrigger } from './src/services/voiceTriggerHelper';
@@ -40,6 +40,13 @@ function ScreamListener({ enabled, background, onScream }: { enabled: boolean; b
   return null;
 }
 
+/** Owns speech recognition for spoken cries for help on phones (render-less). */
+function KeywordListener({ enabled, onKeyword }: { enabled: boolean; onKeyword: (phrase: string) => void }) {
+  const { lang } = useI18n();
+  useKeywordTrigger(onKeyword, enabled, lang);
+  return null;
+}
+
 /** Owns the motion sensors for fall detection (render-less, like ScreamListener). */
 function FallListener({ enabled, onFall }: { enabled: boolean; onFall: () => void }) {
   useFallTrigger(onFall, enabled);
@@ -54,28 +61,7 @@ function ShakeListener({ enabled, onShake }: { enabled: boolean; onShake: () => 
   return null;
 }
 
-// Mock default session so login is not required for now
-const DEFAULT_GUEST_SESSION: Session = {
-  user: {
-    id: 'user_heimdal_1',
-    email: 'user@heimdal.app',
-    name: 'Heimdal User',
-    phone: '+91 98765 43210',
-    initials: 'HU',
-  },
-  tokens: {
-    access: 'dev_guest_access_token',
-    refresh: 'dev_guest_refresh_token',
-  },
-  emergencyContacts: [],
-  discreet: {
-    screamToSos: true,
-    calculatorDisguise: false,
-    alertPoliceOnSos: false,
-  },
-} as any;
-
-type ActiveView = 'Splash' | 'Home' | 'LiveLocation' | 'SafeRoutes' | 'Settings' | 'Contacts' | 'FakeCall' | 'Helplines';
+type ActiveView = 'Splash' | 'Home' | 'SafeRoutes' | 'Settings' | 'Contacts' | 'FakeCall' | 'Helplines';
 
 function HeimdalMain() {
   const { colors, isDark, mode, setMode } = useTheme();
@@ -83,11 +69,10 @@ function HeimdalMain() {
   const [activeTab, setActiveTab] = useState<TabKey>('Home');
   // undefined while the stored session loads; null means signed out. A real account is
   // needed: the SOS is sent for it, to its guardians, and stopped with the PIN set at sign-up.
-  const [session, setSession] = useState<Session | null | undefined>(DEFAULT_GUEST_SESSION);
+  const [session, setSession] = useState<Session | null | undefined>(undefined);
   // Calculator disguise: shown at launch and whenever the app returns from the background
   const [disguised, setDisguised] = useState(false);
   const [pendingInviteId, setPendingInviteId] = useState<string | undefined>(undefined);
-  const [sosVisible, setSosVisible] = useState(false);
   // Hidden navbar while a fake call is ringing/in progress, so the simulation holds up
   const [callActive, setCallActive] = useState(false);
   // Scream detection: ~3 s of screaming opens the 10 s SOS countdown, then the PIN dialog
@@ -95,11 +80,13 @@ function HeimdalMain() {
   const [screamDetection, setScreamDetection] = useState(true);
   const [screamInBackground, setScreamInBackground] = useState(true);
   const [fallDetection, setFallDetection] = useState(true);
+  const [keywordDetection, setKeywordDetection] = useState(true);
   const [shakeDetection, setShakeDetection] = useState(false);
   const [appActive, setAppActive] = useState(AppState.currentState === 'active' || Platform.OS === 'web');
 
   useEffect(() => {
-    const apply = (d: { screamToSos: boolean; screamInBackground: boolean; fallToSos: boolean; shakeToSos?: boolean }) => {
+    const apply = (d: { screamToSos: boolean; screamInBackground: boolean; fallToSos: boolean; shakeToSos?: boolean; keywordToSos?: boolean }) => {
+      setKeywordDetection(d.keywordToSos !== false);
       setScreamDetection(d.screamToSos);
       setScreamInBackground(d.screamInBackground);
       setFallDetection(d.fallToSos);
@@ -113,13 +100,9 @@ function HeimdalMain() {
   }, []);
 
   useEffect(() => {
-    const unsub = onVoiceSosTrigger(() => {
-      if (screamSosPhase === 'idle' && !sosVisible) {
-        ScreamSosController.start('AUDIO_DISTRESS');
-      }
-    });
-    return unsub;
-  }, [screamSosPhase, sosVisible]);
+    // start() ignores a trigger while an SOS is already running
+    return onVoiceSosTrigger(() => ScreamSosController.start('VOICE'));
+  }, []);
 
   // Handle guardian invitation deep links (?invite=<id> or /invite/<id>)
   useEffect(() => {
@@ -172,6 +155,9 @@ function HeimdalMain() {
 
   useEffect(() => {
     if (!session) return;
+    // An SOS that was sent and never stood down (app killed, phone restarted) comes back
+    // on screen with the siren until the PIN is entered.
+    ScreamSosController.restore().catch(() => undefined);
     try {
       NotificationService.registerForPushNotifications().catch(() => {});
     } catch (_) {}
@@ -195,42 +181,42 @@ function HeimdalMain() {
     };
   }, [session]);
 
-  // Login page disabled for now per user request
-  const signedOut = false;
-  const hidden = disguised && !!session;
-  // One navbar for the whole app shell
-  const showBottomNav = !disguised && currentView !== 'Splash' && !callActive;
+  // Every screen except the splash needs an account: the SOS is sent for it, to its
+  // guardians, and stopped with the PIN set at sign-up. Signing in happens once.
+  const signedOut = currentView !== 'Splash' && session === null;
+  const hidden = (disguised && !!session) || signedOut;
+  // One navbar for the whole app shell: not on the splash, sign-in, disguise or a fake call
+  const showBottomNav = !!session && !disguised && currentView !== 'Splash' && !callActive;
+  const sosRunning = screamSosPhase === 'countdown' || screamSosPhase === 'sending' || screamSosPhase === 'sent';
 
   // Listens only for a signed-in walker (the SOS is sent for the account). With background
   // listening on, the microphone stays on when the app is left (Android shows a permanent
   // notification); it can only be started while the app is open. It keeps running during
   // the scream countdown so the countdown can advance with the screen off, and is released
   // once an SOS is being sent or shown, and during a fake call (it records its own audio).
+  // The microphone stays on during the countdown: in the background its chunks are what
+  // advance the countdown (Android pauses JS timers), see ScreamSosController.tick.
   const listenForScreams =
-    screamDetection &&
-    screamSosPhase === 'idle' &&
-    !sosVisible &&
-    !callActive &&
-    currentView !== 'FakeCall';
+    screamDetection && !!session && (appActive || screamInBackground) &&
+    screamSosPhase !== 'sending' && screamSosPhase !== 'sent' &&
+    !callActive && currentView !== 'FakeCall';
 
   // Fall detection: motion sensors only reach the app while it is open, so it runs then.
   const watchForFalls =
-    fallDetection && !!session && appActive && screamSosPhase === 'idle' &&
-    !sosVisible && !callActive && currentView !== 'FakeCall';
+    fallDetection && !!session && appActive && !sosRunning &&
+    !callActive && currentView !== 'FakeCall';
 
   const handleTabPress = (tab: TabKey) => {
     setActiveTab(tab);
     if (tab === 'Home') setCurrentView('Home');
     else if (tab === 'Journey' || tab === 'Map') setCurrentView('SafeRoutes');
-    else if (tab === 'Safety') setCurrentView('LiveLocation');
+    else if (tab === 'Helplines') setCurrentView('Helplines');
     else if (tab === 'Profile' || tab === 'Settings') setCurrentView('Settings');
     else if (tab === 'Contacts') setCurrentView('Contacts');
   };
 
   const handleNavigate = (view: string) => {
-    if (view === 'LiveLocation') {
-      setCurrentView('LiveLocation');
-    } else if (view === 'SafeRoutes') {
+    if (view === 'SafeRoutes') {
       setActiveTab('Map');
       setCurrentView('SafeRoutes');
     } else if (view === 'Settings') {
@@ -247,7 +233,7 @@ function HeimdalMain() {
     } else if (view === 'FakeCall') {
       setCurrentView('FakeCall');
     } else if (view === 'Helplines') {
-      setActiveTab('Home');
+      setActiveTab('Helplines');
       setCurrentView('Helplines');
     }
   };
@@ -277,15 +263,6 @@ function HeimdalMain() {
           >
             <Text style={[styles.screenPillText, { color: currentView === 'Home' ? '#FFFFFF' : colors.textSecondary }]}>
               Home
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.screenPill, currentView === 'LiveLocation' && { backgroundColor: colors.brandAccent }]}
-            onPress={() => setCurrentView('LiveLocation')}
-          >
-            <Text style={[styles.screenPillText, { color: currentView === 'LiveLocation' ? '#FFFFFF' : colors.textSecondary }]}>
-              Location
             </Text>
           </TouchableOpacity>
 
@@ -390,18 +367,6 @@ function HeimdalMain() {
           <HomeScreen onNavigate={handleNavigate} />
         )}
 
-        {!hidden && currentView === 'LiveLocation' && (
-          <LiveLocationScreen
-            onBack={() => {
-              setCurrentView('Home');
-              setActiveTab('Home');
-            }}
-            onNavigateToContacts={() => {
-              setCurrentView('Contacts');
-              setActiveTab('Contacts');
-            }}
-          />
-        )}
 
         {!hidden && currentView === 'SafeRoutes' && (
           <NavigationScreen />
@@ -447,15 +412,18 @@ function HeimdalMain() {
         </View>
 
         {showBottomNav && (
-          <BottomNavigation activeTab={activeTab} onTabPress={handleTabPress} onSos={() => setSosVisible(true)} />
+          <BottomNavigation activeTab={activeTab} onTabPress={handleTabPress} onSos={() => ScreamSosController.start('SOS_BUTTON')} />
         )}
       </View>
 
-      <SosOverlay visible={sosVisible} onClose={() => setSosVisible(false)} />
       <ScreamSosOverlay />
       <ScreamListener enabled={listenForScreams} background={screamInBackground} onScream={() => ScreamSosController.start('AUDIO_DISTRESS')} />
       <FallListener enabled={watchForFalls} onFall={() => ScreamSosController.start('FALL')} />
-      <ShakeListener enabled={shakeDetection && !sosVisible && screamSosPhase === 'idle'} onShake={() => setSosVisible(true)} />
+      <KeywordListener
+        enabled={keywordDetection && !!session && appActive && !sosRunning && !callActive && currentView !== 'FakeCall' && Platform.OS !== 'web'}
+        onKeyword={() => ScreamSosController.start('VOICE')}
+      />
+      <ShakeListener enabled={shakeDetection && !!session && appActive && !sosRunning} onShake={() => ScreamSosController.start('SHAKE')} />
     </View>
   );
 }

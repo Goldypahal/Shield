@@ -11,7 +11,7 @@ const bn: Translation = {
 
   'tab.home': 'হোম',
   'tab.routes': 'রাস্তা',
-  'tab.safety': 'নিরাপত্তা তথ্য',
+  'tab.helplines': 'হেল্পলাইন',
   'tab.profile': 'প্রোফাইল',
 
   'lang.title': 'ভাষা',
@@ -36,8 +36,8 @@ const bn: Translation = {
   'home.actions.title': 'দ্রুত কাজ',
   'home.actions.route': 'নিরাপদ রাস্তা',
   'home.actions.routeSub': 'নিরাপদ পথ বেছে নিন',
-  'home.actions.share': 'লোকেশন শেয়ার',
-  'home.actions.shareSub': 'অভিভাবকদের সাথে লাইভ',
+  'home.actions.guardians': 'অভিভাবক',
+  'home.actions.guardiansSub': 'কে আপনার SOS পাবে',
   'home.actions.fakeCall': 'নকল কল',
   'home.actions.fakeCallSub': 'পরিস্থিতি থেকে বেরিয়ে আসুন',
   'home.actions.checkin': 'চেক-ইন টাইমার',
@@ -116,6 +116,10 @@ const bn: Translation = {
   'sos.screamDetected': 'চিৎকার শোনা গেছে',
 
   'sos.fallDetected': 'পড়ে যাওয়া শনাক্ত হয়েছে',
+
+  'sos.shakeDetected': 'ঝাঁকুনি শনাক্ত হয়েছে',
+
+  'sos.voiceDetected': 'সাহায্যের ডাক শোনা গেছে',
   'sos.title': 'জরুরি SOS',
   'sos.countdown': '{seconds} সেকেন্ডের মধ্যে আপনার লাইভ লোকেশন আপনার বাবা-মা ও পুলিশের কাছে পাঠানো হবে।',
   'sos.imSafe': 'আমি নিরাপদ – PIN দিন',
@@ -169,6 +173,12 @@ const bn: Translation = {
   'settings.fall': 'পড়ে যাওয়া শনাক্তকরণ',
 
   'settings.fallOn': 'চালু: পড়ে গিয়ে স্থির থাকলে 10 সেকেন্ডের SOS কাউন্টডাউন শুরু হয় (অ্যাপ খোলা থাকলে)',
+
+  'settings.keywords': 'কণ্ঠস্বরে SOS',
+
+  'settings.keywordsOn': 'চালু: "help", "bachao" বা "call the police" বললে 10 সেকেন্ডের SOS কাউন্টডাউন শুরু হয় (অ্যাপ খোলা থাকলে)',
+
+  'settings.keywordsUnavailable': 'Android 13 বা নতুন ও পূর্ণ অ্যাপ বিল্ড লাগবে',
 
   'nav.from': 'কোথা থেকে',
   'nav.to': 'কোথায় যাবেন?',

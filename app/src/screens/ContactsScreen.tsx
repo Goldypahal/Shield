@@ -12,11 +12,15 @@ import {
   Alert as RNAlert,
   Clipboard,
   Platform,
+  KeyboardAvoidingView,
+  Pressable,
+  ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme';
 import AppHeader from '../components/common/AppHeader';
-import ContactService from '../services/contactService';
+import ContactService, { normalizePhone } from '../services/contactService';
 import { EmergencyContact } from '../types';
 
 interface ContactsScreenProps {
@@ -33,6 +37,8 @@ export default function ContactsScreen({ onBack, initialInviteId }: ContactsScre
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [verifying, setVerifying] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -45,51 +51,46 @@ export default function ContactsScreen({ onBack, initialInviteId }: ContactsScre
 
   const loadContacts = async () => {
     try {
-      const list = await ContactService.listContacts();
-      if (list && list.length > 0) {
-        setContacts(list);
-      } else {
-        const defaults: EmergencyContact[] = [
-          { id: 'c1', name: 'Parent / Guardian', phone: '+919876543210', verified: true, priority: 1 },
-          { id: 'c2', name: 'Campus Safety Dispatch', phone: '+911722700000', verified: true, priority: 2 },
-          { id: 'c3', name: 'Roommate / Trusted Friend', phone: '+919812345678', verified: false, priority: 3 },
-        ];
-        setContacts(defaults);
-      }
+      // Only real guardians: example entries here used to look like people who get your SOS
+      setContacts((await ContactService.listContacts()) ?? []);
     } catch (_) {}
   };
 
+  const openAddModal = () => {
+    setAddError(null);
+    setAddModalVisible(true);
+  };
+
   const handleAddContact = async () => {
-    if (!name.trim() || !phone.trim()) {
-      RNAlert.alert('Missing Info', 'Please provide both contact name and phone number.');
+    if (saving) return;
+    if (!name.trim()) {
+      setAddError('Enter the guardian\'s name.');
       return;
     }
-
+    if (!normalizePhone(phone)) {
+      setAddError('Enter a valid mobile number, e.g. 98765 43210 or +91 98765 43210.');
+      return;
+    }
+    if (contacts.length >= 5) {
+      setAddError('You can have up to 5 guardians. Remove one first.');
+      return;
+    }
+    setSaving(true);
+    setAddError(null);
     try {
-      const newContact = await ContactService.saveContact({
-        name: name.trim(),
-        phone: phone.trim(),
-      });
-      setContacts((prev) => [...prev, newContact]);
+      const newContact = await ContactService.saveContact({ name: name.trim(), phone });
+      setContacts((prev) => [...prev.filter((c) => c.id !== newContact.id && c.phone !== newContact.phone), newContact]);
       setName('');
       setPhone('');
       setAddModalVisible(false);
       RNAlert.alert(
-        'Guardian Added',
-        `${newContact.name} was added. Share the invite link with them so they can accept and view your live location during an SOS.`
+        'Guardian added',
+        `${newContact.name} (${newContact.phone}) will get your SOS by SMS. Share the invite link so they can also follow your live location.`
       );
-    } catch (_) {
-      const fallback: EmergencyContact = {
-        id: `local-${Date.now()}`,
-        name: name.trim(),
-        phone: phone.trim(),
-        verified: false,
-        priority: 1,
-      };
-      setContacts((prev) => [...prev, fallback]);
-      setName('');
-      setPhone('');
-      setAddModalVisible(false);
+    } catch (e: any) {
+      setAddError(e?.message ?? 'Could not add this guardian. Try again.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -156,7 +157,7 @@ export default function ContactsScreen({ onBack, initialInviteId }: ContactsScre
         showBack={!!onBack}
         onBack={onBack}
         rightIcon="add"
-        onRightPress={() => setAddModalVisible(true)}
+        onRightPress={openAddModal}
         rightAccessibilityLabel="Add new trusted contact"
       />
 
@@ -292,7 +293,7 @@ export default function ContactsScreen({ onBack, initialInviteId }: ContactsScre
               <View style={styles.actionColumn}>
                 <TouchableOpacity
                   style={[styles.actionBtn, { backgroundColor: colors.surfaceSecondary }]}
-                  onPress={() => RNAlert.alert('Contact Action', `Ready to call ${contact.name} at ${contact.phone}.`)}
+                  onPress={() => Linking.openURL(`tel:${contact.phone}`).catch(() => RNAlert.alert('Cannot call', `Call ${contact.phone} from your phone app.`))}
                   accessibilityRole="button"
                   accessibilityLabel={`Call ${contact.name}`}
                 >
@@ -321,61 +322,78 @@ export default function ContactsScreen({ onBack, initialInviteId }: ContactsScre
               borderRadius: radii.lg,
             },
           ]}
-          onPress={() => setAddModalVisible(true)}
+          onPress={openAddModal}
           activeOpacity={0.8}
         >
           <Ionicons name="add-circle-outline" size={22} color={colors.brandAccent} />
           <Text style={[typography.button, { color: colors.brandAccent, marginLeft: 8 }]}>
-            Add Emergency Contact
+            Add guardian
           </Text>
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Add Contact Modal */}
+      {/* Add Contact Modal: the backdrop is a sibling (not a parent) of the card, so taps in
+          the form never close it, and the keyboard pushes the card up instead of hiding it. */}
       <Modal visible={addModalVisible} transparent animationType="fade" onRequestClose={() => setAddModalVisible(false)}>
-        <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setAddModalVisible(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setAddModalVisible(false)} accessibilityLabel="Close" />
           <View style={[styles.modalCard, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radii.xl }]}>
             <View style={styles.modalHeader}>
               <Text style={[typography.h3, { color: colors.textPrimary }]}>Add Guardian</Text>
-              <TouchableOpacity onPress={() => setAddModalVisible(false)}>
+              <TouchableOpacity onPress={() => setAddModalVisible(false)} accessibilityLabel="Close">
                 <Ionicons name="close" size={22} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
             <Text style={[typography.bodySmall, { color: colors.textSecondary, marginBottom: 12 }]}>
-              Enter their name and E.164 phone number (e.g. +919876543210). They will receive an invitation to accept.
+              Their name and mobile number. Indian numbers can be typed without +91. They get your SOS by SMS.
             </Text>
 
             <TextInput
               style={[styles.modalInput, { backgroundColor: colors.surfaceSecondary, color: colors.textPrimary, borderColor: colors.border }]}
-              placeholder="Full Name (e.g. Jordan Smith)"
+              placeholder="Name (e.g. Mom)"
               placeholderTextColor={colors.textMuted}
               value={name}
-              onChangeText={setName}
+              onChangeText={(v) => { setName(v); setAddError(null); }}
+              autoCapitalize="words"
+              returnKeyType="next"
+              maxLength={80}
             />
 
             <TextInput
               style={[styles.modalInput, { backgroundColor: colors.surfaceSecondary, color: colors.textPrimary, borderColor: colors.border, marginTop: 12 }]}
-              placeholder="Phone Number (e.g. +919876543210)"
+              placeholder="Mobile number (e.g. 98765 43210)"
               placeholderTextColor={colors.textMuted}
               value={phone}
-              onChangeText={setPhone}
+              onChangeText={(v) => { setPhone(v); setAddError(null); }}
               keyboardType="phone-pad"
+              textContentType="telephoneNumber"
+              autoComplete="tel"
+              returnKeyType="done"
+              onSubmitEditing={handleAddContact}
+              maxLength={20}
             />
 
+            {addError && (
+              <Text style={[typography.bodySmall, { color: colors.sosPrimary, marginTop: 10 }]}>{addError}</Text>
+            )}
+
             <TouchableOpacity
-              style={[styles.saveBtn, { backgroundColor: colors.brandAccent }]}
+              style={[styles.saveBtn, { backgroundColor: colors.brandAccent, opacity: saving ? 0.7 : 1 }]}
               onPress={handleAddContact}
+              disabled={saving}
+              accessibilityRole="button"
             >
-              <Text style={[typography.button, { color: '#FFFFFF' }]}>Add & Send Invite</Text>
+              {saving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={[typography.button, { color: '#FFFFFF' }]}>Add guardian</Text>}
             </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Verify Invitation Modal */}
       <Modal visible={verifyModalVisible} transparent animationType="fade" onRequestClose={() => setVerifyModalVisible(false)}>
-        <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setVerifyModalVisible(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setVerifyModalVisible(false)} accessibilityLabel="Close" />
           <View style={[styles.modalCard, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radii.xl }]}>
             <View style={styles.modalHeader}>
               <Text style={[typography.h3, { color: colors.textPrimary }]}>Accept Guardian Invite</Text>
@@ -407,7 +425,7 @@ export default function ContactsScreen({ onBack, initialInviteId }: ContactsScre
               </Text>
             </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+        </KeyboardAvoidingView>
       </Modal>
 
     </SafeAreaView>

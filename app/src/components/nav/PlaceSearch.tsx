@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Activity
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme';
 import { useI18n } from '../../i18n';
-import { NavPlace, searchPlaces, resolvePlace } from '../../services/navService';
+import { NavPlace, searchPlaces, resolvePlace, navErrorMessage } from '../../services/navService';
 import type { LatLon } from '../../services/routeService';
 
 interface PlaceSearchProps {
@@ -39,8 +39,8 @@ export default function PlaceSearch({ visible, title, near, allowMyLocation, onP
       try {
         const places = await searchPlaces(query, near, lang);
         if (id === seq.current) { setResults(places); setError(null); }
-      } catch {
-        if (id === seq.current) setError(t('nav.error'));
+      } catch (e) {
+        if (id === seq.current) setError(navErrorMessage(e) ?? t('nav.error'));
       } finally {
         if (id === seq.current) setBusy(false);
       }
@@ -51,8 +51,8 @@ export default function PlaceSearch({ visible, title, near, allowMyLocation, onP
   const pick = async (p: NavPlace) => {
     try {
       onPick(await resolvePlace(p));
-    } catch {
-      setError(t('nav.error'));
+    } catch (e) {
+      setError(navErrorMessage(e) ?? t('nav.error'));
     }
   };
 

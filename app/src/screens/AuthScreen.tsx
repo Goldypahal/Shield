@@ -16,12 +16,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme';
 import HeimdalLogo from '../components/common/HeimdalLogo';
 import AuthService, { authErrorMessage, DemoCodes } from '../services/authService';
+import { normalizePhone } from '../services/contactService';
 
 type Mode = 'login' | 'register' | 'forgot';
 type RegisterStep = 'details' | 'codes' | 'pins';
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$/;
-const PHONE_RE = /^\+[1-9]\d{7,14}$/;
 const PIN_RE = /^\d{4,6}$/;
 
 /**
@@ -91,11 +91,13 @@ export default function AuthScreen() {
   const sendCodes = () => {
     if (!name.trim()) return setError('Enter your name.');
     if (!EMAIL_RE.test(normEmail)) return setError('Enter a valid email address.');
-    if (!PHONE_RE.test(phone.trim())) return setError('Enter your phone with country code, e.g. +919876543210.');
+    const e164 = normalizePhone(phone);
+    if (!e164) return setError('Enter a valid mobile number, e.g. 98765 43210 or +91 98765 43210.');
+    setPhone(e164); // shown back in full, so the walker sees the number that will get the SMS
     if (password.length < 10) return setError('Password must be at least 10 characters.');
     if (password !== password2) return setError('Passwords do not match.');
     run(async () => {
-      showDemo(await AuthService.registerStart(normEmail, phone.trim()));
+      showDemo(await AuthService.registerStart(normEmail, e164));
       setStep('codes');
     });
   };

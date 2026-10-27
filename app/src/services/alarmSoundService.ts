@@ -1,137 +1,99 @@
-import { Platform } from 'react-native';
-import { Audio } from 'expo-av';
+import { Platform, Vibration } from 'react-native';
+import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from 'expo-av';
+
+/**
+ * The SOS siren: a loud police-style wail (assets/sounds/siren.wav) looped at full volume,
+ * plus continuous vibration on phones. It starts the moment any SOS starts (button, scream,
+ * fall, voice, shake) and stops only when the SOS is stood down with the PIN.
+ *
+ * Earlier this only made sound on the web (an oscillator); on Android and iOS startSiren()
+ * set the audio mode and played nothing.
+ *
+ * The app cannot raise the phone's media volume itself; at low media volume the siren is
+ * quiet, so vibration runs alongside it.
+ */
+const SIREN = require('../../assets/sounds/siren.wav');
+const VIBRATE_PATTERN = [0, 700, 300]; // repeats
 
 class AlarmSoundService {
-  private isPlaying: boolean = false;
-  private audioContext: any = null;
-  private oscillatorNode: any = null;
-  private gainNode: any = null;
-  private sirenInterval: any = null;
-  private nativeSound: Audio.Sound | null = null;
+  private wanted = false;
+  private sound: Audio.Sound | null = null;
+  private starting: Promise<void> | null = null;
 
-  /**
-   * Immediate loud chirp/beep when user touches the SOS button
-   */
+  /** Short beep when the SOS button is touched (web only; phones vibrate instead). */
   async playSosPressSound() {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
     try {
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-        if (AudioCtx) {
-          const ctx = new AudioCtx();
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-
-          osc.type = 'sawtooth';
-          osc.frequency.setValueAtTime(880, ctx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(1760, ctx.currentTime + 0.15);
-
-          gain.gain.setValueAtTime(0.8, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
-
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-
-          osc.start();
-          osc.stop(ctx.currentTime + 0.2);
-        }
-      }
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1760, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.8, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.2);
+      osc.onended = () => ctx.close().catch(() => undefined);
     } catch (e) {
       console.warn('[AlarmSound] Failed to play tap sound', e);
     }
   }
 
-  /**
-   * Starts a loud, high-decibel emergency siren
-   */
+  /** Starts the looping siren (idempotent). */
   async startSiren() {
-    if (this.isPlaying) return;
-    this.isPlaying = true;
-
-    try {
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-        if (AudioCtx) {
-          this.audioContext = new AudioCtx();
-          if (this.audioContext.state === 'suspended') {
-            await this.audioContext.resume();
-          }
-
-          this.oscillatorNode = this.audioContext.createOscillator();
-          this.gainNode = this.audioContext.createGain();
-
-          this.oscillatorNode.type = 'sawtooth';
-          this.gainNode.gain.setValueAtTime(0.9, this.audioContext.currentTime);
-
-          this.oscillatorNode.connect(this.gainNode);
-          this.gainNode.connect(this.audioContext.destination);
-
-          this.oscillatorNode.start();
-
-          // Continuous European / Police emergency pitch sweep (700Hz <-> 1350Hz)
-          let high = true;
-          this.oscillatorNode.frequency.setValueAtTime(750, this.audioContext.currentTime);
-
-          this.sirenInterval = setInterval(() => {
-            if (!this.isPlaying || !this.audioContext || !this.oscillatorNode) return;
-            const targetFreq = high ? 1350 : 750;
-            this.oscillatorNode.frequency.exponentialRampToValueAtTime(
-              targetFreq,
-              this.audioContext.currentTime + 0.35
-            );
-            high = !high;
-          }, 350);
-        }
-      } else {
-        // Native configuration for maximum alert volume
+    this.wanted = true;
+    if (Platform.OS !== 'web') {
+      try { Vibration.vibrate(VIBRATE_PATTERN, true); } catch (_) {}
+    }
+    if (this.sound || this.starting) return this.starting ?? undefined;
+    this.starting = (async () => {
+      try {
         await Audio.setAudioModeAsync({
           playsInSilentModeIOS: true,
           staysActiveInBackground: true,
           shouldDuckAndroid: false,
-        });
+          playThroughEarpieceAndroid: false,
+          interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
+          interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+          // keep recording allowed: the scream listener may still hold the microphone
+          allowsRecordingIOS: true,
+        }).catch(() => undefined);
+        const { sound } = await Audio.Sound.createAsync(SIREN, { isLooping: true, volume: 1.0, shouldPlay: true });
+        if (!this.wanted) {
+          await sound.unloadAsync().catch(() => undefined);
+          return;
+        }
+        this.sound = sound;
+        console.log('[AlarmSound] Siren playing');
+      } catch (e) {
+        console.warn('[AlarmSound] Failed to start siren', e);
+      } finally {
+        this.starting = null;
       }
-      console.log('[AlarmSound] Loud SOS siren active');
-    } catch (e) {
-      console.warn('[AlarmSound] Failed to start siren', e);
-    }
+    })();
+    return this.starting;
   }
 
-  /**
-   * Stops the siren immediately
-   */
+  /** Stops siren and vibration immediately. */
   stopSiren() {
-    this.isPlaying = false;
-    if (this.sirenInterval) {
-      clearInterval(this.sirenInterval);
-      this.sirenInterval = null;
+    this.wanted = false;
+    if (Platform.OS !== 'web') {
+      try { Vibration.cancel(); } catch (_) {}
     }
-
-    if (this.oscillatorNode) {
-      try {
-        this.oscillatorNode.stop();
-        this.oscillatorNode.disconnect();
-      } catch (_) {}
-      this.oscillatorNode = null;
+    const s = this.sound;
+    this.sound = null;
+    if (s) {
+      s.stopAsync().catch(() => undefined).finally(() => s.unloadAsync().catch(() => undefined));
     }
-
-    if (this.audioContext && this.audioContext.state !== 'closed') {
-      try {
-        this.audioContext.close();
-      } catch (_) {}
-      this.audioContext = null;
-    }
-
-    if (this.nativeSound) {
-      try {
-        this.nativeSound.stopAsync();
-        this.nativeSound.unloadAsync();
-      } catch (_) {}
-      this.nativeSound = null;
-    }
-    console.log('[AlarmSound] Siren silenced');
   }
 
   isSirenActive(): boolean {
-    return this.isPlaying;
+    return this.wanted;
   }
 }
 

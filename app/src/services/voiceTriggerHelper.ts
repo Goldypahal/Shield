@@ -1,26 +1,10 @@
 import { Platform } from 'react-native';
 
-export const EMERGENCY_KEYWORDS = [
-  'help',
-  'help me',
-  'save',
-  'save me',
-  'save me please',
-  'please help',
-  'please save me',
-  'bachao',
-  'madad',
-  'emergency',
-  'scream',
-  'danger',
-  'police',
-  'stop',
-  'attack',
-  'someone help',
-  'help us',
-  'choro',
-  'bhabho',
-];
+import { DISTRESS_PHRASES, isEmergencyPhrase, matchEmergency } from './emergencyKeywords';
+
+/** @deprecated use emergencyKeywords.ts; kept for older imports */
+export const EMERGENCY_KEYWORDS = DISTRESS_PHRASES;
+export { isEmergencyPhrase, matchEmergency };
 
 type VoiceTriggerListener = () => void;
 const listeners: Set<VoiceTriggerListener> = new Set();
@@ -226,10 +210,8 @@ function startBrowserSpeechRecognition() {
       for (let i = event.resultIndex; i < event.results.length; ++i) {
         const transcript = String(event.results[i][0]?.transcript || '').toLowerCase().trim();
         console.log('[SpeechRecognition] Heard phrase:', transcript);
-        const clean = transcript.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, ' ');
-        const matched = EMERGENCY_KEYWORDS.some((kw) => {
-          return clean.includes(kw) || transcript.includes(kw);
-        });
+        // guarded words (stop, police, emergency) are judged on final results only
+        const matched = isEmergencyPhrase(transcript, !!event.results[i].isFinal);
 
         reportHeardPhrase(transcript, matched);
 

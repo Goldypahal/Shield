@@ -42,6 +42,8 @@ jobs:
         run: npx tsc --noEmit -p .
       - name: Translations match English (keys and placeholders)
         run: python3 scripts/check-translations.py
+      - name: Voice SOS keywords (phrases trigger, everyday speech does not)
+        run: node scripts/test-keywords.cjs
 
   dashboard:
     runs-on: ubuntu-latest

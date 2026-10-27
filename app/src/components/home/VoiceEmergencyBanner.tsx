@@ -96,7 +96,12 @@ export default function VoiceEmergencyBanner() {
       source.connect(analyser);
       const data = new Uint8Array(analyser.frequencyBinCount);
 
-      let loudFrames = 0;
+      // Time-based, not frame-based: a shout must stay at 90%+ for SHOUT_MS (brief dips allowed).
+      // 2 frames (~33 ms) let a clap, cough or slammed door start a PIN-locked SOS with siren.
+      const SHOUT_MS = 1500;
+      const DIP_MS = 300;
+      let loudSince: number | null = null;
+      let lastLoud = 0;
       const loop = () => {
         analyser.getByteFrequencyData(data);
         let sum = 0;
@@ -111,17 +116,19 @@ export default function VoiceEmergencyBanner() {
         setAudioLevel(level);
 
         // DIRECT TRIGGER: When shouting reaches 90% or more on the meter
+        const now = Date.now();
         if (level >= 90) {
-          loudFrames += 1;
-          if (loudFrames >= 2) { // ~33ms of sustained 90%+ shouting
-            console.log(`[VoiceEmergencyBanner] Shouting reached ${level}% (>= 90%) -> TRIGGERING SOS DIRECTLY!`);
+          lastLoud = now;
+          if (loudSince === null) loudSince = now;
+          if (now - loudSince >= SHOUT_MS) {
+            console.log(`[VoiceEmergencyBanner] Shouting at ${level}% for ${SHOUT_MS} ms -> TRIGGERING SOS`);
             setIsMatch(true);
             setHeardText(`🚨 Loud Shout (${level}%) Detected!`);
             triggerVoiceSos('shouting_meter_90_percent');
-            loudFrames = 0;
+            loudSince = null;
           }
-        } else {
-          loudFrames = 0;
+        } else if (loudSince !== null && now - lastLoud > DIP_MS) {
+          loudSince = null;
         }
 
         animId = requestAnimationFrame(loop);

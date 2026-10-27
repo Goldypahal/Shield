@@ -11,7 +11,7 @@ const mr: Translation = {
 
   'tab.home': 'होम',
   'tab.routes': 'मार्ग',
-  'tab.safety': 'सुरक्षा माहिती',
+  'tab.helplines': 'हेल्पलाइन',
   'tab.profile': 'प्रोफाइल',
 
   'lang.title': 'भाषा',
@@ -36,8 +36,8 @@ const mr: Translation = {
   'home.actions.title': 'झटपट कृती',
   'home.actions.route': 'सुरक्षित मार्ग',
   'home.actions.routeSub': 'सुरक्षित वाट निवडा',
-  'home.actions.share': 'लोकेशन शेअर करा',
-  'home.actions.shareSub': 'पालकांसोबत लाइव्ह',
+  'home.actions.guardians': 'पालक',
+  'home.actions.guardiansSub': 'तुमचा SOS कोणाला जाईल',
   'home.actions.fakeCall': 'खोटा कॉल',
   'home.actions.fakeCallSub': 'परिस्थितीतून बाहेर पडा',
   'home.actions.checkin': 'चेक-इन टायमर',
@@ -116,6 +116,10 @@ const mr: Translation = {
   'sos.screamDetected': 'किंचाळी ऐकू आली',
 
   'sos.fallDetected': 'पडणे ओळखले',
+
+  'sos.shakeDetected': 'हलवणे ओळखले',
+
+  'sos.voiceDetected': 'मदतीची हाक ऐकू आली',
   'sos.title': 'आपत्कालीन SOS',
   'sos.countdown': '{seconds} सेकंदांत तुमचे लाइव्ह लोकेशन तुमचे आई-वडील आणि पोलिसांना पाठवले जाईल.',
   'sos.imSafe': 'मी सुरक्षित आहे – PIN टाका',
@@ -169,6 +173,12 @@ const mr: Translation = {
   'settings.fall': 'पडणे ओळख',
 
   'settings.fallOn': 'चालू: पडल्यानंतर स्थिर राहिल्यास 10 सेकंदांचे SOS काउंटडाउन सुरू होते (अ‍ॅप उघडे असताना)',
+
+  'settings.keywords': 'आवाजाने SOS',
+
+  'settings.keywordsOn': 'चालू: "help", "bachao" किंवा "call the police" म्हटल्यास 10 सेकंदांचे SOS काउंटडाउन सुरू होते (अ‍ॅप उघडे असताना)',
+
+  'settings.keywordsUnavailable': 'Android 13 किंवा नवीन आणि पूर्ण अ‍ॅप बिल्ड लागेल',
 
   'nav.from': 'कोठून',
   'nav.to': 'कोठे जायचे?',

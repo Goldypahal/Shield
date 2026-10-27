@@ -163,7 +163,7 @@ export default function FakeCallScreen({ onBack, onActiveChange }: FakeCallScree
     clearTimers();
     setPhase('ringing');
     Vibration.vibrate(VIBRATION_PATTERN, true);
-    stopRingRef.current = await startRingtone();
+    stopRingRef.current = startRingtone();
     ringTimeoutRef.current = setTimeout(() => {
       stopRinging();
       setPhase('setup');

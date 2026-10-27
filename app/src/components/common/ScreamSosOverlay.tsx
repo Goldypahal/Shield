@@ -11,8 +11,16 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import PinPromptModal from './PinPromptModal';
 import { useI18n } from '../../i18n';
-import ScreamSosController, { ScreamSosState } from '../../services/screamSosController';
-import AlarmSoundService from '../../services/alarmSoundService';
+import ScreamSosController, { ScreamSosState, AutoSosTrigger } from '../../services/screamSosController';
+import type { StringKey } from '../../i18n';
+
+const TRIGGER_ICON: Record<AutoSosTrigger, keyof typeof Ionicons.glyphMap> = {
+  SOS_BUTTON: 'warning', AUDIO_DISTRESS: 'mic', FALL: 'body', SHAKE: 'phone-portrait', VOICE: 'chatbubble-ellipses',
+};
+const TRIGGER_KICKER: Record<AutoSosTrigger, StringKey | null> = {
+  SOS_BUTTON: null, AUDIO_DISTRESS: 'sos.screamDetected', FALL: 'sos.fallDetected',
+  SHAKE: 'sos.shakeDetected', VOICE: 'sos.voiceDetected',
+};
 
 export { SCREAM_SOS_COUNTDOWN_S } from '../../services/screamSosController';
 
@@ -51,20 +59,11 @@ export default function ScreamSosOverlay() {
     return () => clearInterval(id);
   }, [phase]);
 
-  // Siren management
-  useEffect(() => {
-    if (visible && (phase === 'countdown' || phase === 'sending')) {
-      AlarmSoundService.startSiren();
-    } else {
-      AlarmSoundService.stopSiren();
-    }
-    return () => {
-      AlarmSoundService.stopSiren();
-    };
-  }, [visible, phase]);
+  // The siren belongs to the controller: it starts with the SOS and stops only when the PIN
+  // is accepted, also with the app in the background.
 
+  /** Only possible once nothing is running any more (stood down with the PIN, or not sent). */
   const onClose = () => {
-    AlarmSoundService.stopSiren();
     setPinVisible(false);
     ScreamSosController.dismiss();
   };
@@ -107,9 +106,9 @@ export default function ScreamSosOverlay() {
         {phase === 'countdown' && (
           <View style={styles.content}>
             <View style={styles.iconCircle}>
-              <Ionicons name={s.trigger === 'FALL' ? 'body' : 'mic'} size={44} color="#FFFFFF" />
+              <Ionicons name={TRIGGER_ICON[s.trigger]} size={44} color="#FFFFFF" />
             </View>
-            <Text style={styles.kicker}>{s.trigger === 'FALL' ? t('sos.fallDetected') : t('sos.screamDetected')}</Text>
+            {TRIGGER_KICKER[s.trigger] && <Text style={styles.kicker}>{t(TRIGGER_KICKER[s.trigger]!)}</Text>}
             <Text style={styles.countdown}>{secondsLeft}</Text>
             <Text style={styles.title}>{t('sos.title')}</Text>
             <Text style={styles.body}>{t('sos.countdown', { seconds: secondsLeft })}</Text>
@@ -141,7 +140,7 @@ export default function ScreamSosOverlay() {
             <Text style={styles.body}>{deliveryLine}</Text>
 
             {/* 3 Methods Cascade Card */}
-            <View style={styles.methodsCard}>
+            {result && <View style={styles.methodsCard}>
               <Text style={styles.methodsHeader}>EMERGENCY DISPATCH METHODS:</Text>
               <View style={styles.methodRow}>
                 <Ionicons
@@ -165,15 +164,15 @@ export default function ScreamSosOverlay() {
               </View>
               <View style={styles.methodRow}>
                 <Ionicons
-                  name={result?.channel === 'BLUETOOTH_MESH' || result?.delivery === 'queued' ? 'checkmark-circle' : 'radio-button-off'}
+                  name={result?.channel === 'BLUETOOTH_MESH' ? 'checkmark-circle' : 'radio-button-off'}
                   size={15}
-                  color={result?.channel === 'BLUETOOTH_MESH' || result?.delivery === 'queued' ? '#86EFAC' : '#E2E8F0'}
+                  color={result?.channel === 'BLUETOOTH_MESH' ? '#86EFAC' : '#E2E8F0'}
                 />
                 <Text style={styles.methodText}>
-                  3. Bluetooth Relay: {result?.delivery === 'queued' ? 'Beacon active (Offline mesh)' : 'Standby'}
+                  3. Bluetooth Relay: {result?.channel === 'BLUETOOTH_MESH' ? 'Beacon active (Offline mesh)' : 'Standby'}
                 </Text>
               </View>
-            </View>
+            </View>}
 
             <Text style={[styles.body, { marginTop: 12 }]}>{t('sos.enterPinToStop')}</Text>
             <TouchableOpacity
@@ -191,9 +190,6 @@ export default function ScreamSosOverlay() {
               accessibilityLabel="Call 112"
             >
               <Text style={styles.linkButtonText}>{t('sos.call112')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={onClose} style={styles.linkButton} accessibilityRole="button">
-              <Text style={styles.linkButtonSubtle}>{t('sos.hide')}</Text>
             </TouchableOpacity>
           </View>
         )}

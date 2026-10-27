@@ -11,7 +11,7 @@ const gu: Translation = {
 
   'tab.home': 'હોમ',
   'tab.routes': 'રસ્તા',
-  'tab.safety': 'સુરક્ષા માહિતી',
+  'tab.helplines': 'હેલ્પલાઇન',
   'tab.profile': 'પ્રોફાઇલ',
 
   'lang.title': 'ભાષા',
@@ -36,8 +36,8 @@ const gu: Translation = {
   'home.actions.title': 'ઝડપી ક્રિયાઓ',
   'home.actions.route': 'સુરક્ષિત રસ્તો',
   'home.actions.routeSub': 'સુરક્ષિત રસ્તો પસંદ કરો',
-  'home.actions.share': 'લોકેશન શેર કરો',
-  'home.actions.shareSub': 'વાલીઓ સાથે લાઇવ',
+  'home.actions.guardians': 'વાલીઓ',
+  'home.actions.guardiansSub': 'તમારો SOS કોને મળે',
   'home.actions.fakeCall': 'નકલી કૉલ',
   'home.actions.fakeCallSub': 'પરિસ્થિતિમાંથી બહાર નીકળો',
   'home.actions.checkin': 'ચેક-ઇન ટાઇમર',
@@ -116,6 +116,10 @@ const gu: Translation = {
   'sos.screamDetected': 'ચીસ સંભળાઈ',
 
   'sos.fallDetected': 'પડવું શોધાયું',
+
+  'sos.shakeDetected': 'હલાવવું શોધાયું',
+
+  'sos.voiceDetected': 'મદદની બૂમ સંભળાઈ',
   'sos.title': 'ઇમરજન્સી SOS',
   'sos.countdown': '{seconds} સેકન્ડમાં તમારું લાઇવ લોકેશન તમારા માતા-પિતા અને પોલીસને મોકલવામાં આવશે.',
   'sos.imSafe': 'હું સુરક્ષિત છું – PIN નાખો',
@@ -169,6 +173,12 @@ const gu: Translation = {
   'settings.fall': 'પડવાની ઓળખ',
 
   'settings.fallOn': 'ચાલુ: પડ્યા પછી સ્થિર રહેવાથી 10 સેકન્ડનું SOS કાઉન્ટડાઉન શરૂ થાય છે (ઍપ ખુલ્લી હોય ત્યારે)',
+
+  'settings.keywords': 'અવાજથી SOS',
+
+  'settings.keywordsOn': 'ચાલુ: "help", "bachao" અથવા "call the police" બોલવાથી 10 સેકન્ડનું SOS કાઉન્ટડાઉન શરૂ થાય છે (ઍપ ખુલ્લી હોય ત્યારે)',
+
+  'settings.keywordsUnavailable': 'Android 13 કે નવું અને પૂર્ણ ઍપ બિલ્ડ જોઈએ',
 
   'nav.from': 'ક્યાંથી',
   'nav.to': 'ક્યાં જવું છે?',

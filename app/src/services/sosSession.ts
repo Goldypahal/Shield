@@ -116,11 +116,30 @@ export async function stopActiveSos(pin: string): Promise<StopResult> {
 
   try {
     const client = await AuthService.getAuthenticatedClient();
-    await client.put(`/api/v1/alerts/${active.alertId}/state`, { state: 'CANCELLED', pin, reason: 'Stopped by walker' });
+    // 30 s: a free-plan server that was asleep needs ~30-50 s to answer the first request
+    await client.put(`/api/v1/alerts/${active.alertId}/state`, { state: 'CANCELLED', pin, reason: 'Stopped by walker' },
+      { timeout: 30000 });
     await finish();
     return { ok: true };
   } catch (e) {
     const status = (e as AxiosError).response?.status;
+    // No answer, or the server no longer knows this session (signed out, or a test server
+    // that was reset): the PIN hashes on this phone decide, so the walker is never stuck
+    // with an SOS (and siren) that cannot be stopped.
+    if (status === undefined || status === 401) {
+      const kind = await checkPinOffline(pin);
+      if (kind === 'normal' || kind === 'duress') {
+        await finish();
+        return { ok: true };
+      }
+      if (kind === null) return { ok: false, message: 'Incorrect PIN. The SOS is still active.' };
+      // The server ended this session (and sign-out wipes the PIN hashes): nothing on this
+      // phone or server can check a PIN or manage the alert any more, so let it close here.
+      if (status === 401 && !(await AuthService.ensureSession())) {
+        await finish();
+        return { ok: true };
+      }
+    }
     if (status === 403) return { ok: false, message: 'Incorrect PIN. The SOS is still active.' };
     if (status === 423) return { ok: false, message: 'Too many wrong PINs. Your guardians have been alerted; try again in 15 minutes.' };
     if (status === 404 || status === 409) {
