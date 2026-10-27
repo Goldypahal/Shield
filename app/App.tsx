@@ -11,10 +11,12 @@ import { sendSilentSos } from './src/services/sosSession';
 import AuthService, { Session } from './src/services/authService';
 import HomeScreen from './src/screens/HomeScreen';
 import LiveLocationScreen from './src/screens/LiveLocationScreen';
-import SafeRoutesScreen from './src/screens/SafeRoutesScreen';
+import NavigationScreen from './src/screens/NavigationScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import ContactsScreen from './src/screens/ContactsScreen';
 import FakeCallScreen from './src/screens/FakeCallScreen';
+import HelplinesScreen from './src/screens/HelplinesScreen';
+import { LanguageProvider } from './src/i18n';
 import DeviceStatusBar from './src/components/common/DeviceStatusBar';
 import BottomNavigation, { TabKey } from './src/components/common/BottomNavigation';
 import SosOverlay from './src/components/common/SosOverlay';
@@ -53,7 +55,7 @@ const DEFAULT_GUEST_SESSION: Session = {
   },
 } as any;
 
-type ActiveView = 'Splash' | 'Home' | 'LiveLocation' | 'SafeRoutes' | 'Settings' | 'Contacts' | 'FakeCall';
+type ActiveView = 'Splash' | 'Home' | 'LiveLocation' | 'SafeRoutes' | 'Settings' | 'Contacts' | 'FakeCall' | 'Helplines';
 
 function HeimdalMain() {
   const { colors, isDark, mode, setMode } = useTheme();
@@ -172,6 +174,9 @@ function HeimdalMain() {
       setCurrentView('Splash');
     } else if (view === 'FakeCall') {
       setCurrentView('FakeCall');
+    } else if (view === 'Helplines') {
+      setActiveTab('Home');
+      setCurrentView('Helplines');
     }
   };
 
@@ -315,12 +320,7 @@ function HeimdalMain() {
         )}
 
         {!hidden && currentView === 'SafeRoutes' && (
-          <SafeRoutesScreen
-            onBack={() => {
-              setCurrentView('Home');
-              setActiveTab('Home');
-            }}
-          />
+          <NavigationScreen />
         )}
 
         {!hidden && currentView === 'Settings' && (
@@ -339,6 +339,15 @@ function HeimdalMain() {
               setActiveTab('Home');
             }}
             onActiveChange={setCallActive}
+          />
+        )}
+
+        {!hidden && currentView === 'Helplines' && (
+          <HelplinesScreen
+            onBack={() => {
+              setCurrentView('Home');
+              setActiveTab('Home');
+            }}
           />
         )}
 
@@ -368,7 +377,9 @@ function HeimdalMain() {
 export default function App() {
   return (
     <ThemeProvider>
-      <HeimdalMain />
+      <LanguageProvider>
+        <HeimdalMain />
+      </LanguageProvider>
     </ThemeProvider>
   );
 }

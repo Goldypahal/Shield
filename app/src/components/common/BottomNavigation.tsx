@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme';
+import { useI18n, StringKey } from '../../i18n';
 
 export type TabKey = 'Home' | 'Journey' | 'Safety' | 'Profile' | 'Contacts' | 'Map' | 'Settings';
 
@@ -14,24 +15,25 @@ interface BottomNavigationProps {
 
 interface NavItem {
   key: TabKey;
-  label: string;
+  label: StringKey;
   iconActive: keyof typeof Ionicons.glyphMap;
   iconInactive: keyof typeof Ionicons.glyphMap;
   aliases?: TabKey[];
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { key: 'Home', label: 'Home', iconActive: 'home', iconInactive: 'home-outline' },
+  { key: 'Home', label: 'tab.home', iconActive: 'home', iconInactive: 'home-outline' },
   // 'Journey' and 'Map' both resolve to the Safe Routes screen in App.tsx
-  { key: 'Journey', label: 'Routes', iconActive: 'navigate', iconInactive: 'navigate-outline', aliases: ['Map'] },
-  { key: 'Safety', label: 'Safety Info', iconActive: 'shield-checkmark', iconInactive: 'shield-checkmark-outline' },
-  { key: 'Profile', label: 'Profile', iconActive: 'person', iconInactive: 'person-outline', aliases: ['Settings', 'Contacts'] },
+  { key: 'Journey', label: 'tab.routes', iconActive: 'navigate', iconInactive: 'navigate-outline', aliases: ['Map'] },
+  { key: 'Safety', label: 'tab.safety', iconActive: 'shield-checkmark', iconInactive: 'shield-checkmark-outline' },
+  { key: 'Profile', label: 'tab.profile', iconActive: 'person', iconInactive: 'person-outline', aliases: ['Settings', 'Contacts'] },
 ];
 
 const SOS_SLOT_INDEX = 2; // SOS sits between Routes and Safety Info
 
 export default function BottomNavigation({ activeTab, onTabPress, onSos }: BottomNavigationProps) {
   const { colors, typography } = useTheme();
+  const { t } = useI18n();
 
   const renderTab = (item: NavItem) => {
     const isActive = activeTab === item.key || (item.aliases && item.aliases.includes(activeTab));
@@ -45,7 +47,7 @@ export default function BottomNavigation({ activeTab, onTabPress, onSos }: Botto
         style={styles.tabButton}
         accessibilityRole="tab"
         accessibilityState={{ selected: isActive }}
-        accessibilityLabel={`${item.label} tab`}
+        accessibilityLabel={`${t(item.label)} tab`}
         activeOpacity={0.7}
       >
         <Ionicons name={iconName} size={22} color={tintColor} />
@@ -59,7 +61,7 @@ export default function BottomNavigation({ activeTab, onTabPress, onSos }: Botto
             },
           ]}
         >
-          {item.label}
+          {t(item.label)}
         </Text>
       </TouchableOpacity>
     );

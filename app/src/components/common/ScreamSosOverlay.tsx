@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import PinPromptModal from './PinPromptModal';
+import { useI18n } from '../../i18n';
 import { sendSos, stopActiveSos, cancelCountdownWithPin } from '../../services/sosSession';
 import { SosResult } from '../../services/sosService';
 
@@ -36,6 +37,7 @@ export const SCREAM_SOS_COUNTDOWN_S = 10;
  * someone else cannot simply tap it away.
  */
 export default function ScreamSosOverlay({ visible, onClose }: ScreamSosOverlayProps) {
+  const { t } = useI18n();
   const [phase, setPhase] = useState<Phase>('countdown');
   const [secondsLeft, setSecondsLeft] = useState(SCREAM_SOS_COUNTDOWN_S);
   const [result, setResult] = useState<SosResult | null>(null);
@@ -120,12 +122,12 @@ export default function ScreamSosOverlay({ visible, onClose }: ScreamSosOverlayP
 
   const deliveryLine = result
     ? result.delivery === 'server'
-      ? 'Your parents can now follow your live location. Police are alerted if you turned police alerts on.'
+      ? t('sos.delivered')
       : result.fallback === 'sms_composer'
-      ? 'No connection to SHIELD. Your alert is saved on this phone and an SMS draft with your location was opened.'
+      ? t('sos.queuedSms')
       : result.fallback === 'firebase'
-      ? 'The SHIELD server was unreachable, so your parents were alerted through the backup channel.'
-      : 'No connection to SHIELD. Your alert is saved on this phone and will send as soon as you are online.'
+      ? t('sos.queuedBackup')
+      : t('sos.queued')
     : '';
 
   return (
@@ -142,19 +144,17 @@ export default function ScreamSosOverlay({ visible, onClose }: ScreamSosOverlayP
             <View style={styles.iconCircle}>
               <Ionicons name="mic" size={44} color="#FFFFFF" />
             </View>
-            <Text style={styles.kicker}>SCREAM DETECTED</Text>
+            <Text style={styles.kicker}>{t('sos.screamDetected')}</Text>
             <Text style={styles.countdown}>{secondsLeft}</Text>
-            <Text style={styles.title}>Emergency SOS</Text>
-            <Text style={styles.body}>
-              Sharing your live location with your parents and the police in {secondsLeft} second{secondsLeft === 1 ? '' : 's'}.
-            </Text>
+            <Text style={styles.title}>{t('sos.title')}</Text>
+            <Text style={styles.body}>{t('sos.countdown', { seconds: secondsLeft })}</Text>
             <TouchableOpacity
               style={styles.primaryButton}
               onPress={() => setPinVisible(true)}
               accessibilityRole="button"
               accessibilityLabel="I am safe. Enter PIN to cancel the SOS"
             >
-              <Text style={styles.primaryButtonText}>I'M SAFE – ENTER PIN</Text>
+              <Text style={styles.primaryButtonText}>{t('sos.imSafe')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -162,8 +162,8 @@ export default function ScreamSosOverlay({ visible, onClose }: ScreamSosOverlayP
         {phase === 'sending' && (
           <View style={styles.content}>
             <ActivityIndicator size="large" color="#FFFFFF" />
-            <Text style={[styles.title, { marginTop: 18 }]}>Sharing your location…</Text>
-            <Text style={styles.body}>Alerting your parents and the police.</Text>
+            <Text style={[styles.title, { marginTop: 18 }]}>{t('sos.sending')}</Text>
+            <Text style={styles.body}>{t('sos.sendingBody')}</Text>
           </View>
         )}
 
@@ -172,16 +172,16 @@ export default function ScreamSosOverlay({ visible, onClose }: ScreamSosOverlayP
             <View style={styles.iconCircle}>
               <Ionicons name="location" size={48} color="#FFFFFF" />
             </View>
-            <Text style={styles.title}>SOS active</Text>
+            <Text style={styles.title}>{t('sos.active')}</Text>
             <Text style={styles.body}>{deliveryLine}</Text>
-            <Text style={styles.body}>Enter your SOS PIN to stop it.</Text>
+            <Text style={styles.body}>{t('sos.enterPinToStop')}</Text>
             <TouchableOpacity
               style={styles.primaryButton}
               onPress={() => setPinVisible(true)}
               accessibilityRole="button"
               accessibilityLabel="Enter PIN to stop the SOS"
             >
-              <Text style={styles.primaryButtonText}>ENTER PIN TO STOP</Text>
+              <Text style={styles.primaryButtonText}>{t('sos.enterPinButton')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => Linking.openURL('tel:112').catch(() => undefined)}
@@ -189,10 +189,10 @@ export default function ScreamSosOverlay({ visible, onClose }: ScreamSosOverlayP
               accessibilityRole="button"
               accessibilityLabel="Call 112"
             >
-              <Text style={styles.linkButtonText}>Call 112</Text>
+              <Text style={styles.linkButtonText}>{t('sos.call112')}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={onClose} style={styles.linkButton} accessibilityRole="button">
-              <Text style={styles.linkButtonSubtle}>Hide (SOS keeps running, stop it in Settings)</Text>
+              <Text style={styles.linkButtonSubtle}>{t('sos.hide')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -202,12 +202,12 @@ export default function ScreamSosOverlay({ visible, onClose }: ScreamSosOverlayP
             <View style={styles.iconCircle}>
               <Ionicons name="checkmark-circle" size={54} color="#FFFFFF" />
             </View>
-            <Text style={styles.title}>{stoppedBeforeSend ? 'SOS cancelled' : 'SOS stopped'}</Text>
+            <Text style={styles.title}>{stoppedBeforeSend ? t('sos.cancelled') : t('sos.stopped')}</Text>
             <Text style={styles.body}>
-              {stoppedBeforeSend ? 'Glad you are safe.' : 'Location sharing has ended.'}
+              {stoppedBeforeSend ? t('sos.cancelledBody') : t('sos.stoppedBody')}
             </Text>
             <TouchableOpacity style={styles.primaryButton} onPress={onClose} accessibilityRole="button">
-              <Text style={[styles.primaryButtonText, { color: '#0F7B4F' }]}>DONE</Text>
+              <Text style={[styles.primaryButtonText, { color: '#0F7B4F' }]}>{t('sos.done')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -217,33 +217,33 @@ export default function ScreamSosOverlay({ visible, onClose }: ScreamSosOverlayP
             <View style={styles.iconCircle}>
               <Ionicons name="alert-circle" size={54} color="#FFFFFF" />
             </View>
-            <Text style={styles.title}>SOS not sent</Text>
+            <Text style={styles.title}>{t('sos.notSent')}</Text>
             <Text style={styles.body}>{failure}</Text>
-            <Text style={styles.body}>If you are in danger, call 112 now.</Text>
+            <Text style={styles.body}>{t('sos.inDanger')}</Text>
             <TouchableOpacity
               style={styles.primaryButton}
               onPress={() => Linking.openURL('tel:112').catch(() => undefined)}
               accessibilityRole="button"
               accessibilityLabel="Call 112"
             >
-              <Text style={styles.primaryButtonText}>CALL 112</Text>
+              <Text style={styles.primaryButtonText}>{t('sos.call112').toUpperCase()}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={onClose} style={styles.linkButton}>
-              <Text style={styles.linkButtonText}>Close</Text>
+              <Text style={styles.linkButtonText}>{t('common.close')}</Text>
             </TouchableOpacity>
           </View>
         )}
 
         <PinPromptModal
           visible={visible && pinVisible && (phase === 'countdown' || phase === 'sent')}
-          title={phase === 'countdown' ? 'Are you safe?' : 'Enter your SOS PIN'}
+          title={phase === 'countdown' ? t('sos.pinTitleCountdown') : t('sos.pinTitleActive')}
           message={
             phase === 'countdown'
-              ? `Enter the PIN you set up to cancel. Otherwise your location is shared in ${secondsLeft}s.`
-              : 'Your location is being shared with your parents and the police. Enter the PIN you set up to stop the SOS.'
+              ? t('sos.pinMsgCountdown', { seconds: secondsLeft })
+              : t('sos.pinMsgActive')
           }
-          confirmLabel={phase === 'countdown' ? 'Cancel SOS' : 'Stop SOS'}
-          dismissLabel="Back"
+          confirmLabel={phase === 'countdown' ? t('sos.cancelSos') : t('sos.stopSos')}
+          dismissLabel={t('sos.back')}
           onSubmit={phase === 'countdown' ? submitDuringCountdown : submitAfterSend}
           onDismiss={() => setPinVisible(false)}
         />

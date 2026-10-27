@@ -33,6 +33,7 @@ from track_router import router as track_router
 from checkin_router import router as checkin_router
 from safety_router import router as safety_router
 from police_router import router as police_router
+from nav_router import router as nav_router
 from escalation import run_escalation_loop
 from live import broker
 from rate_limiter import limiter
@@ -137,7 +138,7 @@ async def unhandled_error(request: Request, exc: Exception):
 # police_router first: its /api/v1/alerts/mine must win over /api/v1/alerts/{alert_id}
 for r in (police_router, auth_router, contacts_router, route_router, walk_router, alerts_router, guardian_router,
           evidence_router, ratings_router, dashboard_router, report_router, scream_router, track_router,
-          checkin_router, safety_router):
+          checkin_router, safety_router, nav_router):
     app.include_router(r)
 
 # Community buddy matching, server-side risk and media relay need PostgreSQL/PostGIS

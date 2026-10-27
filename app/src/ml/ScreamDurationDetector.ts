@@ -2,7 +2,7 @@
  * Sustained-scream trigger: fires only when the scream model keeps hearing a scream
  * for about 3 seconds, so a single shout, a horn or a door slam never starts an SOS.
  *
- * Fed one model score per hop (every ~250 ms the latest 0.975 s window is classified).
+ * Fed one model score per hop (every ~500 ms the latest 1 s of audio is classified).
  * Short dips below the threshold, such as a breath between screams, are bridged by
  * `maxGapMs`; a longer quiet stretch ends the run and the count starts again.
  */
@@ -45,14 +45,15 @@ export class ScreamDurationDetector {
    * @param probability model score for the window ending at `nowMs`
    * @param nowMs       timestamp of the hop in milliseconds
    * @param hopMs       time since the previous hop (the new audio this window adds)
+   * @param threshold   score that counts as a scream for the engine that produced it
    */
-  push(probability: number, nowMs: number, hopMs: number): ScreamDetectorStatus {
+  push(probability: number, nowMs: number, hopMs: number, threshold = this.opts.threshold): ScreamDetectorStatus {
     if (nowMs < this.cooldownUntil) {
       this.runStart = null;
       return { sustainedMs: 0, triggered: false };
     }
 
-    const screaming = probability >= this.opts.threshold;
+    const screaming = probability >= threshold;
 
     if (screaming) {
       // Start a new run, or continue the current one if the gap was only a breath

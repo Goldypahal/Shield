@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme';
+import { useI18n } from '../../i18n';
 import PinPromptModal from '../common/PinPromptModal';
 import {
   Checkin, activeCheckin, confirmCheckin, extendCheckin, sendCheckinLocation, startCheckin,
@@ -14,8 +15,9 @@ const CHOICES = [15, 30, 45, 60, 90];
  * "I should be home by…" timer. The countdown runs on the server, so guardians are
  * alerted even if this phone dies or is taken. Stopping or extending it needs the PIN.
  */
-export default function CheckinCard() {
+export default function CheckinCard({ style }: { style?: object } = {}) {
   const { colors, typography, radii } = useTheme();
+  const { t } = useI18n();
   const [timer, setTimer] = useState<Checkin | null>(null);
   const [now, setNow] = useState(Date.now());
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -46,7 +48,7 @@ export default function CheckinCard() {
     try {
       setTimer(await startCheckin(minutes, label.trim() || undefined));
     } catch (e) {
-      setError(authErrorMessage(e, 'Could not start the timer. Check your connection.'));
+      setError(authErrorMessage(e, t('checkin.startError')));
     }
   };
 
@@ -70,19 +72,19 @@ export default function CheckinCard() {
   const urgent = timer !== null && secondsLeft < 120;
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: urgent ? colors.sosPrimary : colors.border, borderRadius: radii.lg }]}>
+    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: urgent ? colors.sosPrimary : colors.border, borderRadius: radii.lg }, style]}>
       <View style={styles.row}>
         <View style={[styles.icon, { backgroundColor: colors.surfaceSecondary }]}>
           <Ionicons name="timer-outline" size={22} color={urgent ? colors.sosPrimary : colors.brandAccent} />
         </View>
         <View style={{ flex: 1, marginLeft: 12 }}>
           <Text style={[typography.h4, { color: colors.textPrimary }]}>
-            {timer ? `Check in within ${mmss}` : 'Check-in timer'}
+            {timer ? t('checkin.within', { time: mmss }) : t('checkin.title')}
           </Text>
           <Text style={[typography.bodySmall, { color: colors.textSecondary }]} numberOfLines={2}>
             {timer
-              ? `${timer.label ? `${timer.label} · ` : ''}If you don't, your guardians are alerted with your last location.`
-              : "Going somewhere? If you don't check in on time, guardians are alerted automatically."}
+              ? `${timer.label ? `${timer.label} · ` : ''}${t('checkin.activeBody')}`
+              : t('checkin.idleBody')}
           </Text>
         </View>
       </View>
@@ -90,17 +92,17 @@ export default function CheckinCard() {
         <View style={[styles.row, { marginTop: 10 }]}>
           <TouchableOpacity style={[styles.btn, { backgroundColor: colors.statusSuccess }]} onPress={() => setPinFor('confirm')}
             accessibilityRole="button" accessibilityLabel="I am safe, stop the timer with PIN">
-            <Text style={[typography.button, { color: '#FFFFFF' }]}>I'm safe</Text>
+            <Text style={[typography.button, { color: '#FFFFFF' }]}>{t('checkin.safe')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.btn, { backgroundColor: colors.surfaceSecondary, marginLeft: 8 }]} onPress={() => setPinFor('extend')}
             accessibilityRole="button" accessibilityLabel="Add 10 minutes with PIN">
-            <Text style={[typography.button, { color: colors.textPrimary }]}>+10 min</Text>
+            <Text style={[typography.button, { color: colors.textPrimary }]}>{t('checkin.add10')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <TouchableOpacity style={[styles.btn, { backgroundColor: colors.brandAccent, marginTop: 10 }]} onPress={() => setPickerOpen(true)}
           accessibilityRole="button" accessibilityLabel="Start a check-in timer">
-          <Text style={[typography.button, { color: '#FFFFFF' }]}>Start timer</Text>
+          <Text style={[typography.button, { color: '#FFFFFF' }]}>{t('checkin.start')}</Text>
         </TouchableOpacity>
       )}
       {error && <Text style={[typography.caption, { color: colors.sosPrimary, marginTop: 6 }]}>{error}</Text>}
@@ -108,8 +110,8 @@ export default function CheckinCard() {
       <Modal visible={pickerOpen} transparent animationType="fade" onRequestClose={() => setPickerOpen(false)}>
         <View style={styles.backdrop}>
           <View style={[styles.sheet, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radii.xl }]}>
-            <Text style={[typography.h3, { color: colors.textPrimary }]}>I should be safe in…</Text>
-            <TextInput value={label} onChangeText={setLabel} maxLength={60} placeholder="Where to? (optional, e.g. Home)"
+            <Text style={[typography.h3, { color: colors.textPrimary }]}>{t('checkin.pickerTitle')}</Text>
+            <TextInput value={label} onChangeText={setLabel} maxLength={60} placeholder={t('checkin.labelPlaceholder')}
               placeholderTextColor={colors.textMuted}
               style={[styles.input, typography.bodyMedium, { color: colors.textPrimary, borderColor: colors.border, borderRadius: radii.lg }]} />
             <View style={styles.choices}>
@@ -117,12 +119,12 @@ export default function CheckinCard() {
                 <TouchableOpacity key={m} style={[styles.choice, { borderColor: colors.brandAccent, borderRadius: radii.lg }]} onPress={() => start(m)}
                   accessibilityRole="button" accessibilityLabel={`${m} minutes`}>
                   <Text style={[typography.h4, { color: colors.brandAccent }]}>{m}</Text>
-                  <Text style={[typography.caption, { color: colors.textSecondary }]}>min</Text>
+                  <Text style={[typography.caption, { color: colors.textSecondary }]}>{t('common.min')}</Text>
                 </TouchableOpacity>
               ))}
             </View>
             <TouchableOpacity onPress={() => setPickerOpen(false)} style={{ alignItems: 'center', paddingTop: 12 }}>
-              <Text style={[typography.button, { color: colors.textSecondary }]}>Cancel</Text>
+              <Text style={[typography.button, { color: colors.textSecondary }]}>{t('checkin.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -130,9 +132,9 @@ export default function CheckinCard() {
 
       <PinPromptModal
         visible={pinFor !== null}
-        title={pinFor === 'confirm' ? "Confirm you're safe" : 'Add 10 minutes'}
-        message="Enter your SOS PIN."
-        confirmLabel={pinFor === 'confirm' ? "I'm safe" : 'Add time'}
+        title={pinFor === 'confirm' ? t('checkin.confirmTitle') : t('checkin.addTitle')}
+        message={t('checkin.pinMessage')}
+        confirmLabel={pinFor === 'confirm' ? t('checkin.safe') : t('checkin.addTime')}
         onSubmit={onPin}
         onDismiss={() => setPinFor(null)}
       />

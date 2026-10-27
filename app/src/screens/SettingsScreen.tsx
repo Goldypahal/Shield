@@ -24,6 +24,8 @@ import { DiscreetSettings, getDiscreetSettings, updateDiscreetSettings } from '.
 import { getActiveSos, stopActiveSos } from '../services/sosSession';
 import { getPoliceSharing, setPoliceSharing } from '../services/policeService';
 import IncidentHistoryModal from '../components/settings/IncidentHistoryModal';
+import LanguagePicker from '../components/common/LanguagePicker';
+import { useI18n } from '../i18n';
 
 interface SettingsScreenProps {
   onNavigateToContacts?: () => void;
@@ -31,6 +33,8 @@ interface SettingsScreenProps {
 
 export default function SettingsScreen({ onNavigateToContacts }: SettingsScreenProps) {
   const { colors, typography, isDark, mode, radii } = useTheme();
+  const { t, language } = useI18n();
+  const [languageVisible, setLanguageVisible] = useState(false);
 
   const [themeModalVisible, setThemeModalVisible] = useState(false);
   const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
@@ -154,6 +158,13 @@ export default function SettingsScreen({ onNavigateToContacts }: SettingsScreenP
 
         <View style={styles.sectionContainer}>
           <SettingsRow
+            iconName="language-outline"
+            title={t('lang.title')}
+            subtitle={`${language.native} · ${language.english}`}
+            onPress={() => setLanguageVisible(true)}
+          />
+
+          <SettingsRow
             iconName="people-outline"
             title="Trusted Contacts"
             subtitle={`Manage your ${contactCount} emergency contacts`}
@@ -203,8 +214,8 @@ export default function SettingsScreen({ onNavigateToContacts }: SettingsScreenP
 
           <SettingsRow
             iconName="mic-outline"
-            title="Scream detection"
-            subtitle={discreet.screamToSos ? 'On: a 3-second scream starts a 10-second SOS countdown' : 'Off'}
+            title={t('settings.scream')}
+            subtitle={discreet.screamToSos ? t('settings.screamOn') : t('common.off')}
             onPress={() => toggleDiscreet('screamToSos')}
           />
 
@@ -277,6 +288,7 @@ export default function SettingsScreen({ onNavigateToContacts }: SettingsScreenP
       />
 
       <IncidentHistoryModal visible={historyVisible} onClose={() => setHistoryVisible(false)} />
+      <LanguagePicker visible={languageVisible} onClose={() => setLanguageVisible(false)} />
 
       <ChangePinModal
         visible={pinModalVisible}
