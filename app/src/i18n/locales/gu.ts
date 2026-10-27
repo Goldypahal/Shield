@@ -114,6 +114,8 @@ const gu: Translation = {
   'hl.1363.desc': 'પ્રવાસીઓ માટે ઘણી ભાષાઓમાં મદદ',
 
   'sos.screamDetected': 'ચીસ સંભળાઈ',
+
+  'sos.fallDetected': 'પડવું શોધાયું',
   'sos.title': 'ઇમરજન્સી SOS',
   'sos.countdown': '{seconds} સેકન્ડમાં તમારું લાઇવ લોકેશન તમારા માતા-પિતા અને પોલીસને મોકલવામાં આવશે.',
   'sos.imSafe': 'હું સુરક્ષિત છું – PIN નાખો',
@@ -161,6 +163,12 @@ const gu: Translation = {
 
   'settings.scream': 'ચીસ ઓળખ',
   'settings.screamOn': 'ચાલુ: 3 સેકન્ડની ચીસથી 10 સેકન્ડનું SOS કાઉન્ટડાઉન શરૂ થાય છે',
+  'settings.screamBg': 'બેકગ્રાઉન્ડમાં સાંભળો',
+  'settings.screamBgOn': 'ચાલુ: સ્ક્રીન બંધ હોય ત્યારે પણ સાંભળે છે; એક સૂચના દેખાય છે',
+
+  'settings.fall': 'પડવાની ઓળખ',
+
+  'settings.fallOn': 'ચાલુ: પડ્યા પછી સ્થિર રહેવાથી 10 સેકન્ડનું SOS કાઉન્ટડાઉન શરૂ થાય છે (ઍપ ખુલ્લી હોય ત્યારે)',
 
   'nav.from': 'ક્યાંથી',
   'nav.to': 'ક્યાં જવું છે?',

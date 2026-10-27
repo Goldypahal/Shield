@@ -22,6 +22,8 @@ import BottomNavigation, { TabKey } from './src/components/common/BottomNavigati
 import SosOverlay from './src/components/common/SosOverlay';
 import ScreamSosOverlay from './src/components/common/ScreamSosOverlay';
 import { useScreamTrigger } from './src/hooks/useScreamTrigger';
+import { useFallTrigger } from './src/hooks/useFallTrigger';
+import ScreamSosController from './src/services/screamSosController';
 
 import NotificationService from './src/services/notificationService';
 
@@ -29,31 +31,16 @@ import NotificationService from './src/services/notificationService';
  * Owns the microphone for scream detection. Kept as its own render-less component because
  * the recorder updates state on every audio chunk; this keeps those re-renders out of the shell.
  */
-function ScreamListener({ enabled, onScream }: { enabled: boolean; onScream: () => void }) {
-  useScreamTrigger(onScream, enabled);
+function ScreamListener({ enabled, background, onScream }: { enabled: boolean; background: boolean; onScream: () => void }) {
+  useScreamTrigger(onScream, enabled, { background });
   return null;
 }
 
-// Mock default session so login is not required for now
-const DEFAULT_GUEST_SESSION: Session = {
-  user: {
-    id: 'user_heimdal_1',
-    email: 'user@heimdal.app',
-    name: 'Heimdal User',
-    phone: '+91 98765 43210',
-    initials: 'HU',
-  },
-  tokens: {
-    access: 'dev_guest_access_token',
-    refresh: 'dev_guest_refresh_token',
-  },
-  emergencyContacts: [],
-  discreet: {
-    screamToSos: true,
-    calculatorDisguise: false,
-    alertPoliceOnSos: false,
-  },
-} as any;
+/** Owns the motion sensors for fall detection (render-less, like ScreamListener). */
+function FallListener({ enabled, onFall }: { enabled: boolean; onFall: () => void }) {
+  useFallTrigger(onFall, enabled);
+  return null;
+}
 
 type ActiveView = 'Splash' | 'Home' | 'LiveLocation' | 'SafeRoutes' | 'Settings' | 'Contacts' | 'FakeCall' | 'Helplines';
 
@@ -61,8 +48,9 @@ function HeimdalMain() {
   const { colors, isDark, mode, setMode } = useTheme();
   const [currentView, setCurrentView] = useState<ActiveView>('Splash');
   const [activeTab, setActiveTab] = useState<TabKey>('Home');
-  // Default to guest session so login page is removed for now
-  const [session, setSession] = useState<Session | null | undefined>(DEFAULT_GUEST_SESSION);
+  // undefined while the stored session loads; null means signed out. A real account is
+  // needed: the SOS is sent for it, to its guardians, and stopped with the PIN set at sign-up.
+  const [session, setSession] = useState<Session | null | undefined>(undefined);
   // Calculator disguise: shown at launch and whenever the app returns from the background
   const [disguised, setDisguised] = useState(false);
   const [pendingInviteId, setPendingInviteId] = useState<string | undefined>(undefined);
@@ -70,15 +58,23 @@ function HeimdalMain() {
   // Hidden navbar while a fake call is ringing/in progress, so the simulation holds up
   const [callActive, setCallActive] = useState(false);
   // Scream detection: ~3 s of screaming opens the 10 s SOS countdown, then the PIN dialog
-  const [screamSosVisible, setScreamSosVisible] = useState(false);
+  const [screamSosPhase, setScreamSosPhase] = useState(ScreamSosController.getState().phase);
   const [screamDetection, setScreamDetection] = useState(true);
+  const [screamInBackground, setScreamInBackground] = useState(true);
+  const [fallDetection, setFallDetection] = useState(true);
   const [appActive, setAppActive] = useState(AppState.currentState === 'active' || Platform.OS === 'web');
 
   useEffect(() => {
-    getDiscreetSettings().then((d) => setScreamDetection(d.screamToSos)).catch(() => undefined);
-    const unsubscribe = onDiscreetSettingsChange((d) => setScreamDetection(d.screamToSos));
+    const apply = (d: { screamToSos: boolean; screamInBackground: boolean; fallToSos: boolean }) => {
+      setScreamDetection(d.screamToSos);
+      setScreamInBackground(d.screamInBackground);
+      setFallDetection(d.fallToSos);
+    };
+    getDiscreetSettings().then(apply).catch(() => undefined);
+    const unsubscribe = onDiscreetSettingsChange(apply);
+    const unsubscribeSos = ScreamSosController.subscribe((st) => setScreamSosPhase(st.phase));
     const sub = AppState.addEventListener('change', (state) => setAppActive(state === 'active'));
-    return () => { unsubscribe(); sub.remove(); };
+    return () => { unsubscribe(); unsubscribeSos(); sub.remove(); };
   }, []);
 
   // Handle guardian invitation deep links (?invite=<id> or /invite/<id>)
@@ -117,7 +113,10 @@ function HeimdalMain() {
   }, []);
 
   useEffect(() => {
-    AuthService.ensureSession().then(setSession).catch(() => setSession(null));
+    AuthService.ensureSession()
+      .then(async (s) => s ?? (await AuthService.devAutoSignIn()))
+      .then(setSession)
+      .catch(() => setSession(null));
     return AuthService.onSessionChange((s) => {
       setSession(s);
       if (s) {
@@ -134,17 +133,27 @@ function HeimdalMain() {
     } catch (_) {}
   }, [session]);
 
-  // Login page disabled for now per user request
-  const signedOut = false;
-  const hidden = disguised && !!session;
-  // One navbar for the whole app shell
-  const showBottomNav = !disguised && currentView !== 'Splash' && !callActive;
+  // Every screen except the splash needs an account: SOS, guardians and the PIN belong to it.
+  // Signing in happens once; the session is kept on the phone afterwards.
+  const signedOut = currentView !== 'Splash' && session === null;
+  const hidden = (disguised && !!session) || signedOut;
+  // One navbar for the whole app shell: not on the splash, sign-in, disguise or a fake call
+  const showBottomNav = !!session && !disguised && currentView !== 'Splash' && !callActive;
 
-  // The microphone is released while any SOS is on screen, during a fake call (it records
-  // its own audio) and while the app is in the background.
+  // Listens only for a signed-in walker (the SOS is sent for the account). With background
+  // listening on, the microphone stays on when the app is left (Android shows a permanent
+  // notification); it can only be started while the app is open. It keeps running during
+  // the scream countdown so the countdown can advance with the screen off, and is released
+  // once an SOS is being sent or shown, and during a fake call (it records its own audio).
+  const screamSosBusy = screamSosPhase === 'sending' || screamSosPhase === 'sent' || screamSosPhase === 'error';
   const listenForScreams =
-    screamDetection && appActive &&
-    !sosVisible && !screamSosVisible && !callActive && currentView !== 'FakeCall';
+    screamDetection && !!session && (appActive || screamInBackground) &&
+    !sosVisible && !screamSosBusy && !callActive && currentView !== 'FakeCall';
+
+  // Fall detection: motion sensors only reach the app while it is open, so it runs then.
+  const watchForFalls =
+    fallDetection && !!session && appActive && screamSosPhase === 'idle' &&
+    !sosVisible && !callActive && currentView !== 'FakeCall';
 
   const handleTabPress = (tab: TabKey) => {
     setActiveTab(tab);
@@ -292,6 +301,8 @@ function HeimdalMain() {
           />
         )}
 
+        {signedOut && <AuthScreen />}
+
         {!hidden && currentView === 'Splash' && (
           <SplashScreen
             onContinue={() => {
@@ -368,8 +379,9 @@ function HeimdalMain() {
       </View>
 
       <SosOverlay visible={sosVisible} onClose={() => setSosVisible(false)} />
-      <ScreamSosOverlay visible={screamSosVisible} onClose={() => setScreamSosVisible(false)} />
-      <ScreamListener enabled={listenForScreams} onScream={() => setScreamSosVisible(true)} />
+      <ScreamSosOverlay />
+      <ScreamListener enabled={listenForScreams} background={screamInBackground} onScream={() => ScreamSosController.start('AUDIO_DISTRESS')} />
+      <FallListener enabled={watchForFalls} onFall={() => ScreamSosController.start('FALL')} />
     </View>
   );
 }

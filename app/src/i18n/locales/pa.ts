@@ -114,6 +114,8 @@ const pa: Translation = {
   'hl.1363.desc': 'ਸੈਲਾਨੀਆਂ ਲਈ ਕਈ ਭਾਸ਼ਾਵਾਂ ਵਿੱਚ ਮਦਦ',
 
   'sos.screamDetected': 'ਚੀਕ ਸੁਣੀ ਗਈ',
+
+  'sos.fallDetected': 'ਡਿੱਗਣ ਦਾ ਪਤਾ ਲੱਗਿਆ',
   'sos.title': 'ਐਮਰਜੈਂਸੀ SOS',
   'sos.countdown': '{seconds} ਸਕਿੰਟਾਂ ਵਿੱਚ ਤੁਹਾਡੀ ਲਾਈਵ ਲੋਕੇਸ਼ਨ ਤੁਹਾਡੇ ਮਾਪਿਆਂ ਅਤੇ ਪੁਲਿਸ ਨੂੰ ਭੇਜੀ ਜਾਵੇਗੀ।',
   'sos.imSafe': 'ਮੈਂ ਸੁਰੱਖਿਅਤ ਹਾਂ – PIN ਪਾਓ',
@@ -161,6 +163,12 @@ const pa: Translation = {
 
   'settings.scream': 'ਚੀਕ ਦੀ ਪਛਾਣ',
   'settings.screamOn': 'ਚਾਲੂ: 3 ਸਕਿੰਟਾਂ ਦੀ ਚੀਕ ਤੇ 10 ਸਕਿੰਟਾਂ ਦਾ SOS ਕਾਊਂਟਡਾਊਨ ਸ਼ੁਰੂ ਹੁੰਦਾ ਹੈ',
+  'settings.screamBg': 'ਬੈਕਗ੍ਰਾਊਂਡ ਵਿੱਚ ਸੁਣੋ',
+  'settings.screamBgOn': 'ਚਾਲੂ: ਸਕ੍ਰੀਨ ਬੰਦ ਹੋਣ ਤੇ ਵੀ ਸੁਣਦਾ ਹੈ; ਇੱਕ ਸੂਚਨਾ ਦਿਖਦੀ ਹੈ',
+
+  'settings.fall': 'ਡਿੱਗਣ ਦੀ ਪਛਾਣ',
+
+  'settings.fallOn': 'ਚਾਲੂ: ਡਿੱਗ ਕੇ ਸਥਿਰ ਰਹਿਣ ਤੇ 10 ਸਕਿੰਟਾਂ ਦਾ SOS ਕਾਊਂਟਡਾਊਨ ਸ਼ੁਰੂ ਹੁੰਦਾ ਹੈ (ਐਪ ਖੁੱਲ੍ਹੀ ਹੋਵੇ ਤਾਂ)',
 
   'nav.from': 'ਕਿੱਥੋਂ',
   'nav.to': 'ਕਿੱਥੇ ਜਾਣਾ ਹੈ?',

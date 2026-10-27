@@ -16,6 +16,7 @@ import HelplineRow from '../components/common/HelplineRow';
 import LanguagePicker from '../components/common/LanguagePicker';
 import PinPromptModal from '../components/common/PinPromptModal';
 import CheckinCard from '../components/home/CheckinCard';
+import { screamDetectionAvailable } from '../hooks/useScreamTrigger';
 
 interface HomeScreenProps {
   onNavigate: (destination: string) => void;
@@ -58,7 +59,7 @@ export default function HomeScreen({ onNavigate }: HomeScreenProps) {
   const guardianCount = contacts?.length ?? 0;
   // on: true = good, false = needs attention, null = unknown or optional-and-off (grey)
   const statusItems: { label: string; on: boolean | null; value: string }[] = [
-    { label: t('home.status.scream'), on: discreet ? discreet.screamToSos : null, value: discreet?.screamToSos ? t('common.on') : t('common.off') },
+    { label: t('home.status.scream'), on: discreet ? discreet.screamToSos && screamDetectionAvailable : null, value: discreet?.screamToSos && screamDetectionAvailable ? t('common.on') : t('common.off') },
     { label: t('home.status.location'), on: locationOk, value: locationOk ? t('home.status.allowed') : t('home.status.blocked') },
     { label: t('home.status.guardians'), on: contacts ? guardianCount > 0 : null, value: String(guardianCount) },
     { label: t('home.status.shake'), on: discreet?.shakeToSos ? true : null, value: discreet?.shakeToSos ? t('common.on') : t('common.off') },

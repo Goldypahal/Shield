@@ -43,7 +43,7 @@ export default function SettingsScreen({ onNavigateToContacts }: SettingsScreenP
   const [session, setSession] = useState<Session | null>(null);
   const [pinModalVisible, setPinModalVisible] = useState(false);
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
-  const [discreet, setDiscreet] = useState<DiscreetSettings>({ calculatorDisguise: false, shakeToSos: false, screamToSos: true });
+  const [discreet, setDiscreet] = useState<DiscreetSettings>({ calculatorDisguise: false, shakeToSos: false, screamToSos: true, screamInBackground: true, fallToSos: true });
   const [sosRunning, setSosRunning] = useState(false);
   const [stopPinVisible, setStopPinVisible] = useState(false);
   const [policeSharing, setPoliceSharingState] = useState<boolean | null>(null);
@@ -217,6 +217,22 @@ export default function SettingsScreen({ onNavigateToContacts }: SettingsScreenP
             title={t('settings.scream')}
             subtitle={discreet.screamToSos ? t('settings.screamOn') : t('common.off')}
             onPress={() => toggleDiscreet('screamToSos')}
+          />
+
+          {discreet.screamToSos && (
+            <SettingsRow
+              iconName="moon-outline"
+              title={t('settings.screamBg')}
+              subtitle={discreet.screamInBackground ? t('settings.screamBgOn') : t('common.off')}
+              onPress={() => toggleDiscreet('screamInBackground')}
+            />
+          )}
+
+          <SettingsRow
+            iconName="body-outline"
+            title={t('settings.fall')}
+            subtitle={discreet.fallToSos ? t('settings.fallOn') : t('common.off')}
+            onPress={() => toggleDiscreet('fallToSos')}
           />
 
           <SettingsRow

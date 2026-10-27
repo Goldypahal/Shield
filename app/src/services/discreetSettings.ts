@@ -4,16 +4,22 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  * Discreet-SOS preferences. The app can open as a working calculator (typing the SOS PIN
  * and "=" unlocks it; the duress PIN and "=" sends a silent SOS), and shaking the phone
  * can start the SOS countdown. Both are off by default. Scream detection (a ~3 s scream
- * starts the 10 s SOS countdown) is on by default and can be turned off.
+ * starts the 10 s SOS countdown) is on by default and can be turned off. It keeps
+ * listening when the app is in the background (screamInBackground), shown by a permanent
+ * notification, unless the walker turns that off.
  */
 export interface DiscreetSettings {
   calculatorDisguise: boolean;
   shakeToSos: boolean;
   screamToSos: boolean;
+  /** Keep listening for screams with the app in the background or the screen off. */
+  screamInBackground: boolean;
+  /** A fall (fall model + lying still afterwards) starts the SOS countdown; app open only. */
+  fallToSos: boolean;
 }
 
 const KEY = '@shield_discreet_settings';
-const DEFAULTS: DiscreetSettings = { calculatorDisguise: false, shakeToSos: false, screamToSos: true };
+const DEFAULTS: DiscreetSettings = { calculatorDisguise: false, shakeToSos: false, screamToSos: true, screamInBackground: true, fallToSos: true };
 const listeners = new Set<(s: DiscreetSettings) => void>();
 
 export async function getDiscreetSettings(): Promise<DiscreetSettings> {

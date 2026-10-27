@@ -1,0 +1,26 @@
+{
+  "threshold": 0.9879549145698547,
+  "test_window_auc": 0.9999999403953552,
+  "test_window_sensitivity": 0.9933333333333333,
+  "test_window_specificity": 1.0,
+  "test_stream": {
+    "falls": 150,
+    "falls_caught": 149,
+    "sensitivity": 0.9933333333333333,
+    "false_alarms": 0,
+    "adl_hours": 0.9943222222222221,
+    "false_alarms_per_hour": 0.0
+  },
+  "test_people": [
+    "sis_SA06",
+    "sis_SA10"
+  ],
+  "recordings": {
+    "sis": [
+      947,
+      900
+    ]
+  },
+  "tflite_max_diff": 5.820766091346741e-09,
+  "tflite_kb": 153
+}
