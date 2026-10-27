@@ -1,8 +1,23 @@
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
-import { useAudioRecorder, AudioStudioModule, AudioDataEvent } from '@siteed/audio-studio';
+import type { AudioDataEvent, UseAudioRecorderState } from '@siteed/audio-studio';
+import { optionalNative } from '../utils/nativeModules';
 import audioClassifier, { AudioClassifier } from '../ml/AudioClassifier';
 import { ScreamDurationDetector } from '../ml/ScreamDurationDetector';
+
+// The microphone stream needs native code that Expo Go lacks; without it scream detection is off.
+const audioStudio = optionalNative(
+  () => require('@siteed/audio-studio') as typeof import('@siteed/audio-studio'),
+  'Microphone streaming (@siteed/audio-studio)',
+);
+export const screamDetectionAvailable = audioStudio !== null;
+
+const noRecorder = (): Pick<UseAudioRecorderState, 'startRecording' | 'stopRecording'> => ({
+  startRecording: async () => { throw new Error('Microphone streaming needs a development build'); },
+  stopRecording: async () => { throw new Error('not recording'); },
+});
+// Chosen once at load time, so the hook order never changes between renders
+const useRecorder = audioStudio ? audioStudio.useAudioRecorder : noRecorder;
 
 const SAMPLE_RATE = 16000;
 const HOP_MS = 500;
@@ -40,14 +55,14 @@ export interface ScreamTriggerOptions {
  * `enabled` turns false, so pass false while an SOS, a call or other recording runs.
  */
 export function useScreamTrigger(onScream: () => void, enabled: boolean, options: ScreamTriggerOptions = {}) {
-  const { startRecording, stopRecording } = useAudioRecorder();
+  const { startRecording, stopRecording } = useRecorder();
   const onScreamRef = useRef(onScream);
   const onProgressRef = useRef(options.onProgress);
   onScreamRef.current = onScream;
   onProgressRef.current = options.onProgress;
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !audioStudio) return;
     let stopped = false;
     let started = false;
     let busy = false;
@@ -89,7 +104,7 @@ export function useScreamTrigger(onScream: () => void, enabled: boolean, options
     (async () => {
       try {
         if (Platform.OS !== 'web') {
-          const perm = await AudioStudioModule.requestPermissionsAsync();
+          const perm = await audioStudio.AudioStudioModule.requestPermissionsAsync();
           if (!perm?.granted) {
             console.warn('[ScreamTrigger] Microphone permission denied; scream detection is off.');
             return;
