@@ -75,6 +75,22 @@ export default function SosButton({ onShowToast }: SosButtonProps) {
     }, 2000);
   };
 
+  const handlePress = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    setIsHolding(false);
+    progressAnim.setValue(0);
+    setSosState('countdown');
+    setShowOverlay(true);
+    if (Platform.OS !== 'web') {
+      try {
+        Vibration.vibrate(50);
+      } catch (_) {}
+    }
+  };
+
   const handlePressOut = () => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
@@ -83,7 +99,6 @@ export default function SosButton({ onShowToast }: SosButtonProps) {
     if (isHolding) {
       setIsHolding(false);
       setSosState('idle');
-      onShowToast?.('Hold for 2 seconds to trigger SOS');
     }
     Animated.timing(progressAnim, {
       toValue: 0,
@@ -119,9 +134,10 @@ export default function SosButton({ onShowToast }: SosButtonProps) {
         style={styles.sosButton}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        activeOpacity={0.9}
+        onPress={handlePress}
+        activeOpacity={0.8}
         accessibilityRole="button"
-        accessibilityLabel="Emergency SOS button. Press and hold for 2 seconds to send an emergency alert."
+        accessibilityLabel="Emergency SOS button. Tap or hold to send an emergency alert."
       >
         {/* Inner white ring */}
         <View style={styles.innerWhiteRing}>

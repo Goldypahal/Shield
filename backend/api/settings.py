@@ -123,6 +123,13 @@ RETENTION_DAYS = int(os.environ.get("RETENTION_DAYS", "90"))
 # Secret for pseudonymising user ids in community data (ratings, hazards); derived from the JWT secret if unset.
 PSEUDONYM_SECRET = os.environ.get("PSEUDONYM_SECRET", "") or JWT_SECRET
 
+# Signing key for Bluetooth-relayed SOS packets (the no-network path). The app ships
+# the same value, so it is only as secret as the app bundle: set BLE_RELAY_SECRET to a
+# dedicated random value so a leaked app bundle cannot also sign this server's JWTs.
+BLE_RELAY_SECRET = os.environ.get("BLE_RELAY_SECRET", "") or PSEUDONYM_SECRET
+if not os.environ.get("BLE_RELAY_SECRET"):
+    logger.warning("BLE_RELAY_SECRET not set; reusing the pseudonym/JWT secret for BLE relay signatures")
+
 # CARTO basemaps. Tile keys are visible to every browser that loads the map, so
 # restrict this key to your domains in the CARTO dashboard.
 CARTO_API_KEY = os.environ.get("CARTO_API_KEY", "")

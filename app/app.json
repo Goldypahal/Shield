@@ -18,7 +18,9 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "SHIELD uses your location to plan safer routes, share your walk with guardians and send it with an SOS.",
         "NSMicrophoneUsageDescription": "SHIELD listens for a sustained scream so it can start an SOS for you, also when the app is in the background if you allow it. Audio is analysed on your phone and is not stored.",
-        "NSMotionUsageDescription": "SHIELD uses motion to detect a fall (and a shake, if you turn that on) so it can start an SOS for you."
+        "NSMotionUsageDescription": "SHIELD uses motion to detect a fall (and a shake, if you turn that on) so it can start an SOS for you.",
+        "NSBluetoothAlwaysUsageDescription": "When you have no signal, SHIELD can hand your SOS to a nearby SHIELD phone over Bluetooth so it can be relayed to your guardians. It can also carry a nearby SOS to the network for someone else.",
+        "NSBluetoothPeripheralUsageDescription": "SHIELD broadcasts your SOS over Bluetooth while you have no signal, so a nearby SHIELD phone can relay it."
       }
     },
     "android": {
@@ -70,7 +72,17 @@
         }
       ],
       "react-native-fast-tflite",
-      "@maplibre/maplibre-react-native"
+      "@maplibre/maplibre-react-native",
+      [
+        "munim-bluetooth",
+        {
+          "androidBluetoothPermissions": [
+            "scan",
+            "connect",
+            "advertise"
+          ]
+        }
+      ]
     ],
     "icon": "./assets/images/icon.png",
     "splash": {

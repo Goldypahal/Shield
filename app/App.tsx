@@ -24,8 +24,12 @@ import ScreamSosOverlay from './src/components/common/ScreamSosOverlay';
 import { useScreamTrigger } from './src/hooks/useScreamTrigger';
 import { useFallTrigger } from './src/hooks/useFallTrigger';
 import ScreamSosController from './src/services/screamSosController';
+import { useShakeTrigger } from './src/hooks/useShakeTrigger';
+import { triggerVoiceSos, onVoiceSosTrigger } from './src/services/voiceTriggerHelper';
 
 import NotificationService from './src/services/notificationService';
+import OfflineQueue from './src/services/OfflineQueue';
+import { startRelayScanner, stopRelayScanner, stopSosBroadcast } from './src/services/bleRelay';
 
 /**
  * Owns the microphone for scream detection. Kept as its own render-less component because
@@ -41,6 +45,35 @@ function FallListener({ enabled, onFall }: { enabled: boolean; onFall: () => voi
   useFallTrigger(onFall, enabled);
   return null;
 }
+
+/**
+ * Listens for physical shake gestures to trigger emergency SOS.
+ */
+function ShakeListener({ enabled, onShake }: { enabled: boolean; onShake: () => void }) {
+  useShakeTrigger(onShake, enabled);
+  return null;
+}
+
+// Mock default session so login is not required for now
+const DEFAULT_GUEST_SESSION: Session = {
+  user: {
+    id: 'user_heimdal_1',
+    email: 'user@heimdal.app',
+    name: 'Heimdal User',
+    phone: '+91 98765 43210',
+    initials: 'HU',
+  },
+  tokens: {
+    access: 'dev_guest_access_token',
+    refresh: 'dev_guest_refresh_token',
+  },
+  emergencyContacts: [],
+  discreet: {
+    screamToSos: true,
+    calculatorDisguise: false,
+    alertPoliceOnSos: false,
+  },
+} as any;
 
 type ActiveView = 'Splash' | 'Home' | 'LiveLocation' | 'SafeRoutes' | 'Settings' | 'Contacts' | 'FakeCall' | 'Helplines';
 
@@ -75,6 +108,13 @@ function HeimdalMain() {
     const unsubscribeSos = ScreamSosController.subscribe((st) => setScreamSosPhase(st.phase));
     const sub = AppState.addEventListener('change', (state) => setAppActive(state === 'active'));
     return () => { unsubscribe(); unsubscribeSos(); sub.remove(); };
+  }, []);
+
+  useEffect(() => {
+    const unsub = onVoiceSosTrigger(() => {
+      setScreamSosVisible(true);
+    });
+    return unsub;
   }, []);
 
   // Handle guardian invitation deep links (?invite=<id> or /invite/<id>)
@@ -133,12 +173,29 @@ function HeimdalMain() {
     } catch (_) {}
   }, [session]);
 
-  // Every screen except the splash needs an account: SOS, guardians and the PIN belong to it.
-  // Signing in happens once; the session is kept on the phone afterwards.
-  const signedOut = currentView !== 'Splash' && session === null;
-  const hidden = (disguised && !!session) || signedOut;
-  // One navbar for the whole app shell: not on the splash, sign-in, disguise or a fake call
-  const showBottomNav = !!session && !disguised && currentView !== 'Splash' && !callActive;
+  // Bluetooth SOS relay (the no-network path): while signed in, scan for alerts that
+  // nearby phones cannot upload and carry them. Our own queued alert stops advertising
+  // the moment it reaches the server.
+  useEffect(() => {
+    if (!session) {
+      stopRelayScanner();
+      return;
+    }
+    startRelayScanner().catch(() => undefined);
+    const unsubscribe = OfflineQueue.onQueueChange((pending) => {
+      if (pending === 0) stopSosBroadcast().catch(() => undefined);
+    });
+    return () => {
+      unsubscribe();
+      stopRelayScanner();
+    };
+  }, [session]);
+
+  // Login page disabled for now per user request
+  const signedOut = false;
+  const hidden = disguised && !!session;
+  // One navbar for the whole app shell
+  const showBottomNav = !disguised && currentView !== 'Splash' && !callActive;
 
   // Listens only for a signed-in walker (the SOS is sent for the account). With background
   // listening on, the microphone stays on when the app is left (Android shows a permanent
@@ -259,6 +316,16 @@ function HeimdalMain() {
           >
             <Text style={[styles.screenPillText, { color: currentView === 'FakeCall' ? '#FFFFFF' : colors.textSecondary }]}>
               FakeCall
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.screenPill, { backgroundColor: '#EF4444', flexDirection: 'row', alignItems: 'center', gap: 3 }]}
+            onPress={() => triggerVoiceSos('dev_inspection_bar')}
+          >
+            <Ionicons name="mic" size={12} color="#FFFFFF" />
+            <Text style={[styles.screenPillText, { color: '#FFFFFF', fontWeight: '700' }]}>
+              Voice SOS
             </Text>
           </TouchableOpacity>
         </View>
@@ -382,6 +449,7 @@ function HeimdalMain() {
       <ScreamSosOverlay />
       <ScreamListener enabled={listenForScreams} background={screamInBackground} onScream={() => ScreamSosController.start('AUDIO_DISTRESS')} />
       <FallListener enabled={watchForFalls} onFall={() => ScreamSosController.start('FALL')} />
+      <ShakeListener enabled={!sosVisible && screamSosPhase === 'idle'} onShake={() => setSosVisible(true)} />
     </View>
   );
 }

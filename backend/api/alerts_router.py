@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from access import alert_for_owner, alert_for_viewer, guardian_link, staff_can_see, walk_for_owner
 from alert_states import OPEN, transition
+from ble_relay import E5, MAX_LAT_E5, MAX_LON_E5, RELAY_VERSION, verify as verify_relay_signature
 from live import broker
 import police
 from notifier import notify_guardians_of_alert
@@ -46,6 +47,38 @@ class SyncAlertPayload(BaseModel):
     @classmethod
     def _uuid(cls, v: str) -> str:
         return str(uuid.UUID(v))
+
+
+class RelayAlertPayload(BaseModel):
+    """A signed SOS packet that reached the API through a nearby phone over Bluetooth.
+
+    Names are short because the packet is assembled by hand on the radio side; `sig`
+    is an HMAC-SHA256 over the canonical form built by ble_relay.canonical(). The
+    walker's id and the alert id must be lowercase canonical UUIDs on both sides,
+    because the signature is computed over the strings as sent.
+
+    Unknown fields are rejected rather than ignored: the signature covers a fixed
+    field list, so silently accepting extra keys would let what we parsed and what
+    we verified disagree.
+    """
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    v: int = RELAY_VERSION
+    id: str
+    uid: str
+    tt: TriggerType = Field(alias="trigger_type")
+    # Coordinates as integer micro-degrees: floats are kept out of the signed bytes
+    lat_e5: int = Field(ge=-MAX_LAT_E5, le=MAX_LAT_E5)
+    lon_e5: int = Field(ge=-MAX_LON_E5, le=MAX_LON_E5)
+    pri: Literal["LOW", "MEDIUM", "HIGH"] = "HIGH"
+    ts: int
+    sig: str = Field(min_length=64, max_length=64)
+
+    @field_validator("id", "uid")
+    @classmethod
+    def _uuid(cls, v: str) -> str:
+        parsed = uuid.UUID(v)  # rejects anything that is not a UUID
+        return str(parsed)  # canonical lowercase, so signature checks are stable
 
 
 class StateTransitionPayload(BaseModel):
@@ -114,6 +147,46 @@ async def sync_alert(request: Request, payload: SyncAlertPayload, background: Ba
         if payload.state == "ACTIVE":
             background.add_task(notify_guardians_of_alert, result["alert"])
     return result
+
+
+@router.post("/relay", status_code=status.HTTP_201_CREATED)
+@limiter.limit("30/minute")
+async def relay_alert(request: Request, payload: RelayAlertPayload, background: BackgroundTasks,
+                      current_user: dict = Depends(get_current_user)):
+    """
+    Bluetooth relay: a walker with no signal cannot reach the API, so a nearby SHIELD
+    phone that can uploads their signed packet here on their behalf.
+
+    The alert belongs to the walker, not to the phone that carried it, and the relaying
+    account is recorded in the audit log. The alert id is the walker's own client-generated
+    UUID, so a packet relayed by several phones (or replayed later) is a no-op after the
+    first time and guardians are not notified twice. What a valid signature does and does
+    not prove is documented in ble_relay.py; it is weaker than the rest of this API.
+    """
+    if not verify_relay_signature(payload.model_dump()):
+        raise HTTPException(status_code=403, detail="Relay signature check failed.")
+    if payload.uid == current_user["user_id"]:
+        raise HTTPException(status_code=409, detail="Relay from the walker's own device goes to /sync.")
+    if not await storage.get_user_by_id(payload.uid):
+        raise HTTPException(status_code=404, detail="Unknown walker.")
+
+    result = await storage.sync_alert(
+        alert_id=payload.id, user_id=payload.uid, trigger_type=payload.tt,
+        lat=payload.lat_e5 / E5, lon=payload.lon_e5 / E5, priority=payload.pri,
+        initial_state="ACTIVE",
+    )
+    if result["alert"]["user_id"] != payload.uid:
+        raise HTTPException(status_code=409, detail="Alert id already in use.")
+
+    if result["status"] == "synced":
+        await storage.log_audit(
+            actor=current_user["user_id"],
+            action=f"ALERT_RELAYED_BY_BLUETOOTH walker={payload.uid}",
+            target=f"alert/{payload.id}",
+        )
+        await _publish(request, result["alert"])
+        background.add_task(notify_guardians_of_alert, result["alert"])
+    return {**result, "relayed_by": current_user["user_id"]}
 
 
 @router.post("/{alert_id}/location")

@@ -12,6 +12,7 @@ import { IncidentLog, UserProfile } from '../types';
 import LocationTracker from './LocationTracker';
 import ContactService from './contactService';
 import OfflineQueue, { TriggerType } from './OfflineQueue';
+import { startSosBroadcast } from './bleRelay';
 
 const GPS_TIMEOUT_MS = 8000;
 
@@ -115,7 +116,20 @@ export async function triggerEmergency(
     return { alertId, delivery: 'server', locationKnown: !!coords, fallback: 'none' };
   }
 
-  // 4. Backend unreachable: Firebase function if configured, otherwise the SMS composer
+  // 4. No network at all: broadcast the signed alert over Bluetooth so a nearby SHIELD
+  // phone with a connection can carry it to the API. Deliberately still runs for a
+  // silent (duress) alert - it puts nothing on this screen - and only with a real fix,
+  // because broadcasting 0,0 would point a relay at the Gulf of Guinea.
+  if (coords) {
+    startSosBroadcast({
+      alertId, uid: profile.uid, trigger,
+      latitude: coords.latitude, longitude: coords.longitude, priority: threatLevel,
+    }).then((started) => {
+      if (started) console.info('No network: broadcasting this SOS over Bluetooth for a nearby phone to relay');
+    }).catch(() => undefined);
+  }
+
+  // 5. Backend unreachable: Firebase function if configured, otherwise the SMS composer
   // A silent (duress) alert must not open anything on screen; it stays queued and syncs later
   if (options.silent) {
     return { alertId, delivery: 'queued', locationKnown: !!coords, fallback: 'none' };

@@ -26,6 +26,7 @@ import { getPoliceSharing, setPoliceSharing } from '../services/policeService';
 import IncidentHistoryModal from '../components/settings/IncidentHistoryModal';
 import LanguagePicker from '../components/common/LanguagePicker';
 import { useI18n } from '../i18n';
+import { triggerVoiceSos } from '../services/voiceTriggerHelper';
 
 interface SettingsScreenProps {
   onNavigateToContacts?: () => void;
@@ -233,6 +234,13 @@ export default function SettingsScreen({ onNavigateToContacts }: SettingsScreenP
             title={t('settings.fall')}
             subtitle={discreet.fallToSos ? t('settings.fallOn') : t('common.off')}
             onPress={() => toggleDiscreet('fallToSos')}
+          />
+
+          <SettingsRow
+            iconName="play-circle-outline"
+            title="Test voice / scream SOS"
+            subtitle="Simulate voice trigger and test the 10-second countdown"
+            onPress={() => triggerVoiceSos('settings_row')}
           />
 
           <SettingsRow

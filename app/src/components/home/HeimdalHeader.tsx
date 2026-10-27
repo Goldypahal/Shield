@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Modal, Pressable, Image } fro
 import { Ionicons } from '@expo/vector-icons';
 import { TOKENS } from '../../theme/tokens';
 import { useJourneyStore } from '../../store/useJourneyStore';
+import { triggerVoiceSos, getVoiceSupportInfo } from '../../services/voiceTriggerHelper';
 
 interface HeimdalHeaderProps {
   onProfilePress?: () => void;
@@ -11,6 +12,8 @@ interface HeimdalHeaderProps {
 export default function HeimdalHeader({ onProfilePress }: HeimdalHeaderProps) {
   const { unreadNotifications, markNotificationsRead } = useJourneyStore();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const voiceInfo = getVoiceSupportInfo();
 
   const notifications = [
     {
@@ -49,10 +52,20 @@ export default function HeimdalHeader({ onProfilePress }: HeimdalHeaderProps) {
         </View>
       </View>
 
-      {/* Right: Notification Bell & Profile Buttons */}
+      {/* Right: Notification Bell, Mic & Profile Buttons */}
       <View style={styles.rightGroup}>
         <TouchableOpacity
-          style={styles.iconButton}
+          style={[styles.iconButton, { backgroundColor: '#FEE2E2', borderColor: '#FCA5A5' }]}
+          onPress={() => setShowVoiceModal(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Voice SOS Status & Test"
+          activeOpacity={0.7}
+        >
+          <Ionicons name="mic" size={18} color="#EF4444" />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.iconButton, { marginLeft: 6 }]}
           onPress={() => {
             setShowNotifications(true);
             markNotificationsRead();
@@ -61,7 +74,7 @@ export default function HeimdalHeader({ onProfilePress }: HeimdalHeaderProps) {
           accessibilityLabel="Notifications"
           activeOpacity={0.7}
         >
-          <Ionicons name="notifications-outline" size={22} color={TOKENS.colors.ink[900]} />
+          <Ionicons name="notifications-outline" size={20} color={TOKENS.colors.ink[900]} />
           {unreadNotifications > 0 && <View style={styles.dotBadge} />}
         </TouchableOpacity>
 
@@ -75,6 +88,58 @@ export default function HeimdalHeader({ onProfilePress }: HeimdalHeaderProps) {
           <Ionicons name="person" size={20} color={TOKENS.colors.ink[900]} />
         </TouchableOpacity>
       </View>
+
+      {/* Voice SOS Safety & Test Modal */}
+      <Modal
+        visible={showVoiceModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowVoiceModal(false)}
+      >
+        <Pressable style={styles.voiceModalBackdrop} onPress={() => setShowVoiceModal(false)}>
+          <View style={styles.voiceModalCard}>
+            <View style={styles.voiceModalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={styles.voiceMicIconBadge}>
+                  <Ionicons name="mic" size={20} color="#EF4444" />
+                </View>
+                <Text style={styles.voiceModalTitle}>Voice & Scream SOS</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowVoiceModal(false)}>
+                <Ionicons name="close" size={22} color={TOKENS.colors.ink[500]} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.voiceStatusBox}>
+              <View style={[styles.statusDot, { backgroundColor: voiceInfo.isSecureContext ? '#10B981' : '#F59E0B' }]} />
+              <Text style={styles.voiceStatusText}>{voiceInfo.summary}</Text>
+            </View>
+
+            <View style={styles.voiceInstructions}>
+              <Text style={styles.instructionTitle}>How Voice Trigger Works:</Text>
+              <Text style={styles.instructionLine}>• 🗣️ <Text style={{ fontWeight: '700' }}>Keyword Trigger:</Text> Say <Text style={{ color: '#EF4444', fontWeight: '700' }}>"Help Me"</Text> or <Text style={{ color: '#EF4444', fontWeight: '700' }}>"Emergency"</Text>.</Text>
+              <Text style={styles.instructionLine}>• 🔊 <Text style={{ fontWeight: '700' }}>Scream Classifier:</Text> Sustained loud audio / scream for 2-3 seconds.</Text>
+              {!voiceInfo.isSecureContext && (
+                <Text style={[styles.instructionLine, { color: '#B45309', marginTop: 4 }]}>
+                  ⚠️ Mobile browsers disable microphone on plain HTTP. Use HTTPS, localhost, or the instant test button below.
+                </Text>
+              )}
+            </View>
+
+            <TouchableOpacity
+              style={styles.testVoiceBtn}
+              onPress={() => {
+                setShowVoiceModal(false);
+                triggerVoiceSos('header_modal');
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="alert-circle" size={18} color="#FFFFFF" />
+              <Text style={styles.testVoiceBtnText}>Simulate Voice SOS Trigger</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
 
       {/* Notifications Dropdown Modal */}
       <Modal
@@ -251,5 +316,96 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: TOKENS.colors.ink[400],
     marginTop: 3,
+  },
+  voiceModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  voiceModalCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  voiceModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  voiceMicIconBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  voiceModalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: TOKENS.colors.ink[900],
+  },
+  voiceStatusBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    padding: 10,
+    marginVertical: 12,
+    gap: 8,
+  },
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  voiceStatusText: {
+    flex: 1,
+    fontSize: 12,
+    color: TOKENS.colors.ink[700],
+    fontWeight: '500',
+  },
+  voiceInstructions: {
+    backgroundColor: '#FFF7ED',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  instructionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#9A3412',
+    marginBottom: 6,
+  },
+  instructionLine: {
+    fontSize: 12,
+    color: '#7C2D12',
+    lineHeight: 18,
+  },
+  testVoiceBtn: {
+    backgroundColor: '#DC2626',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+  },
+  testVoiceBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

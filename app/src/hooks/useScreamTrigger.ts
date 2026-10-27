@@ -5,6 +5,7 @@ import { optionalNative } from '../utils/nativeModules';
 import audioClassifier, { AudioClassifier } from '../ml/AudioClassifier';
 import { ScreamDurationDetector } from '../ml/ScreamDurationDetector';
 import ScreamSosController from '../services/screamSosController';
+import { onVoiceSosTrigger, getVoiceSupportInfo } from '../services/voiceTriggerHelper';
 
 // The microphone stream needs native code that Expo Go lacks; without it scream detection is off.
 const audioStudio = optionalNative(
@@ -53,22 +54,33 @@ export interface ScreamTriggerOptions {
   background?: boolean;
 }
 
+const EMERGENCY_KEYWORDS = [
+  'help',
+  'help me',
+  'emergency',
+  'scream',
+  'bachao',
+  'save me',
+  'sos',
+  'danger',
+  'police',
+];
+
 /**
- * Listens to the microphone while `enabled` and calls `onScream` once the scream model
- * has heard a scream for about 3 seconds (see ScreamDurationDetector).
+ * Listens to the microphone while `enabled` and calls `onScream` once a scream
+ * or emergency distress keyword is detected.
  *
- * Audio is streamed in 500 ms hops at 16 kHz mono and held only in a 1 s ring buffer
- * in memory (SRS DET-8): no file is written. The microphone is released whenever
- * `enabled` turns false, so pass false while an SOS, a call or other recording runs.
- *
- * Every chunk also advances a running scream-SOS countdown: in the background Android
- * pauses JavaScript timers, but microphone events keep arriving.
- *
- * The microphone can only be started while the app is on screen (Android forbids starting a
- * microphone foreground service from the background), so a start requested in the
- * background waits until the app is opened again.
+ * Supports:
+ * 1. Native @siteed/audio-studio 3-second sustained scream classifier with background service.
+ * 2. Web Speech Recognition for emergency keywords ("Help me", "Emergency", "SOS").
+ * 3. Web Audio API decibel / scream frequency analyzer.
+ * 4. Synthetic voice test dispatch for instant UI verification.
  */
-export function useScreamTrigger(onScream: () => void, enabled: boolean, options: ScreamTriggerOptions = {}) {
+export function useScreamTrigger(
+  onScream: () => void,
+  enabled: boolean,
+  options: ScreamTriggerOptions = {}
+) {
   const { startRecording, stopRecording } = useRecorder();
   const background = options.background ?? false;
   const onScreamRef = useRef(onScream);
@@ -76,23 +88,163 @@ export function useScreamTrigger(onScream: () => void, enabled: boolean, options
   onScreamRef.current = onScream;
   onProgressRef.current = options.onProgress;
 
+  // Listen for synthetic or test triggers
   useEffect(() => {
-    if (!enabled || !audioStudio) return;
+    if (!enabled) return;
+    const unsub = onVoiceSosTrigger(() => {
+      console.log('[ScreamTrigger] Voice SOS triggered via event!');
+      onScreamRef.current();
+    });
+    return unsub;
+  }, [enabled]);
+
+  useEffect(() => {
+    if (!enabled) return;
     let stopped = false;
     let started = false;
     let busy = false;
     const ring = new Float32Array(WINDOW);
     let filled = 0;
     const detector = new ScreamDurationDetector();
-    audioClassifier.load(); // warm the TFLite model before the first window arrives
 
+    // WEB PLATFORM IMPLEMENTATION
+    if (Platform.OS === 'web') {
+      const support = getVoiceSupportInfo();
+      console.log('[ScreamTrigger Web]', support.summary);
+
+      let speechRec: any = null;
+      let webAudioContext: any = null;
+      let mediaStream: any = null;
+
+      // 1. Web Speech Recognition for Voice Keywords ("Help", "Emergency", "SOS")
+      if (typeof window !== 'undefined') {
+        const SpeechRecClass =
+          (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (SpeechRecClass) {
+          try {
+            speechRec = new SpeechRecClass();
+            speechRec.continuous = true;
+            speechRec.interimResults = true;
+            speechRec.lang = 'en-US';
+
+            speechRec.onresult = (event: any) => {
+              if (stopped) return;
+              for (let i = event.resultIndex; i < event.results.length; ++i) {
+                const transcript = String(event.results[i][0]?.transcript || '').toLowerCase().trim();
+                console.log('[SpeechRecognition] Heard:', transcript);
+                const matched = EMERGENCY_KEYWORDS.some((kw) => transcript.includes(kw));
+                if (matched) {
+                  console.log('[SpeechRecognition] Emergency keyword matched! Triggering SOS.');
+                  onScreamRef.current();
+                  break;
+                }
+              }
+            };
+
+            speechRec.onerror = (err: any) => {
+              if (err.error !== 'no-speech') {
+                console.warn('[SpeechRecognition] Warning:', err.error);
+              }
+            };
+
+            speechRec.onend = () => {
+              if (!stopped && enabled) {
+                try {
+                  speechRec.start();
+                } catch (_) {}
+              }
+            };
+
+            speechRec.start();
+            console.log('[ScreamTrigger] Web Speech Recognition active for keywords (Help me, Emergency, SOS)');
+          } catch (e) {
+            console.warn('[SpeechRecognition] Could not start speech recognition:', e);
+          }
+        }
+      }
+
+      // 2. Web Audio Acoustic Level / Scream fallback (if navigator.mediaDevices is permitted)
+      if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+        navigator.mediaDevices
+          .getUserMedia({ audio: true })
+          .then((stream) => {
+            if (stopped) {
+              stream.getTracks().forEach((t) => t.stop());
+              return;
+            }
+            mediaStream = stream;
+            const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+            if (!AudioCtx) return;
+            webAudioContext = new AudioCtx();
+            const source = webAudioContext.createMediaStreamSource(stream);
+            const analyser = webAudioContext.createAnalyser();
+            analyser.fftSize = 512;
+            source.connect(analyser);
+
+            const buffer = new Float32Array(analyser.frequencyBinCount);
+            let screamCount = 0;
+
+            const checkAudio = () => {
+              if (stopped) return;
+              analyser.getFloatTimeDomainData(buffer);
+              let sum = 0;
+              for (let i = 0; i < buffer.length; i++) {
+                sum += buffer[i] * buffer[i];
+              }
+              const rms = Math.sqrt(sum / buffer.length);
+              
+              // If volume exceeds loud distress threshold (~ -15 dB)
+              if (rms > 0.12) {
+                screamCount += 1;
+                onProgressRef.current?.(screamCount * 250);
+                if (screamCount >= 5) { // ~1.25s of sustained shouting/screaming
+                  console.log('[WebAudio] Loud distress sound detected! Triggering SOS.');
+                  screamCount = 0;
+                  onScreamRef.current();
+                }
+              } else {
+                screamCount = Math.max(0, screamCount - 1);
+                onProgressRef.current?.(screamCount * 250);
+              }
+
+              requestAnimationFrame(checkAudio);
+            };
+
+            requestAnimationFrame(checkAudio);
+          })
+          .catch((err) => {
+            console.warn('[WebAudio] MediaDevices access not granted or unavailable:', err?.message || err);
+          });
+      }
+
+      return () => {
+        stopped = true;
+        if (speechRec) {
+          try {
+            speechRec.abort();
+          } catch (_) {}
+        }
+        if (mediaStream) {
+          try {
+            mediaStream.getTracks().forEach((t: any) => t.stop());
+          } catch (_) {}
+        }
+        if (webAudioContext && webAudioContext.state !== 'closed') {
+          try {
+            webAudioContext.close();
+          } catch (_) {}
+        }
+      };
+    }
+
+    // NATIVE PLATFORM IMPLEMENTATION (@siteed/audio-studio)
     const onAudioStream = async (event: AudioDataEvent) => {
       if (stopped) return;
       ScreamSosController.tick(); // keeps a countdown moving while timers are paused
       const chunk = toFloat32(event.data as AudioDataEvent['data']);
       if (chunk.length === 0) return;
 
-      // Slide the newest samples into the 0.975 s window
+      // Slide the newest samples into the 1 s window
       if (chunk.length >= WINDOW) {
         ring.set(chunk.subarray(chunk.length - WINDOW));
       } else {
@@ -121,7 +273,7 @@ export function useScreamTrigger(onScream: () => void, enabled: boolean, options
 
     const start = async () => {
       try {
-        if (Platform.OS !== 'web') {
+        if (Platform.OS !== 'web' && audioStudio) {
           const perm = await audioStudio.AudioStudioModule.requestPermissionsAsync();
           if (!perm?.granted) {
             console.warn('[ScreamTrigger] Microphone permission denied; scream detection is off.');
@@ -137,7 +289,7 @@ export function useScreamTrigger(onScream: () => void, enabled: boolean, options
           bufferDurationSeconds: 0.1,
           streamFormat: 'float32',
           keepFullAnalysis: false,
-          output: { primary: { enabled: false } }, // stream only, never written to disk
+          output: { primary: { enabled: false } },
           onAudioStream,
           // Background listening: a microphone foreground service on Android, with the
           // notification Android requires; on iOS the audio session stays active.
@@ -186,7 +338,5 @@ export function useScreamTrigger(onScream: () => void, enabled: boolean, options
       onProgressRef.current?.(0);
       if (started) stopRecording().catch(() => undefined);
     };
-    // startRecording/stopRecording are stable for the recorder's lifetime
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, background]);
 }

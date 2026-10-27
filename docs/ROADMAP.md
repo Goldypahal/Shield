@@ -118,6 +118,44 @@ police get nothing they should not (no bulk tracking of citizens).
    independent audit of what police can see. Police never get live location
    outside an open alert.
 
+## Bluetooth SOS relay (built October 2026, needs hardening before launch)
+
+With no signal at all the SMS composer cannot help either: SMS still needs a cell tower.
+So a walker's phone now broadcasts its signed alert over BLE, and any other SHIELD phone
+within range reads it and uploads it to `POST /api/v1/alerts/relay` on the walker's behalf.
+
+* App: `src/services/bleRelay.ts` (advertise + GATT serve, and scan + read + upload),
+  `src/services/bleRelayPayload.ts` (shared signed payload), `bleRelay.web.ts` (web has
+  no phone-to-phone BLE). Uses `munim-bluetooth` + `react-native-nitro-modules`.
+* API: `ble_relay.py`, plus the relay endpoint in `alerts_router.py`.
+* Needs a native development build; it does not work in Expo Go (neither do
+  `@siteed/audio-studio` or `react-native-maps`, so this was already true).
+
+What it honestly is not: Bluetooth reaches tens of metres, so this carries an alert to
+the *next SHIELD phone*, never to a guardian or to 112 directly. It works on a campus or
+a busy street and fails on an empty road. It also needs the walker's app to be running
+to advertise.
+
+Before launch:
+
+1. **Replace the shared signing key with per-device identity.** The key ships in the app
+   bundle, so today a valid signature proves only that a packet came from a SHIELD build,
+   not *who* sent it, and an extracted key could raise an alert attributed to another
+   user. Register an Ed25519 public key per install at sign-up and sign with the private
+   half in `expo-secure-store`. The relay endpoint already records `relayed_by` and the
+   alert is marked as relayed, which limits the damage in the meantime.
+2. **Encrypt the payload on the air.** GATT reads that require encryption need a pairing
+   step that cannot happen mid-emergency, so the characteristic is currently readable by
+   any device in range while an alert is active, exposing the walker's coordinates.
+3. **Field-test it on real phones:** two Android devices, one in airplane mode, radios on,
+   app foreground and background, and the Android 12+ permission prompts. Nothing in this
+   path has run on a device yet.
+4. **Get consent for relaying.** Scanning means a phone reads alerts for strangers nearby.
+   It is passive and carries no location of its own, but it belongs in the privacy policy
+   and behind an explicit toggle.
+5. **Battery and abuse:** measure the scanning budget, and cap how many alerts one account
+   can relay per hour (the endpoint is rate limited now, which is not the same thing).
+
 ## Future scope: smartwatch companion
 
 Not buildable in the Expo managed app: Wear OS needs a separate Android module and
