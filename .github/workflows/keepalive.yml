@@ -1,0 +1,21 @@
+# Keeps the free Render backend awake: it sleeps after 15 minutes without requests, and
+# waking it takes ~50 s, too slow for an SOS. GitHub runs this every 10 minutes (it can be
+# a few minutes late). Set the repo variable SHIELD_API_URL if your Render URL differs.
+name: Keep backend awake
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping /health
+        env:
+          URL: ${{ vars.SHIELD_API_URL || 'https://shield-api.onrender.com' }}
+        run: curl --silent --show-error --fail --max-time 90 --retry 2 "$URL/health"

@@ -1,0 +1,60 @@
+# Render Blueprint: deploys the SHIELD backend from this repo.
+# Render dashboard > New > Blueprint > pick this repo. Free plan, no card needed.
+#
+# Free plan limits (see docs/DEPLOY_ANDROID.md):
+#  * the server sleeps after 15 min without requests; .github/workflows/keepalive.yml pings it
+#  * no persistent disk: the SQLite database is reset when the service restarts or redeploys.
+#    For real users switch to plan: starter and uncomment the disk below.
+services:
+  - type: web
+    name: shield-api
+    runtime: docker
+    plan: free
+    region: singapore          # closest Render region to India
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    healthCheckPath: /ready
+    autoDeploy: true
+    # disk:
+    #   name: shield-data
+    #   mountPath: /data
+    #   sizeGB: 1
+    envVars:
+      - key: PORT
+        value: "8000"
+      # Pilot/testing mode: sign-up codes are shown in the app (no SMS/email service needed).
+      # For a public launch set SHIELD_ENV=production, SHIELD_DEMO_MODE=false and fill in
+      # SMTP_* (email codes) and TWILIO_* (SMS codes and guardian SMS).
+      - key: SHIELD_ENV
+        value: staging
+      - key: SHIELD_DEMO_MODE
+        value: "true"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PSEUDONYM_SECRET
+        generateValue: true
+      - key: ERSS_MODE
+        value: "off"
+      - key: CORS_ORIGINS
+        value: https://shield-api.onrender.com
+      - key: PUBLIC_APP_URL
+        value: https://shield-api.onrender.com
+      - key: LOG_LEVEL
+        value: INFO
+      # Optional, add in the Render dashboard (Environment) when you have them:
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_PHONE_NUMBER
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
