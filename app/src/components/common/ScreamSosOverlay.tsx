@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import PinPromptModal from './PinPromptModal';
 import { useI18n } from '../../i18n';
 import ScreamSosController, { ScreamSosState } from '../../services/screamSosController';
+import AlarmSoundService from '../../services/alarmSoundService';
 
 export { SCREAM_SOS_COUNTDOWN_S } from '../../services/screamSosController';
 
@@ -50,7 +51,20 @@ export default function ScreamSosOverlay() {
     return () => clearInterval(id);
   }, [phase]);
 
+  // Siren management
+  useEffect(() => {
+    if (visible && (phase === 'countdown' || phase === 'sending')) {
+      AlarmSoundService.startSiren();
+    } else {
+      AlarmSoundService.stopSiren();
+    }
+    return () => {
+      AlarmSoundService.stopSiren();
+    };
+  }, [visible, phase]);
+
   const onClose = () => {
+    AlarmSoundService.stopSiren();
     setPinVisible(false);
     ScreamSosController.dismiss();
   };
@@ -125,7 +139,43 @@ export default function ScreamSosOverlay() {
             </View>
             <Text style={styles.title}>{t('sos.active')}</Text>
             <Text style={styles.body}>{deliveryLine}</Text>
-            <Text style={styles.body}>{t('sos.enterPinToStop')}</Text>
+
+            {/* 3 Methods Cascade Card */}
+            <View style={styles.methodsCard}>
+              <Text style={styles.methodsHeader}>EMERGENCY DISPATCH METHODS:</Text>
+              <View style={styles.methodRow}>
+                <Ionicons
+                  name={result?.delivery === 'server' ? 'checkmark-circle' : 'close-circle'}
+                  size={15}
+                  color={result?.delivery === 'server' ? '#86EFAC' : '#FCA5A5'}
+                />
+                <Text style={styles.methodText}>
+                  1. Internet: {result?.delivery === 'server' ? 'Cloud synced & Live tracking' : 'Offline'}
+                </Text>
+              </View>
+              <View style={styles.methodRow}>
+                <Ionicons
+                  name={result?.fallback === 'sms_composer' || result?.channel === 'SMS' ? 'checkmark-circle' : 'radio-button-off'}
+                  size={15}
+                  color={result?.fallback === 'sms_composer' || result?.channel === 'SMS' ? '#86EFAC' : '#E2E8F0'}
+                />
+                <Text style={styles.methodText}>
+                  2. Cellular SMS: {result?.fallback === 'sms_composer' ? 'SMS draft popped up' : 'Standby'}
+                </Text>
+              </View>
+              <View style={styles.methodRow}>
+                <Ionicons
+                  name={result?.channel === 'BLUETOOTH_MESH' || result?.delivery === 'queued' ? 'checkmark-circle' : 'radio-button-off'}
+                  size={15}
+                  color={result?.channel === 'BLUETOOTH_MESH' || result?.delivery === 'queued' ? '#86EFAC' : '#E2E8F0'}
+                />
+                <Text style={styles.methodText}>
+                  3. Bluetooth Relay: {result?.delivery === 'queued' ? 'Beacon active (Offline mesh)' : 'Standby'}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={[styles.body, { marginTop: 12 }]}>{t('sos.enterPinToStop')}</Text>
             <TouchableOpacity
               style={styles.primaryButton}
               onPress={() => setPinVisible(true)}
@@ -286,5 +336,33 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: 'rgba(255,255,255,0.8)',
     textAlign: 'center',
+  },
+  methodsCard: {
+    width: '100%',
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  methodsHeader: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#F8FAFC',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  methodRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginVertical: 3,
+  },
+  methodText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    flex: 1,
   },
 });

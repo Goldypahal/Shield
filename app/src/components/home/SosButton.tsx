@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { TOKENS } from '../../theme/tokens';
 import { useJourneyStore } from '../../store/useJourneyStore';
 import SosOverlay from '../common/SosOverlay';
+import AlarmSoundService from '../../services/alarmSoundService';
 
 interface SosButtonProps {
   onShowToast?: (message: string) => void;
@@ -49,6 +50,7 @@ export default function SosButton({ onShowToast }: SosButtonProps) {
   const handlePressIn = () => {
     setIsHolding(true);
     setSosState('holding');
+    AlarmSoundService.playSosPressSound();
 
     if (Platform.OS !== 'web') {
       try {
@@ -67,6 +69,7 @@ export default function SosButton({ onShowToast }: SosButtonProps) {
       progressAnim.setValue(0);
       setSosState('countdown');
       setShowOverlay(true);
+      AlarmSoundService.startSiren();
       if (Platform.OS !== 'web') {
         try {
           Vibration.vibrate(50);
@@ -80,10 +83,12 @@ export default function SosButton({ onShowToast }: SosButtonProps) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
+    AlarmSoundService.playSosPressSound();
     setIsHolding(false);
     progressAnim.setValue(0);
     setSosState('countdown');
     setShowOverlay(true);
+    AlarmSoundService.startSiren();
     if (Platform.OS !== 'web') {
       try {
         Vibration.vibrate(50);

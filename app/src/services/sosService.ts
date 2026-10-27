@@ -16,12 +16,15 @@ import { startSosBroadcast } from './bleRelay';
 
 const GPS_TIMEOUT_MS = 8000;
 
+export type SosChannel = 'INTERNET' | 'SMS' | 'BLUETOOTH_MESH';
+
 export type SosResult = {
   alertId: string;
   /** 'server': guardians are being notified by the backend; 'queued': stored on device, retrying. */
   delivery: 'server' | 'queued';
   locationKnown: boolean;
   fallback: 'none' | 'firebase' | 'sms_composer' | 'unavailable';
+  channel?: SosChannel;
 };
 
 async function uploadAudio(uri: string, userId: string) {
@@ -112,30 +115,64 @@ export async function triggerEmergency(
     console.warn('Could not record local incident history', e);
   }
 
+  // =========================================================================
+  // METHOD 1: INTERNET IS AVAILABLE
+  // When network data connectivity exists, sync alert to SHIELD cloud API
+  // and broadcast live telemetry to guardians and police.
+  // =========================================================================
   if (delivery === 'synced') {
-    return { alertId, delivery: 'server', locationKnown: !!coords, fallback: 'none' };
+    return {
+      alertId,
+      delivery: 'server',
+      locationKnown: !!coords,
+      fallback: 'none',
+      channel: 'INTERNET',
+    };
   }
 
-  // 4. No network at all: broadcast the signed alert over Bluetooth so a nearby SHIELD
-  // phone with a connection can carry it to the API. Deliberately still runs for a
-  // silent (duress) alert - it puts nothing on this screen - and only with a real fix,
-  // because broadcasting 0,0 would point a relay at the Gulf of Guinea.
+  // =========================================================================
+  // METHOD 2: INTERNET NOT AVAILABLE -> CELLULAR SMS SERVICES (SMS POPUP)
+  // When internet connection is absent, pop up the device's native SMS composer
+  // with pre-filled coordinates and distress message to trusted contacts.
+  // =========================================================================
+  let smsOpened = false;
+  const contacts = profile.emergencyContacts.length > 0
+    ? profile.emergencyContacts
+    : await ContactService.listContacts().catch(() => []);
+
+  if (!options.silent && contacts.length > 0) {
+    const text = `SHIELD SOS: ${profile.name} needs emergency help! ` +
+      (mapsLink ? `Current Location: ${mapsLink}` : 'Location unavailable.') +
+      ' Immediate assistance required. Call 112.';
+    smsOpened = await OfflineQueue.openSmsFallback(contacts.map((c) => c.phone), text);
+  }
+
+  // =========================================================================
+  // METHOD 3: NO NETWORK / CELLULAR DEAD ZONE -> BLUETOOTH MESH RELAY
+  // When internet is unavailable, broadcast signed SOS packet over Bluetooth LE
+  // so nearby SHIELD devices can pick up the packet and relay it to the cloud.
+  // =========================================================================
+  let bleActive = false;
   if (coords) {
-    startSosBroadcast({
-      alertId, uid: profile.uid, trigger,
-      latitude: coords.latitude, longitude: coords.longitude, priority: threatLevel,
-    }).then((started) => {
-      if (started) console.info('No network: broadcasting this SOS over Bluetooth for a nearby phone to relay');
-    }).catch(() => undefined);
+    try {
+      bleActive = await startSosBroadcast({
+        alertId,
+        uid: profile.uid,
+        trigger,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        priority: threatLevel,
+      });
+      if (bleActive) {
+        console.info('[SOS] Bluetooth relay beacon active: broadcasting SOS packet to nearby devices');
+      }
+    } catch (e) {
+      console.warn('[SOS] BLE relay broadcast could not start', e);
+    }
   }
 
-  // 5. Backend unreachable: Firebase function if configured, otherwise the SMS composer
-  // A silent (duress) alert must not open anything on screen; it stays queued and syncs later
-  if (options.silent) {
-    return { alertId, delivery: 'queued', locationKnown: !!coords, fallback: 'none' };
-  }
-  const contacts = profile.emergencyContacts.length > 0 ? profile.emergencyContacts : await ContactService.listContacts();
-  if (isFirebaseConfigured) {
+  // Optional Firebase fallback if configured
+  if (!options.silent && isFirebaseConfigured) {
     try {
       let audioUrl: string | undefined;
       const localAudioUri = await stopIncidentRecording();
@@ -145,14 +182,17 @@ export async function triggerEmergency(
         audioUrl, threatScore, threatLevel
       });
       await updateIncident(incidentId, { status: 'SENT', delivery: { sms: true, call: true }, audioUrl });
-      return { alertId, delivery: 'queued', locationKnown: !!coords, fallback: 'firebase' };
+      return { alertId, delivery: 'queued', locationKnown: !!coords, fallback: 'firebase', channel: 'INTERNET' };
     } catch (e) {
       console.warn('Firebase fallback failed', e);
     }
   }
 
-  const text = `SHIELD SOS: ${profile.name} needs help. ` +
-    (mapsLink ? `Location: ${mapsLink}` : 'Location unavailable.') + ' If in danger, call 112.';
-  const opened = await OfflineQueue.openSmsFallback(contacts.map((c) => c.phone), text);
-  return { alertId, delivery: 'queued', locationKnown: !!coords, fallback: opened ? 'sms_composer' : 'unavailable' };
+  return {
+    alertId,
+    delivery: 'queued',
+    locationKnown: !!coords,
+    fallback: smsOpened ? 'sms_composer' : 'unavailable',
+    channel: smsOpened ? 'SMS' : (bleActive ? 'BLUETOOTH_MESH' : 'SMS'),
+  };
 }

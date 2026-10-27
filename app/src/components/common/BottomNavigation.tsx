@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme';
+import AlarmSoundService from '../../services/alarmSoundService';
 import { useI18n, StringKey } from '../../i18n';
 
 export type TabKey = 'Home' | 'Journey' | 'Safety' | 'Profile' | 'Contacts' | 'Map' | 'Settings';
@@ -82,7 +83,10 @@ export default function BottomNavigation({ activeTab, onTabPress, onSos }: Botto
 
       <View style={styles.sosSlot}>
         <TouchableOpacity
-          onPress={onSos}
+          onPress={() => {
+            AlarmSoundService.playSosPressSound();
+            onSos?.();
+          }}
           disabled={!onSos}
           style={[
             styles.sosButton,
