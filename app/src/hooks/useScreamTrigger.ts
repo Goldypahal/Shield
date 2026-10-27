@@ -321,7 +321,7 @@ export function useScreamTrigger(
       }
     };
 
-    if (Platform.OS === 'web' || AppState.currentState === 'active') {
+    if ((Platform.OS as string) === 'web' || AppState.currentState === 'active') {
       start();
     } else {
       waitForForeground = AppState.addEventListener('change', (next) => {

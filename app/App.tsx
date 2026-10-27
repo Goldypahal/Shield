@@ -112,7 +112,7 @@ function HeimdalMain() {
 
   useEffect(() => {
     const unsub = onVoiceSosTrigger(() => {
-      setScreamSosVisible(true);
+      ScreamSosController.start('AUDIO_DISTRESS');
     });
     return unsub;
   }, []);
