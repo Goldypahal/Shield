@@ -174,6 +174,12 @@ const asm: Translation = {
 
   'settings.fallOn': 'অন: পৰি গৈ স্থিৰ হৈ থাকিলে 10 ছেকেণ্ডৰ SOS কাউণ্টডাউন আৰম্ভ হয় (এপ খোলা থাকিলে)',
 
+  'settings.keywords': 'কণ্ঠৰে SOS',
+
+  'settings.keywordsOn': 'অন: "help", "bachao" বা "call the police" ক’লে 10 ছেকেণ্ডৰ SOS কাউণ্টডাউন আৰম্ভ হয় (এপ খোলা থাকিলে)',
+
+  'settings.keywordsUnavailable': 'Android 13 বা নতুন আৰু সম্পূৰ্ণ এপ বিল্ড লাগিব',
+
   'nav.from': 'ক’ৰ পৰা',
   'nav.to': 'ক’লৈ যাব?',
   'nav.myLocation': 'মোৰ লোকেশ্বন',

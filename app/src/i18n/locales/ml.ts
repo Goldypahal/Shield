@@ -174,6 +174,12 @@ const ml: Translation = {
 
   'settings.fallOn': 'ഓൺ: വീണ് അനങ്ങാതെ കിടന്നാൽ 10 സെക്കൻഡ് SOS കൗണ്ട്‌ഡൗൺ ആരംഭിക്കും (ആപ്പ് തുറന്നിരിക്കുമ്പോൾ)',
 
+  'settings.keywords': 'ശബ്ദ വാക്കുകൾ',
+
+  'settings.keywordsOn': 'ഓൺ: "help", "bachao" അല്ലെങ്കിൽ "call the police" എന്ന് പറഞ്ഞാൽ 10 സെക്കൻഡ് SOS കൗണ്ട്‌ഡൗൺ ആരംഭിക്കും (ആപ്പ് തുറന്നിരിക്കുമ്പോൾ)',
+
+  'settings.keywordsUnavailable': 'Android 13 അല്ലെങ്കിൽ പുതിയതും പൂർണ്ണ ആപ്പ് ബിൽഡും വേണം',
+
   'nav.from': 'എവിടെ നിന്ന്',
   'nav.to': 'എവിടേക്ക്?',
   'nav.myLocation': 'എന്റെ ലൊക്കേഷൻ',

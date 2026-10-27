@@ -174,6 +174,12 @@ const hi: Translation = {
 
   'settings.fallOn': 'चालू: गिरने के बाद स्थिर पड़े रहने पर 10 सेकंड का SOS काउंटडाउन शुरू होता है (ऐप खुला हो तब)',
 
+  'settings.keywords': 'आवाज़ से SOS',
+
+  'settings.keywordsOn': 'चालू: "help", "बचाओ" या "पुलिस बुलाओ" कहने पर 10 सेकंड का SOS काउंटडाउन शुरू होता है (ऐप खुला हो तब)',
+
+  'settings.keywordsUnavailable': 'Android 13 या नया फ़ोन और पूरा ऐप बिल्ड चाहिए',
+
   'nav.from': 'कहां से',
   'nav.to': 'कहां जाना है?',
   'nav.myLocation': 'मेरी लोकेशन',

@@ -174,6 +174,12 @@ const ta: Translation = {
 
   'settings.fallOn': 'இயக்கத்தில்: விழுந்து அசையாமல் இருந்தால் 10 விநாடி SOS கவுண்ட்டவுன் தொடங்கும் (ஆப் திறந்திருக்கும்போது)',
 
+  'settings.keywords': 'குரல் சொற்கள்',
+
+  'settings.keywordsOn': 'இயக்கத்தில்: "help", "bachao" அல்லது "call the police" என்றால் 10 விநாடி SOS கவுண்ட்டவுன் தொடங்கும் (ஆப் திறந்திருக்கும்போது)',
+
+  'settings.keywordsUnavailable': 'Android 13 அல்லது புதியது மற்றும் முழு ஆப் பில்ட் தேவை',
+
   'nav.from': 'எங்கிருந்து',
   'nav.to': 'எங்கே செல்ல வேண்டும்?',
   'nav.myLocation': 'என் இருப்பிடம்',

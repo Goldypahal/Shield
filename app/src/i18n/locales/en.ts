@@ -179,6 +179,9 @@ const en = {
   'settings.screamBgOn': 'On: keeps listening with the screen off; a notification shows it',
   'settings.fall': 'Fall detection',
   'settings.fallOn': 'On: a fall, then lying still, starts a 10-second SOS countdown while the app is open',
+  'settings.keywords': 'Voice keywords',
+  'settings.keywordsOn': 'On: saying "help", "bachao" or "call the police" starts a 10-second SOS countdown (app open)',
+  'settings.keywordsUnavailable': 'Needs Android 13 or newer and the full app build',
 
   // Navigation page
   'nav.from': 'From',

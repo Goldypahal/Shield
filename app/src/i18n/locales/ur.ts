@@ -174,6 +174,12 @@ const ur: Translation = {
 
   'settings.fallOn': 'آن: گرنے کے بعد ساکت رہنے پر 10 سیکنڈ کا SOS کاؤنٹ ڈاؤن شروع ہوتا ہے (ایپ کھلی ہو تو)',
 
+  'settings.keywords': 'آواز سے SOS',
+
+  'settings.keywordsOn': 'آن: "help"، "bachao" یا "call the police" کہنے پر 10 سیکنڈ کا SOS کاؤنٹ ڈاؤن شروع ہوتا ہے (ایپ کھلی ہو تو)',
+
+  'settings.keywordsUnavailable': 'Android 13 یا نیا فون اور مکمل ایپ بلڈ درکار ہے',
+
   'nav.from': 'کہاں سے',
   'nav.to': 'کہاں جانا ہے؟',
   'nav.myLocation': 'میری لوکیشن',

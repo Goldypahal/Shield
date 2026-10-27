@@ -21,6 +21,8 @@ import BottomNavigation, { TabKey } from './src/components/common/BottomNavigati
 import ScreamSosOverlay from './src/components/common/ScreamSosOverlay';
 import { useScreamTrigger } from './src/hooks/useScreamTrigger';
 import { useFallTrigger } from './src/hooks/useFallTrigger';
+import { useKeywordTrigger } from './src/hooks/useKeywordTrigger';
+import { useI18n } from './src/i18n';
 import ScreamSosController from './src/services/screamSosController';
 import { useShakeTrigger } from './src/hooks/useShakeTrigger';
 import { triggerVoiceSos, onVoiceSosTrigger } from './src/services/voiceTriggerHelper';
@@ -35,6 +37,13 @@ import { startRelayScanner, stopRelayScanner, stopSosBroadcast } from './src/ser
  */
 function ScreamListener({ enabled, background, onScream }: { enabled: boolean; background: boolean; onScream: () => void }) {
   useScreamTrigger(onScream, enabled, { background });
+  return null;
+}
+
+/** Owns speech recognition for spoken cries for help on phones (render-less). */
+function KeywordListener({ enabled, onKeyword }: { enabled: boolean; onKeyword: (phrase: string) => void }) {
+  const { lang } = useI18n();
+  useKeywordTrigger(onKeyword, enabled, lang);
   return null;
 }
 
@@ -71,11 +80,13 @@ function HeimdalMain() {
   const [screamDetection, setScreamDetection] = useState(true);
   const [screamInBackground, setScreamInBackground] = useState(true);
   const [fallDetection, setFallDetection] = useState(true);
+  const [keywordDetection, setKeywordDetection] = useState(true);
   const [shakeDetection, setShakeDetection] = useState(false);
   const [appActive, setAppActive] = useState(AppState.currentState === 'active' || Platform.OS === 'web');
 
   useEffect(() => {
-    const apply = (d: { screamToSos: boolean; screamInBackground: boolean; fallToSos: boolean; shakeToSos?: boolean }) => {
+    const apply = (d: { screamToSos: boolean; screamInBackground: boolean; fallToSos: boolean; shakeToSos?: boolean; keywordToSos?: boolean }) => {
+      setKeywordDetection(d.keywordToSos !== false);
       setScreamDetection(d.screamToSos);
       setScreamInBackground(d.screamInBackground);
       setFallDetection(d.fallToSos);
@@ -408,6 +419,10 @@ function HeimdalMain() {
       <ScreamSosOverlay />
       <ScreamListener enabled={listenForScreams} background={screamInBackground} onScream={() => ScreamSosController.start('AUDIO_DISTRESS')} />
       <FallListener enabled={watchForFalls} onFall={() => ScreamSosController.start('FALL')} />
+      <KeywordListener
+        enabled={keywordDetection && !!session && appActive && !sosRunning && !callActive && currentView !== 'FakeCall' && Platform.OS !== 'web'}
+        onKeyword={() => ScreamSosController.start('VOICE')}
+      />
       <ShakeListener enabled={shakeDetection && !!session && appActive && !sosRunning} onShake={() => ScreamSosController.start('SHAKE')} />
     </View>
   );

@@ -174,6 +174,12 @@ const or: Translation = {
 
   'settings.fallOn': 'ଚାଲୁ: ପଡ଼ିବା ପରେ ସ୍ଥିର ରହିଲେ 10 ସେକେଣ୍ଡର SOS କାଉଣ୍ଟଡାଉନ୍ ଆରମ୍ଭ ହୁଏ (ଆପ୍ ଖୋଲା ଥିଲେ)',
 
+  'settings.keywords': 'ସ୍ୱର ଶବ୍ଦ',
+
+  'settings.keywordsOn': 'ଚାଲୁ: "help", "bachao" ବା "call the police" କହିଲେ 10 ସେକେଣ୍ଡର SOS କାଉଣ୍ଟଡାଉନ୍ ଆରମ୍ଭ ହୁଏ (ଆପ୍ ଖୋଲା ଥିଲେ)',
+
+  'settings.keywordsUnavailable': 'Android 13 ବା ନୂଆ ଏବଂ ସମ୍ପୂର୍ଣ୍ଣ ଆପ୍ ବିଲ୍ଡ ଦରକାର',
+
   'nav.from': 'କେଉଁଠାରୁ',
   'nav.to': 'କେଉଁଠିକି?',
   'nav.myLocation': 'ମୋ ଲୋକେସନ୍',

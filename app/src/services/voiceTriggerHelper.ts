@@ -1,33 +1,10 @@
 import { Platform } from 'react-native';
 
-/**
- * Spoken phrases that start a voice SOS. Matched as whole words, not substrings: before,
- * "stop" matched "bus stop", "help" matched "helpful" and "police"/"emergency" matched
- * any talk about the app, and each match started a PIN-locked SOS with a siren.
- * "help" on its own counts (as a whole word), other single common words do not.
- */
-export const EMERGENCY_KEYWORDS = [
-  'help',
-  'help me',
-  'please help',
-  'someone help',
-  'help help',
-  'help us',
-  'save me',
-  'please save me',
-  'bachao',
-  'bachaao',
-  'mujhe bachao',
-  'madad karo',
-  'chhodo mujhe',
-  'chodo mujhe',
-];
+import { DISTRESS_PHRASES, isEmergencyPhrase, matchEmergency } from './emergencyKeywords';
 
-/** True when the transcript contains one of the SOS phrases as whole words. */
-export function isEmergencyPhrase(transcript: string): boolean {
-  const words = ` ${transcript.toLowerCase().replace(/[^a-z\u0900-\u097f\s]/g, ' ').replace(/\s+/g, ' ').trim()} `;
-  return EMERGENCY_KEYWORDS.some((kw) => words.includes(` ${kw} `));
-}
+/** @deprecated use emergencyKeywords.ts; kept for older imports */
+export const EMERGENCY_KEYWORDS = DISTRESS_PHRASES;
+export { isEmergencyPhrase, matchEmergency };
 
 type VoiceTriggerListener = () => void;
 const listeners: Set<VoiceTriggerListener> = new Set();
@@ -233,7 +210,8 @@ function startBrowserSpeechRecognition() {
       for (let i = event.resultIndex; i < event.results.length; ++i) {
         const transcript = String(event.results[i][0]?.transcript || '').toLowerCase().trim();
         console.log('[SpeechRecognition] Heard phrase:', transcript);
-        const matched = isEmergencyPhrase(transcript);
+        // guarded words (stop, police, emergency) are judged on final results only
+        const matched = isEmergencyPhrase(transcript, !!event.results[i].isFinal);
 
         reportHeardPhrase(transcript, matched);
 

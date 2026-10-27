@@ -174,6 +174,12 @@ const te: Translation = {
 
   'settings.fallOn': 'ఆన్: పడిపోయి కదలకుండా ఉంటే 10 సెకన్ల SOS కౌంట్‌డౌన్ మొదలవుతుంది (యాప్ తెరిచి ఉన్నప్పుడు)',
 
+  'settings.keywords': 'వాయిస్ పదాలు',
+
+  'settings.keywordsOn': 'ఆన్: "help", "bachao" లేదా "call the police" అంటే 10 సెకన్ల SOS కౌంట్‌డౌన్ మొదలవుతుంది (యాప్ తెరిచి ఉన్నప్పుడు)',
+
+  'settings.keywordsUnavailable': 'Android 13 లేదా కొత్తది మరియు పూర్తి యాప్ బిల్డ్ అవసరం',
+
   'nav.from': 'ఎక్కడి నుండి',
   'nav.to': 'ఎక్కడికి?',
   'nav.myLocation': 'నా లొకేషన్',

@@ -174,6 +174,12 @@ const kn: Translation = {
 
   'settings.fallOn': 'ಆನ್: ಬಿದ್ದು ಚಲಿಸದೆ ಇದ್ದರೆ 10 ಸೆಕೆಂಡುಗಳ SOS ಕೌಂಟ್‌ಡೌನ್ ಪ್ರಾರಂಭವಾಗುತ್ತದೆ (ಆಪ್ ತೆರೆದಿರುವಾಗ)',
 
+  'settings.keywords': 'ಧ್ವನಿ ಪದಗಳು',
+
+  'settings.keywordsOn': 'ಆನ್: "help", "bachao" ಅಥವಾ "call the police" ಎಂದರೆ 10 ಸೆಕೆಂಡುಗಳ SOS ಕೌಂಟ್‌ಡೌನ್ ಪ್ರಾರಂಭವಾಗುತ್ತದೆ (ಆಪ್ ತೆರೆದಿರುವಾಗ)',
+
+  'settings.keywordsUnavailable': 'Android 13 ಅಥವಾ ಹೊಸದು ಮತ್ತು ಪೂರ್ಣ ಆಪ್ ಬಿಲ್ಡ್ ಬೇಕು',
+
   'nav.from': 'ಎಲ್ಲಿಂದ',
   'nav.to': 'ಎಲ್ಲಿಗೆ?',
   'nav.myLocation': 'ನನ್ನ ಸ್ಥಳ',

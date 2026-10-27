@@ -174,6 +174,12 @@ const pa: Translation = {
 
   'settings.fallOn': 'ਚਾਲੂ: ਡਿੱਗ ਕੇ ਸਥਿਰ ਰਹਿਣ ਤੇ 10 ਸਕਿੰਟਾਂ ਦਾ SOS ਕਾਊਂਟਡਾਊਨ ਸ਼ੁਰੂ ਹੁੰਦਾ ਹੈ (ਐਪ ਖੁੱਲ੍ਹੀ ਹੋਵੇ ਤਾਂ)',
 
+  'settings.keywords': 'ਆਵਾਜ਼ ਨਾਲ SOS',
+
+  'settings.keywordsOn': 'ਚਾਲੂ: "help", "bachao" ਜਾਂ "call the police" ਕਹਿਣ ਤੇ 10 ਸਕਿੰਟਾਂ ਦਾ SOS ਕਾਊਂਟਡਾਊਨ ਸ਼ੁਰੂ ਹੁੰਦਾ ਹੈ (ਐਪ ਖੁੱਲ੍ਹੀ ਹੋਵੇ ਤਾਂ)',
+
+  'settings.keywordsUnavailable': 'Android 13 ਜਾਂ ਨਵਾਂ ਅਤੇ ਪੂਰਾ ਐਪ ਬਿਲਡ ਚਾਹੀਦਾ ਹੈ',
+
   'nav.from': 'ਕਿੱਥੋਂ',
   'nav.to': 'ਕਿੱਥੇ ਜਾਣਾ ਹੈ?',
   'nav.myLocation': 'ਮੇਰੀ ਲੋਕੇਸ਼ਨ',

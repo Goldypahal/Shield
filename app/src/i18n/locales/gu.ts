@@ -174,6 +174,12 @@ const gu: Translation = {
 
   'settings.fallOn': 'ચાલુ: પડ્યા પછી સ્થિર રહેવાથી 10 સેકન્ડનું SOS કાઉન્ટડાઉન શરૂ થાય છે (ઍપ ખુલ્લી હોય ત્યારે)',
 
+  'settings.keywords': 'અવાજથી SOS',
+
+  'settings.keywordsOn': 'ચાલુ: "help", "bachao" અથવા "call the police" બોલવાથી 10 સેકન્ડનું SOS કાઉન્ટડાઉન શરૂ થાય છે (ઍપ ખુલ્લી હોય ત્યારે)',
+
+  'settings.keywordsUnavailable': 'Android 13 કે નવું અને પૂર્ણ ઍપ બિલ્ડ જોઈએ',
+
   'nav.from': 'ક્યાંથી',
   'nav.to': 'ક્યાં જવું છે?',
   'nav.myLocation': 'મારું લોકેશન',

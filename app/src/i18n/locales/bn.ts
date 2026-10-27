@@ -174,6 +174,12 @@ const bn: Translation = {
 
   'settings.fallOn': 'চালু: পড়ে গিয়ে স্থির থাকলে 10 সেকেন্ডের SOS কাউন্টডাউন শুরু হয় (অ্যাপ খোলা থাকলে)',
 
+  'settings.keywords': 'কণ্ঠস্বরে SOS',
+
+  'settings.keywordsOn': 'চালু: "help", "bachao" বা "call the police" বললে 10 সেকেন্ডের SOS কাউন্টডাউন শুরু হয় (অ্যাপ খোলা থাকলে)',
+
+  'settings.keywordsUnavailable': 'Android 13 বা নতুন ও পূর্ণ অ্যাপ বিল্ড লাগবে',
+
   'nav.from': 'কোথা থেকে',
   'nav.to': 'কোথায় যাবেন?',
   'nav.myLocation': 'আমার লোকেশন',

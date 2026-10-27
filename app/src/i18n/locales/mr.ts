@@ -174,6 +174,12 @@ const mr: Translation = {
 
   'settings.fallOn': 'चालू: पडल्यानंतर स्थिर राहिल्यास 10 सेकंदांचे SOS काउंटडाउन सुरू होते (अ‍ॅप उघडे असताना)',
 
+  'settings.keywords': 'आवाजाने SOS',
+
+  'settings.keywordsOn': 'चालू: "help", "bachao" किंवा "call the police" म्हटल्यास 10 सेकंदांचे SOS काउंटडाउन सुरू होते (अ‍ॅप उघडे असताना)',
+
+  'settings.keywordsUnavailable': 'Android 13 किंवा नवीन आणि पूर्ण अ‍ॅप बिल्ड लागेल',
+
   'nav.from': 'कोठून',
   'nav.to': 'कोठे जायचे?',
   'nav.myLocation': 'माझे लोकेशन',
